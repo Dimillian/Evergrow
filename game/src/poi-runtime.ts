@@ -1,3 +1,5 @@
+import { worldDifficulty } from './world-difficulty.ts';
+import { applyEnemyModifiers } from './enemy-modifiers.ts';
 import { encounterMemberLevel } from './encounter-scaling.ts';
 import { eventRecipe } from './event-recipes.ts';
 import { advanceWaves } from './wave-system.ts';
@@ -80,11 +82,11 @@ export function advanceTrial(context: TrialContext): void {
   }
   for (const point of placements) {
     const g = trial.guardians[point.index];
-    const actor = context.spawn(g.kind, point.x, point.y, g.rank, { campId: `event:${site.id}`, memberId: String(point.index), lootSeed: g.seed });
+    const actor = context.spawn(g.kind, point.x, point.y, g.rank, { campId: `event:${site.id}`, memberId: String(point.index), lootSeed: g.seed, difficulty:site.difficulty??'normal' });
     if (!actor)
       throw new Error('Preflighted event guardian could not be admitted');
     const level = site.scaling ? encounterMemberLevel(site.scaling, g.rank, g.seed) : site.level;
-    Object.assign(actor, scaledEnemyStats(g.kind, level, g.rank), { level, biome: site.biome, hp: g.hp, homeX: site.x, homeY: site.y });
+    Object.assign(actor, applyEnemyModifiers(scaledEnemyStats(g.kind, level, g.rank),actor), { level, biome: site.biome, hp: g.hp*worldDifficulty(actor.difficulty).health, homeX: site.x, homeY: site.y });
     alertEnemy(actor, player);
     g.admitted = true;
     g.x = actor.x;

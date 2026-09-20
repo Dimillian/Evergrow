@@ -408,3 +408,23 @@ test('travel clears transient presentation without rebuilding unchanged terrain,
   renderer.render(sim, destination, 1 / 60, settings);
   assert.ok(destination.groundRequests > before, 'full reset still releases the composition');
 });
+
+test('fixed preview zoom preserves world framing across display densities and never changes gameplay zoom', t => {
+  const { renderer, settings, render } = fixture(t);
+  settings.fixedCamera = true;
+  for (const density of [1, 2, 3]) {
+    renderer.resize(300 * density, 180 * density);
+    settings.fixedCameraZoom = renderer.width / 480;
+    render(0);
+    assert.equal(renderer.worldBounds.width, 480);
+    assert.equal(renderer.worldBounds.height, 288);
+  }
+  settings.fixedCamera = false;
+  render(0);
+  assert.equal(renderer.worldBounds.width, renderer.width, 'runtime zoom remains at its original value');
+  settings.fixedCamera = true;
+  for (const invalid of [0, -1, NaN, Infinity]) {
+    settings.fixedCameraZoom = invalid; render(0);
+    assert.equal(renderer.worldBounds.width, renderer.width);
+  }
+});

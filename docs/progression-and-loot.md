@@ -368,3 +368,7 @@ Existing ground/owned items and delivered chest rewards are untouched. Unclaimed
 Timed rifts suppress all physical monster drops, retaining XP and kill-based recovery. Their final chest owns equipment, gold and a guaranteed normal-inventory rift key. See [Rifts](rifts.md) for the local initial tables and global champion/elite modifiers.
 
 September 14 random-equipment tuning narrows weapon material premiums, strengthens weapon damage rolls, reduces glove speed rolls and removes caster-only melee affixes. It does not change reward quantities or rarity tables. See [equipment affixes](equipment-affixes.md#random-loot-budget-and-power--september-14-2026) and the [follow-up level-50 audit](audits/loot-level50-retuned-2026-09-14.md).
+
+## World difficulty rewards
+
+Optional Veteran, Nightmare and Cataclysm tiers add snapshotted combat XP, gold and Epic+ rarity weighting. Normal preserves these baseline tables. Quality adjusts relative weights, preserves Legendary/Unique parity and does not add item-roll slots or source levels. Monster, event and dungeon rewards retain the lowest difficulty used for an existing encounter; partial chest deliveries lock their recipe independently. See [World difficulty](world-difficulty.md).

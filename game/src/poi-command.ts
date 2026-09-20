@@ -58,10 +58,10 @@ async function commitEvent(sim: Simulation, site: EventSite, choice: EventChoice
   if (!existing) {
     const oldCamp = site.kind === 'camp' && sim.getCampState(site.id) === 'cleared' && !sim.encounterScale(site.id);
     const oldLevel = getZoneAt(site.x, site.y, sim.world.seed).originalLevel;
-    const scaling = sim.encounterScale(site.id) ?? (oldCamp ? { base: oldLevel, min: oldLevel, max: oldLevel, fixed: true as const } : encounterScaleAt(site.x, site.y, sim.world.seed, sim.player.level));
+    const scaling = sim.encounterScale(site.id) ?? (oldCamp ? { base: oldLevel, min: oldLevel, max: oldLevel, fixed: true as const } : encounterScaleAt(site.x, site.y, sim.world.seed, sim.player.level, sim.player.character.difficulty));
     site = { ...site, scaling, level: encounterRewardLevel(scaling) };
   } else site = existing;
-  const record: EventRecord = existing ?? { ...site, phase: 'completed', choice, delivered: 0, wavesCleared: 0, bonusGranted: false };
+  const record: EventRecord = existing ?? { ...site, difficulty:site.kind==='camp' ? site.scaling?.difficulty??'normal' : sim.player.character.difficulty??'normal', phase: 'completed', choice, delivered: 0, wavesCleared: 0, bonusGranted: false };
   state.sites[site.id] = record;
   if(existing?.phase==='paused'){state.trial=existing.pausedTrial!;delete existing.pausedTrial;existing.phase='active';}
   else if (existing?.phase==='active'&&state.trial?.sealReady) {

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WorldMap, mapTileBlend, mapTerrainSize, isMapSampleRevealed, selectMapPOIs, mapRegionLabels, MAP_TERRAIN_RULES, mapRoadPaths, pickMapPOI, chartedMapArea, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt } from '../src/world-map.ts';
 import type { MapView } from '../src/world-map.ts';
-import { fitMapBounds, MAP_ZOOM } from '../src/map-view.ts';
+import { fitMapBounds, getMinimapChartRect, getMinimapHomeRect, MAP_ZOOM } from '../src/map-view.ts';
 import type { WorldPOI } from '../src/world-pois.ts';
 import { World } from '../src/world.ts';
 import { biomeMapColor } from '../src/biomes.ts';
@@ -58,6 +58,14 @@ test('minimap bounds leave a margin in narrow and desktop viewports', () => {
   for (const [w, h] of [[390, 844], [540, 450], [960, 600], [1440, 900]]) {
     const r = getMinimapRect(w, h);
     assert.ok(r.x > 0 && r.y > 0 && r.x + r.width < w && r.y + r.height < h);
+    const chart = getMinimapChartRect(r);
+    assert.ok(chart.x > r.x && chart.x + chart.width < r.x + r.width);
+    assert.ok(chart.y >= r.y + 20 && chart.y + chart.height <= r.y + r.height - 16,
+      'chart markers stay clear of the location header and shared level/time footer');
+    const home = getMinimapHomeRect(w, h);
+    assert.ok(home.x > chart.x && home.x + home.width < chart.x + chart.width / 2);
+    assert.ok(home.y > chart.y + chart.height / 2 && home.y + home.height < chart.y + chart.height,
+      'Home stays in the lower-left chart corner, clear of metadata and the map center');
   }
 });
 

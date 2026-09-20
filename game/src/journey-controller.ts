@@ -3,7 +3,7 @@ import { activityLevel } from './activity-level.ts';
 import { captureEncounterScale } from './encounter-scaling.ts';
 import { JourneyPanel } from './journey-panel.ts';
 import { executeJourneyCommand } from './journey-command.ts';
-import { guidedJourney, type JourneyCommand } from './journey-state.ts';
+import { pinnedJourney, type JourneyCommand } from './journey-state.ts';
 import { JourneySearch, reconcileJourneys, journeyNeedsRefresh, type JourneyFacts } from './journey-director.ts';
 import { publicJourneyMarker, type JourneyMarker } from './journey-marker.ts';
 import { currentDungeon } from './dungeon-state.ts';
@@ -27,8 +27,8 @@ export interface JourneyHost {
     readonly navigationVisible: boolean;
     readonly renderer: Pick<Renderer, 'width' | 'height' | 'extraUIBounds'>;
     readonly panels: Pick<PanelCoordinator, 'canOpen' | 'open' | 'transition' | 'simulationActive'>;
-    readonly worldMap: Pick<WorldMap, 'setJourneyMarker' | 'focusJourney'>;
-    readonly dungeonMap: Pick<DungeonMap, 'marker'>;
+    readonly worldMap: Pick<WorldMap, 'setJourneyMarker' | 'focusJourney' | 'open'>;
+    readonly dungeonMap: Pick<DungeonMap, 'marker' | 'close'>;
     durable(work: () => Promise<boolean>, fallback: boolean): Promise<boolean>;
     persistTravel: PersistDungeon;
     resume(): void;
@@ -52,9 +52,10 @@ export class JourneyController {
     dispose() { this.panel.dispose(); }
     facts(): JourneyFacts {
         const p = this.host.sim.player;
-        const area = getZoneAt(p.x, p.y, this.host.overworld.seed);
-        return { areaId: area.id, areaLevel: captureEncounterScale(area,p.level).base, encounterScale: id=>this.host.sim.encounterScale(id) ?? this.host.sim.expeditions.surface?.encounterScales?.[id], x: p.x, y: p.y, level: p.level, time: this.host.sim.time, events: this.host.sim.eventState, expeditions: this.host.sim.expeditions,
-            discovered: id => { const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].filter(g=>g!==undefined).find(g => g.id === id); return goal?.kind === 'frontier' ? this.host.exploration.isRevealed(goal.x, goal.y) : this.host.exploration.isDiscovered(id); }, campCleared: id => this.host.sim.getCampState(id) === 'cleared' || !!this.host.sim.expeditions.surface?.clearedCamps.includes(id) };
+        const origin = currentDungeon(this.host.sim.expeditions)?.entrance ?? p;
+        const area = getZoneAt(origin.x, origin.y, this.host.overworld.seed);
+        return { areaId: area.id, areaName: area.name, areaLevel: captureEncounterScale(area,p.level).base, encounterScale: id=>this.host.sim.encounterScale(id) ?? this.host.sim.expeditions.surface?.encounterScales?.[id], x: p.x, y: p.y, level: p.level, time: this.host.sim.time, events: this.host.sim.eventState, expeditions: this.host.sim.expeditions,
+            discovered: id => { const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers, ...this.host.sim.journeys.history].filter(g=>g!==undefined).find(g => g.id === id); return goal?.kind === 'frontier' ? this.host.exploration.isRevealed(goal.x, goal.y) : this.host.exploration.isDiscovered(id); }, campCleared: id => this.host.sim.getCampState(id) === 'cleared' || !!this.host.sim.expeditions.surface?.clearedCamps.includes(id) };
     }
     async command(command: JourneyCommand): Promise<boolean> {
         return this.host.durable(async () => {
@@ -77,20 +78,23 @@ export class JourneyController {
     private showMap(id: string) {
         if (this.host.savingAction)
             return;
+        this.selected = id;
         if (currentDungeon(this.host.sim.expeditions)?.entrance.id === id) {
             this.host.panels.transition('map');
             return;
         }
 
-        const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers].filter(g=>g!==undefined).find(g => g.id === id);
+        const goal = [this.host.sim.journeys.townPin, this.host.sim.journeys.nearestTown, ...this.host.sim.journeys.accepted, ...this.host.sim.journeys.offers, ...this.host.sim.journeys.history].filter(g=>g!==undefined).find(g => g.id === id);
         if (!goal)
             return;
         this.host.panels.transition('map');
-        if (!this.host.sim.dungeonFloor) {
-            const target = publicJourneyMarker(goal, this.facts().discovered(goal.id));
-            this.journeyMapPreview = target;
-            this.host.worldMap.focusJourney(target);
+        if (this.host.sim.dungeonFloor) {
+            this.host.dungeonMap.close();
+            this.host.worldMap.open({x:this.host.sim.expeditions.surfaceX,y:this.host.sim.expeditions.surfaceY,angle:0});
         }
+        const target = publicJourneyMarker(goal, goal.finishedAt!==undefined || this.facts().discovered(goal.id));
+        this.journeyMapPreview = target;
+        this.host.worldMap.focusJourney(target);
     }
     update() {
         if (this.host.savingAction)
@@ -106,6 +110,7 @@ export class JourneyController {
         const safe = this.host.panels.simulationActive && !this.host.sim.dungeonFloor && !p.attack && p.castTime <= 0 && !this.host.sim.eventChannel.site && !this.host.sim.portal.active
             && !this.host.sim.enemies.some(enemy => enemy.hp > 0 && Math.hypot(enemy.x - p.x, enemy.y - p.y) < 550 && ['chase', 'windup', 'attack'].includes(enemy.state));
         if (this.journeySearchOwner !== p.character) {
+            this.selected=undefined;this.panel.resetSelection();
             this.journeySearchOwner = p.character;
             this.journeySearch = null;
             this.journeyCheckedAt = -1;
@@ -133,12 +138,12 @@ export class JourneyController {
             this.host.sim.journeys = reconcileJourneys(this.host.sim.journeys, facts, safe || !!this.host.sim.dungeonFloor && !this.host.sim.enemies.some(e => e.hp > 0 && Math.hypot(e.x - p.x, e.y - p.y) < 550));
             const current = this.host.sim.journeys;
             if (safe && !this.journeySearch && journeyNeedsRefresh(current, facts)) {
-                this.journeySearch = new JourneySearch(this.host.overworld, facts, this.host.exploration.getDiscoveredPOIs());
+                this.journeySearch = new JourneySearch(this.host.overworld, facts, this.host.exploration.getDiscoveredPOIs({x:p.x-3600,y:p.y-3600,width:7200,height:7200}));
             }
             this.refreshUI();
         }
         // Visibility is a phase property, not a simulation timer (menus pause that timer).
-        this.panel.mini.hidden = this.host.phase !== 'playing' || !this.host.navigationVisible;
+        this.panel.setHUDVisibility(this.host.phase === 'playing' && this.host.navigationVisible);
         this.host.renderer.extraUIBounds = this.panel.bounds(this.host.renderer.width, this.host.renderer.height);
     }
     refreshUI() {
@@ -152,8 +157,8 @@ export class JourneyController {
             if(g.finishedAt===undefined)g.level=activityLevel(g,facts,this.host.overworld.seed);
         const dungeon = dungeonJourney(this.host.sim.expeditions, this.host.sim.dungeonFloor);
         this.panel.update(state, facts, this.host.phase === 'playing' && this.host.navigationVisible, this.host.renderer.width, this.host.renderer.height, dungeon);
-        const goal = guidedJourney(state);
-        let marker: JourneyMarker | null = goal ? publicJourneyMarker(goal, this.facts().discovered(goal.id)) : null;
+        const goal = pinnedJourney(state);
+        let marker: JourneyMarker | null = goal ? publicJourneyMarker(goal, goal.finishedAt!==undefined || this.facts().discovered(goal.id)) : null;
         if (this.host.phase !== 'map')
             this.journeyMapPreview = null;
         const surfaceMarker = marker;

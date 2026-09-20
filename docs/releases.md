@@ -4,7 +4,7 @@
 
 ## Prototype version policy
 
-Player-facing versions stay within the latest explicitly approved prototype milestone. The current ceiling is **0.6.x**; do not advance to 0.7 or 1.0 without approval. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance beyond the approved milestone automatically.
+Player-facing versions stay within the latest explicitly approved prototype milestone. The current ceiling is **0.7.x**; do not advance to 0.8 or 1.0 without approval. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance beyond the approved milestone automatically.
 
 On 2026-09-09 the display history was renumbered, preserving every date, note and development-recap marker. The renumbered history ships with 0.2.0; it does not redeploy historical builds. The audit records below retain their original published labels, source SHAs and Sites IDs. Save schema v4, world generation 10, dungeon layout versions and Sites snapshot numbers are independent technical identifiers; never lower them to match a game release label.
 
@@ -33,7 +33,20 @@ The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 f
 
 The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 for Crimson Rifts, keys, ranked monsters and the accompanying interface and performance updates. Routine updates after this milestone use 0.6.x.
 
+The user approved the next major prototype milestone, **0.7.0**, on 2026-09-20 for world difficulty, the skill-atlas planning and refund improvements, the Area journal and mobile/interface updates. Routine updates after this milestone use 0.7.x.
+
 ## Last verified publication
+
+- Game v0.7.0 / Sites version 62, publicly deployed on 2026-09-20 at 07:56:55 UTC.
+- Published source: `5628012e1b41c5f2a845866312762452cc735802`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_7818cb4e8fac819190c1336fb3125ec5`.
+- Deployment: `appgdep_6aaf91b13a6c81919fedac45aa749a62`; Sites returned `succeeded`.
+- Includes PRs #64, #65, #67 and #71 plus world difficulty: Area journal and quest HUD settings, minimap navigation, phone layouts, reward-completion indicators, atlas filters/previews/refunds/guide, and four saved difficulty tiers with procedural badges and a minimap selector.
+- All 1,723 code tests passed, alongside application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run.
+- No character reset or required player action. Development tools remain excluded; the local server remains available.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
 
 - Game v0.6.7 / Sites version 61, publicly deployed on 2026-09-17 at 11:44:00 UTC.
 - Published source: `77263046a9cf7be8bf1a561644fb4fe9f79dd22e`.

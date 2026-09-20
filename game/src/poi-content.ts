@@ -1,3 +1,4 @@
+import { storedDifficultyHealth, type WorldDifficulty } from './world-difficulty.ts';
 import { eventRecipe, sealPoint, isTrialKind } from './event-recipes.ts';
 import { eventProgress } from './event-progress.ts';
 import type { WaveProgress } from './wave-system.ts';
@@ -30,6 +31,7 @@ export interface EventSite {
   level: number;
 }
 export interface EventRecord extends EventSite {
+  difficulty?: WorldDifficulty;
   phase: 'active' | 'paused' | 'completed' | 'claimed';
   pausedTrial?: Trial;
   choice: EventChoice | null;
@@ -124,7 +126,7 @@ export function syncTrial(state: EventState, enemies: readonly Enemy[]): void {
     if(!actor.campId?.startsWith('event:'))continue;
     const id=actor.campId.slice(6),trial=state.trial?.siteId===id?state.trial:state.sites[id]?.pausedTrial;
     const guardian=trial?.guardians[Number(actor.campMemberId)];
-    if(guardian){guardian.hp=actor.hp;guardian.x=actor.x;guardian.y=actor.y;guardian.dead=actor.state==='dead';}
+    if(guardian){guardian.hp=storedDifficultyHealth(actor);guardian.x=actor.x;guardian.y=actor.y;guardian.dead=actor.state==='dead';}
   }
 }
 
@@ -143,7 +145,7 @@ export function compactEvents(state: EventState): void {
 }
 
 export function eventInteractionSites(sites: readonly EventSite[],state:EventState):EventSite[] {
-  sites=sites.filter(site=>site.kind!=='bossLair'&&(!isTrialKind(site.kind)||(!eventClaimed(state,site.id)&&state.sites[site.id]?.phase!=='completed')));
+  sites=sites.filter(site=>site.kind!=='bossLair'&&!eventClaimed(state,site.id)&&(!isTrialKind(site.kind)||state.sites[site.id]?.phase!=='completed'));
   const trial=state.trial;if(!trial?.sealReady)return [...sites];
   const site=state.sites[trial.siteId],point=sealPoint(site,trial.wave);
   return [...sites.filter(s=>s.id!==site.id),{...site,...point}];

@@ -1,3 +1,4 @@
+import { difficultyLootWeights, type WorldDifficulty } from './world-difficulty.ts';
 import type { MaterialSource } from './item-materials.ts';
 import type { BiomeId } from './biomes.ts';
 import type { Item, ItemTier } from './character-types.ts';
@@ -8,6 +9,7 @@ import { generateItem, generateUnique } from './items.ts';
 import { BIOME_PROFILE_WEIGHTS, ENEMY_ITEM_KIND_WEIGHTS, ENEMY_LOOT_YIELD, NORMAL_COMMON_EQUIPMENT_SKIP_CHANCE, getLootTable } from './loot-content.ts';
 
 export interface EnemyLootContext {
+  readonly difficulty?: WorldDifficulty;
   readonly playerLevel?: number;
   readonly tierOverride?: ItemTier;
   /** Authored chest rarity; quantity, item identity and source level retain their normal rules. */
@@ -75,7 +77,7 @@ export function rollEnemyLoot(context: EnemyLootContext): Item[] {
   const itemLevel = lootItemLevel(context.level, context.rank);
   const items: Item[] = [];
   for (let index = 0; index < count; index++) {
-    const rolledTier = selectLootWeight(context.tierWeights ?? table.tierWeights, random()), tier = context.tierOverride ?? rolledTier;
+    const rolledTier = selectLootWeight(difficultyLootWeights(context.tierWeights ?? table.tierWeights,context.difficulty), random()), tier = context.tierOverride ?? rolledTier;
     const kind = selectLootWeight(ENEMY_ITEM_KIND_WEIGHTS[context.kind], random());
     // A separate stream preserves existing rarity, charm, profile and item rolls.
     // First-kill guarantees and authored chest/event/boss rewards bypass thinning.

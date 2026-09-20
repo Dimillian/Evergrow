@@ -9,13 +9,14 @@ const css=registerHooks({load(url,context,next){return url.endsWith('.css')?{for
 const {DungeonMap}=await import('../src/dungeon-map.ts');css.deregister();
 const entrance={id:'test',name:'Test',seed:7319,level:30,biome:'verdant' as const,x:0,y:0,rift:{attempt:1}};
 
-test('completed HUD shows elapsed clear time instead of time remaining',()=>{
+test('rift HUD waits for the reward claim before showing completion and retains victory time',()=>{
  const run=createDungeonRun(entrance);run.rift!.elapsed=274.9;run.rift!.points=600;
  const labels:string[]=[];
  const context=new Proxy({getTransform:()=>({a:1,b:0,c:0,d:1,e:0,f:0}),measureText:()=>({width:30}),fillText:(s:string)=>labels.push(s)},{get:(o,k)=>Reflect.get(o,k)??(()=>{})}) as unknown as CanvasRenderingContext2D;
  run.rift!.phase='hunt';drawRiftHUD(context,run,1100);assert.ok(labels.includes('5:26'));
  labels.length=0;run.rift!.phase='complete';drawRiftHUD(context,run,1100);
- assert.ok(labels.includes('4:34'));assert.ok(!labels.includes('5:26'));assert.ok(labels.includes('RIFT CLEARED'));
+ assert.ok(labels.includes('4:34'));assert.ok(!labels.includes('5:26'));assert.ok(labels.includes('REWARD WAITING'));assert.ok(labels.includes('CLAIM THE RIFT CHEST'));assert.ok(!labels.includes('RIFT COMPLETE'));
+ labels.length=0;run.rift!.claimed=true;drawRiftHUD(context,run,1100);assert.ok(labels.includes('RIFT COMPLETE'));assert.ok(labels.includes('RETURN TO TOWN'));assert.ok(labels.includes('4:34'));
  labels.length=0;run.rift!.phase='failed';drawRiftHUD(context,run,1100);assert.ok(labels.includes('RETURNING TO TOWN'));
 });
 

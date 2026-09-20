@@ -1,3 +1,4 @@
+import { worldDifficulty } from './world-difficulty.ts';
 import { metric, syncRiftChronicle } from './chronicle.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
@@ -75,7 +76,7 @@ export function updateRiftGuardian(sim:Simulation,emit:(event:CombatEvent)=>void
  if(r.elapsed-r.guardian.at<RIFT_RULES.guardianArrival||state.hp<=0||sim.enemies.some(e=>e.campMemberId==='warden'&&e.campId===run.entrance.id&&e.hp>0))return;
  const enemy=sim.spawnEnemy(member.kind,state.x,state.y,member.rank,{campId:run.entrance.id,memberId:member.id,lootSeed:member.seed,level:dungeonMemberLevel(run.entrance,member)});
  if(!enemy)return;
- enemy.hp=state.hp;enemy.homeX=state.x;enemy.homeY=state.y;enemy.bossPhases=state.bossPhases??0;
+ enemy.hp=state.hp*worldDifficulty(enemy.difficulty).health;enemy.homeX=state.x;enemy.homeY=state.y;enemy.bossPhases=state.bossPhases??0;
  enemy.state='chase';enemy.awareness=1;enemy.lastSeenX=sim.player.x;enemy.lastSeenY=sim.player.y;state.admitted=true;
  emit({type:'blast',x:enemy.x,y:enemy.y,radius:130,style:'arcane',color:'#f47dbb'});
 }

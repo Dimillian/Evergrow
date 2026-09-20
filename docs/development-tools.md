@@ -2,7 +2,7 @@
 
 Local Unique studies: `/character.html?uniques`, `/loot.html?uniques` and `/chronicle.html?uniques` stage the six designs and collection states. The skill playground has a matching Unique selector for each supported skill. All use runtime generators/renderers/combat with disposable state; see [Unique items](unique-items.md).
 
-Open **http://127.0.0.1:5173/tools/** (`/tools` also resolves) while `npm run dev` is running. This is the canonical entry point for development reviews. It groups existing reviews into Equipment, Characters, Skills & Combat, World, Interface and Data & Audits, with historical concepts in Archive. Search finds tools by purpose. A workspace mounts only one review at a time; moving between tabs unloads its renderer and memory state. Standalone reviews have Tools home / Open in workspace navigation.
+Open **http://127.0.0.1:5173/tools/** (`/tools` also resolves) while `npm run dev` is running. This is the canonical entry point for development reviews. It groups existing reviews into Equipment, Characters, Skills & Combat, World, Interface and Data & Audits, with historical concepts in Archive. Search finds tools by purpose. A workspace mounts only one review at a time; moving between tabs unloads its renderer and memory state. Standalone reviews have Tools home / Open in workspace navigation, except the touch-controls study, which stays free of development chrome so its usable mobile viewport matches the interface under review.
 
 The hub and review HTML are outside the production build entry graph and outside `public/`. Do not add them to Sites or Android builds. No publication is required for local tools. Review changes use staged, memory-only characters; they never load or edit playable saves. The game itself remains `/`.
 
@@ -163,3 +163,9 @@ Equipment → **Coins & mana drops** (`/loot.html?resources`) extends Ground loo
 The Crimson Rifts map study also offers **Rift cleared (HUD)** (`/tools/rifts.html?view=map&cleared`): a disposable completed run at 4:34 with the actual elapsed-time HUD and crimson return marker. Atmosphere/encounter controls return to the hunt study; no character saves are accessed.
 
 Character hall (`/title.html`) now stages wallet balances, effective attribute differences and real equipped items in the redesigned runtime title UI. Its background uses the runtime World, Renderer and post-processing over a frozen disposable simulation; the character pedestal uses the shared title portrait renderer. Gear hover/focus tooltips, narrow-screen detail tabs, empty slots and the existing cloud/conflict fixture parameters remain memory-only. This view never launches gameplay or reads playable saves.
+
+## Area journal review
+
+The existing Journey review (`/journeys.html?view=journal`) stages the production Area journal with disposable accepted, nearby and completed activities. Accept, Dismiss, independent Pin and area browsing use the shared state planner. Show on Map focuses the selected activity, and closing it returns to the same details. No playable character storage is used.
+
+The Progression workspace also has **World difficulty** (`/progression.html?view=difficulty`): shared procedural crests, the actual selector with disposable actions, and level-50 scaling reference. This view never reads or writes character saves.

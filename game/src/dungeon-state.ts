@@ -1,3 +1,4 @@
+import { storedDifficultyHealth, type WorldDifficulty } from './world-difficulty.ts';
 import { riftEnemyStats, type RiftProgress, type RiftLedger, type RiftTag } from './rift-content.ts';
 import { dungeonChestMask, type ExpeditionRoute } from './expedition-route.ts';
 import { freshWaves, type WaveProgress } from './wave-system.ts';
@@ -10,6 +11,7 @@ import type { DungeonEntrance } from './dungeon.ts';
 import { generateDungeon, DUNGEON_RULES } from './dungeon.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 export interface StoredActor {
+    rewardDifficulty?: WorldDifficulty;
     rift?: RiftTag;
     kind: Enemy['kind'];
     rank: Enemy['rank'];
@@ -36,6 +38,7 @@ export interface LocationContents {
     defeatedCampMembers: Record<string, string[]>;
 }
 export interface DungeonRun {
+    difficulty?: WorldDifficulty;
     rift?: RiftProgress;
     layoutVersion: number;
     events?: Record<number, WaveProgress>;
@@ -49,6 +52,8 @@ export interface DungeonRun {
     }>;
     explored: number[];
     chestMasks: number[];
+    /** Freeze each treasure recipe when delivery starts, including partial claims. */
+    chestDifficulties?: Partial<Record<0|1|2, WorldDifficulty>>;
     contents: LocationContents;
     x: number;
     y: number;
@@ -67,14 +72,14 @@ export interface Expeditions {
 export const emptyContents = (): LocationContents => ({ actors: [], groundItems: [], groundGold: [], pickups: [], clearedCamps: [], defeatedCampMembers: {} });
 export const freshExpeditions = (): Expeditions => ({ cleared: [], location: null, runs: [], surface: null, surfaceX: 0, surfaceY: 0 });
 export function createDungeonRun(entrance: DungeonEntrance): DungeonRun { const f = generateDungeon(entrance.seed, entrance.level, entrance); return { ...(entrance.rift?{rift:{elapsed:0,points:0,phase:'hunt' as const,claimed:false}}:{}), entrance, layoutVersion:DUNGEON_RULES.version, events:Object.fromEntries((f.events??[]).map(e=>[e.id,freshWaves()])), states: Object.fromEntries(f.members.map(m => [m.id, { hp: riftEnemyStats(scaledEnemyStats(m.kind, dungeonMemberLevel(entrance, m), m.rank),entrance.rift).maxHp, x: m.x, y: m.y, admitted: false }])), explored: [f.rooms.find(r=>r.kind==='entry')?.id??0], chestMasks: [0, 0, 0], contents: emptyContents(), x: f.entry.x, y: f.entry.y }; }
-export function storedActor(e: Enemy): StoredActor { return { ...(e.rift?{rift:e.rift}:{}), kind: e.kind, rank: e.rank, level: e.level, biome: e.biome, seed: e.lootSeed, x: e.x, y: e.y, homeX: e.homeX, homeY: e.homeY, hp: e.hp, campId: e.campId, memberId: e.campMemberId, bossPhases: e.bossPhases }; }
+export function storedActor(e: Enemy): StoredActor { return { ...(e.rift?{rift:e.rift}:{}), kind: e.kind, rank: e.rank, level: e.level, biome: e.biome, seed: e.lootSeed, x: e.x, y: e.y, homeX: e.homeX, homeY: e.homeY, hp: storedDifficultyHealth(e), rewardDifficulty: e.rewardDifficulty, campId: e.campId, memberId: e.campMemberId, bossPhases: e.bossPhases }; }
 export function currentDungeon(state: Expeditions): DungeonRun | undefined { return state.runs.find(r => r.entrance.id === state.location); }
 export function syncDungeon(run: DungeonRun, enemies: readonly Enemy[], x: number, y: number) { run.x = x; run.y = y; for (const e of enemies) {
     if (e.campId !== run.entrance.id || !e.campMemberId)
         continue;
     const s = run.states[e.campMemberId];
     if (s) {
-        s.hp = Math.max(0, e.hp);
+        s.hp = storedDifficultyHealth(e);
         s.x = e.x;
         s.y = e.y;
         s.admitted = true;

@@ -1,7 +1,7 @@
 /** Read-only, save-free balance audit. Uses the real gear, tree and combat pipeline. */
 import { writeFileSync } from 'node:fs';
 import { atlasBenchmarkSheet, ATLAS_BENCHMARK_BUILDS } from '../src/atlas-benchmark.ts';
-import { SkillStudy, studyWeapons } from '../src/tools/skill-scene.ts';
+import { SkillStudy, studyWeapons } from '../src/skill-showcase.ts';
 import { generateItem, EQUIPMENT_SLOTS } from '../src/items.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { SKILL_SPECIALIZATIONS } from '../src/skill-progression.ts';

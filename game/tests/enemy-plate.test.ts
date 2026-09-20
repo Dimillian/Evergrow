@@ -28,6 +28,24 @@ test('very narrow surfaces place the full plate below the minimap', () => {
   }
 });
 
+test('touch target plate clears the gold counter without changing desktop placement', () => {
+  assert.equal(getEnemyPlateLayout(1055,563,true,0).y,64);
+  assert.equal(getEnemyPlateLayout(1055,563,true,82).y,88);
+  assert.equal(getEnemyPlateLayout(960,600,false,0).y,16);
+});
+
+test('phone landscape target plate halves its remaining top distance', () => {
+  assert.equal(getEnemyPlateLayout(1055,563,true,0,false,true).y,32);
+});
+
+test('phone landscape notifications can start below a scaled target plate', () => {
+  const scale = .72;
+  const plate = getEnemyPlateLayout(844 / scale, 390 / scale, true, 0, true, true);
+  const plateBottom = (plate.y + plate.height) * scale;
+  const notificationTop = 8 + 132;
+  assert.ok(plateBottom < notificationTop);
+});
+
 test('surfaces too small for a readable enemy plate omit it instead of overlapping the HUD', () => {
   for (const [width, height] of [[960, 160], [320, 240], [200, 844], [0, 0]]) {
     const plate = getEnemyPlateLayout(width, height);
