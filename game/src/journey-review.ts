@@ -14,6 +14,7 @@ import { GameShell } from './game-shell.ts';
 import { Exploration } from './exploration.ts';
 import { WorldMap } from './world-map.ts';
 import { JourneyPanel } from './journey-panel.ts';
+import { JourneyHUDPreferences } from './journey-hud-settings.ts';
 import { freshJourneys, planJourney, type JourneyGoal } from './journey-state.ts';
 import { publicJourneyMarker, drawJourneyDestination } from './journey-marker.ts';
 import { getZoneAt } from './zone-progression.ts';
@@ -38,14 +39,20 @@ if(completion)sim.commitJourneyCheckpoint(staged,completion);
 const exploration=life.own(new Exploration(world,{storage:null}));
 for(let x=camp.x-1200;x<=camp.x+1200;x+=400)for(let y=camp.y-900;y<=camp.y+900;y+=400)exploration.reveal(x,y,480);
 let panel:JourneyPanel;
-const shell=life.own(new GameShell(document.querySelector('#app')!,{play(){},returnToTitle(){},openCharacter(){},openSkills(){},portal(){},openMap:()=>showMap(),openJourneys:()=>openPanel()}));
-const map=life.own(new WorldMap(world,exploration,shell.mapMount,()=>{map.close();draw();}));
+const shell=life.own(new GameShell(document.querySelector('#app')!,{play(){},returnToTitle(){},openCharacter(){},openSkills(){},openMap:()=>showMap(),openJourneys:()=>openPanel()}));
+let mapReturn:string|undefined;
+const map=life.own(new WorldMap(world,exploration,shell.mapMount,()=>{map.close();draw();if(mapReturn){const id=mapReturn;mapReturn=undefined;openPanel(id);}}));
 map.setJourneyMarker(completion?null:publicJourneyMarker(active,true));
-const facts=()=>({x:p.x,y:p.y,level:p.level,time:10,events:sim.eventState,expeditions:sim.expeditions,discovered:(id:string)=>id===active.id,campCleared:()=>false});
-panel=life.own(new JourneyPanel(shell.panelMount,shell.canvas.parentElement!,{open:id=>openPanel(id),close:()=>{panel.close();draw();},map:()=>showMap(),command:c=>{const planned=planJourney(sim.journeys,c);if(!planned)return false;sim.journeys=planned;panel.update(planned,facts(),panel.element.hidden,renderer.width,renderer.height);return true;}}));
+const facts=()=>({areaName:getZoneAt(p.x,p.y,world.seed).name,x:p.x,y:p.y,level:p.level,time:10,events:sim.eventState,expeditions:sim.expeditions,discovered:(id:string)=>id===active.id,campCleared:()=>false});
+panel=life.own(new JourneyPanel(shell.panelMount,shell.canvas.parentElement!,{open:id=>openPanel(id),close:()=>{panel.close();draw();},map:id=>showMap(id),command:c=>{const planned=planJourney(sim.journeys,c);if(!planned)return false;sim.journeys=planned;panel.update(planned,facts(),panel.element.hidden,renderer.width,renderer.height);return true;}},new JourneyHUDPreferences()));
 const renderer=new Renderer(),fx=life.own(new PostFX(shell.canvas));
 function openPanel(id=mode==='crypt'?crypt.id:active.id){panel.update(sim.journeys,facts(),false,renderer.width,renderer.height);panel.open(id);}
-function showMap(){panel.close();panel.mini.hidden=true;map.open(p);map.fitBounds({x:camp.x-1800,y:camp.y-1500,width:3600,height:3000});}
+function showMap(id?:string){
+  mapReturn=!panel.element.hidden?id:undefined;panel.close();panel.mini.hidden=true;map.open(p);
+  const goal=[...sim.journeys.accepted,...sim.journeys.offers,...sim.journeys.history].find(g=>g.id===id);
+  if(goal)map.focusJourney(publicJourneyMarker(goal,goal.finishedAt!==undefined||facts().discovered(goal.id)));
+  else map.fitBounds({x:camp.x-1800,y:camp.y-1500,width:3600,height:3000});
+}
 function draw(){
   const ratio=devicePixelRatio||1;
   shell.canvas.width=Math.round(innerWidth*Math.min(1.6,ratio));shell.canvas.height=Math.round(innerHeight*Math.min(1.6,ratio));
@@ -61,8 +68,7 @@ function draw(){
   const anchor=world.getEventSites(camp.x-300,camp.y-300,600,600).find(s=>s.id===camp.id)??camp;
   const point=renderer.worldToScreen(anchor.x,anchor.y);if(!completion)drawJourneyDestination(c,point.x,point.y-35,8);
   if(completion)drawJourneyAnnouncement(c,{...completion,age:.8},renderer.worldToScreen(p.x,p.y),renderer.width,renderer.height,true);
-  const casting=new URLSearchParams(location.search).has('casting');
-  shell.resizeControls(renderer.width,renderer.height);shell.showMenu('playing',0,0);shell.setPortalState({mode:casting?'cancel':'cast',progress:casting ? .4 : null,destination:{kind:'settlement',name:'Home town',detail:'Home town',biome:'deadwood'}});
+  shell.resizeControls(renderer.width,renderer.height);shell.showMenu('playing',0,0);
   panel.update(sim.journeys,facts(),(mode==='hud'||mode==='complete')&&panel.element.hidden,renderer.width,renderer.height);
 }
 draw();if(mode==='journal'||mode==='crypt')openPanel();else if(mode==='map')showMap();

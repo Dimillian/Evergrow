@@ -133,6 +133,8 @@ export function decodeCharacterSave(raw: string): CharacterSave | null {
       if (!Number.isSafeInteger(epoch) || epoch > Math.floor((p.level - 1) / 3) || slot >= (source[2] === 'jeweler' ? 16 : 24)) return null;
       if (epoch >= state.epoch && !(state.sold[source[1]] & 1 << slot)) return null;
     }
+    // Retire suppression and opt-out settings; the HUD now follows accepted work.
+    if (object(p.journeys)) { delete p.journeys.dismissed; delete p.journeys.suggestions; }
     // Normalize the validated parsed copy, including stored dungeon loot and buyback.
     for (const item of items) Object.assign(item, roundItemStats(refreshEquipmentBudgets(rebalanceItemRolls(rebalanceItemOffense(rebalanceItemMana(rebalanceCharm(item)))))));
     return v as unknown as CharacterSave;

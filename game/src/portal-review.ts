@@ -11,7 +11,7 @@ import { GameShell } from './game-shell.ts';
 import { WorldMap } from './world-map.ts';
 import { Exploration } from './exploration.ts';
 import { PORTAL_RULES, portalMapMarkers } from './travel.ts';
-import { portalActionMode, portalDestinations, type PortalDestination } from './portal-destination.ts';
+import { portalDestinations, type PortalDestination } from './portal-destination.ts';
 import { BIOMES, BIOME_IDS, type BiomeId } from './biomes.ts';
 import { Lifetime } from './lifetime.ts';
 
@@ -33,7 +33,7 @@ const requestedProgress = Number(params.get('progress') ?? .73), reducedMotion =
 let channelProgress = Number.isFinite(requestedProgress) ? Math.max(.05, Math.min(1, requestedProgress)) : .73;
 let frozen = reducedMotion.matches || !params.has('animate');
 
-const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {}, portal() {} }));
+const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {} }));
 const chart = life.own(new Exploration(world, { storage: null }));
 const map = life.own(new WorldMap(world, chart, shell.mapMount, () => map.close()));
 map.setPortalMarkers(() => portalMapMarkers(sim.travel, band => world.getPortalAnchor(band)));
@@ -90,9 +90,6 @@ function draw(dt = 0) {
   c.setTransform(shell.uiCanvas.width / renderer.width, 0, 0, shell.uiCanvas.height / renderer.height, 0, 0);
   renderer.renderUI(c, sim, world, settings); map.drawMinimap(c, p, renderer.width, renderer.height, 0);
   shell.resizeControls(renderer.width, renderer.height);
-  const progress = sim.portal.active ? sim.portal.progress : null;
-  const mode = portalActionMode(progress !== null, !sim.portal.active, !!projected.returnTo, !sim.portal.active && !!projected.returnTo);
-  shell.setPortalState({ mode, progress, destination: mode === 'return' || mode === 'locate' ? projected.returnTo! : projected.home });
 }
 
 function captureFrame(): HTMLCanvasElement {

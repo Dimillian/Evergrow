@@ -25,6 +25,7 @@ export class PanelCoordinator {
   }
   private chronicleReturn: 'playing'|'paused'|'character' = 'playing';
   private returnToPause = false;
+  private mapReturn: 'journeys' | null = null;
   private readonly panels: Record<PanelPhase, PanelLifecycle>;
   private readonly hooks: PanelHooks;
   constructor(panels: Record<PanelPhase, PanelLifecycle>, hooks: PanelHooks) { this.panels = panels; this.hooks = hooks; }
@@ -43,11 +44,13 @@ export class PanelCoordinator {
   }
   resume(): boolean {
     if (this.current !== 'paused' && !this.activePanel) return false;
-    const next = this.current === 'chronicle' ? this.chronicleReturn : this.current !== 'paused' && this.returnToPause ? 'paused' : 'playing';
+    const next = this.current === 'map' && this.mapReturn ? this.mapReturn : this.current === 'chronicle' ? this.chronicleReturn : this.current !== 'paused' && this.returnToPause ? 'paused' : 'playing';
     this.transition(next); return true;
   }
   /** Explicit lifecycle changes: character entry, title return and defeat use the same cleanup. */
   transition(next: GamePhase, save = false, holdMap = false): void {
+    if (next === 'map' && this.current === 'journeys' && !holdMap) this.mapReturn = 'journeys';
+    else if (next !== 'map' || this.current !== 'map') this.mapReturn = null;
     if (this.current === 'paused' && Object.hasOwn(this.panels, next)) this.returnToPause = true;
     if (next === 'playing' || next === 'ready' || next === 'dead') this.returnToPause = false;
     this.hooks.clearInput(this.current === 'playing' && next === 'map' && holdMap

@@ -91,7 +91,7 @@ import { CAMERA_FOLLOW, CameraZoom, cameraFollowTarget, cameraSpawnExclusion,
 import { EnemyFocus } from './enemy-focus.ts';
 import { BattleBarkScene } from './battle-bark-scene.ts';
 import { getHUDLayout } from './hud-layout.ts';
-import { getMinimapRect, getPortalControlRect } from './map-view.ts';
+import { getMinimapRect } from './map-view.ts';
 import { ENEMY_BODY_BOUNDS, enemyBodyBounds } from './enemy-body.ts';
 import { resolveRangedAim, resolveDirectionalAim, PROJECTILE_HEIGHT, type RangedAim } from './ranged-aim.ts';
 import { deriveAttackStats } from './equipment.ts';
@@ -584,7 +584,7 @@ export class Renderer {
     const headerX = phone ? (phone.left-22*.8)*unit : 0;
     const headerY = phone ? (phone.top-22*.8)*unit : 0;
     const barkReserved = [...lootBounds,
-      getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height), getPortalControlRect(this.width, this.height),
+      getHUDLayout(this.width, this.height), getMinimapRect(this.width, this.height),
       { x: 0, y: 0, width: this.width, height: 112 + this.touchTopInset }];
     if (this.extraUIBounds) barkReserved.push(this.extraUIBounds);
     if (this.performanceUIBounds) barkReserved.push(this.performanceUIBounds);
