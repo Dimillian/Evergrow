@@ -5,7 +5,7 @@ import { manaCapacity } from '../auras.ts';
 import { UNIQUES } from '../unique-content.ts';
 import { skillUtilityLabel } from '../skill-execution-content.ts';
 import { toolPage, boundedNumber, downloadJSON, reportRoute } from './common.ts';
-import { SkillStudy, studyWeapons, type SkillStudyOptions } from './skill-scene.ts';
+import { SkillStudy, studyWeapons, type SkillStudyOptions } from '../skill-showcase.ts';
 import { SKILL_DEFINITIONS, skillRequirementLabel } from '../skill-content.ts';
 import { skillIconSVG } from '../skill-icon.ts';
 import { SKILL_SPECIALIZATIONS, SKILL_RANK_RULES } from '../skill-progression.ts';

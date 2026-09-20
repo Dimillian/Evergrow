@@ -1,6 +1,7 @@
 const ICONS = {
   pin: '<path d="m15 3 6 6-3 1-3 4v3l-2 2-8-8 2-2h3l4-3ZM9 15l-6 6"/>',
   home: '<path d="m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10"/>',
+  sidebar: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M16 4v16m-6-12 3 4-3 4"/>',
   gold: '<ellipse cx="10" cy="6" rx="7" ry="3"/><path d="M3 6v4c0 4 14 4 14 0V6M3 11v4c0 3 8 4 12 2m0-4c4-1 7 0 7 2v4c0 4-13 4-13 0v-2m6-2c0 2 7 2 7 0"/>',
   dropItem: '<path d="m11 4-4-1-4 3-1 4 3 4 5-1 3-4Z" fill="currentColor" fill-opacity=".14"/><path d="m10 6 4 4m-1-3 3 2-2 3-3-2M5 6l-1 3m9 4 1 1m4 0 3 3-3 3-3-3Zm0 2v2M12 22h10"/>',
   options: '<path d="M4 7h16M4 17h16M9 4v6m6 4v6"/>',
