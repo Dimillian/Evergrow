@@ -29,6 +29,8 @@ export class PotionTooltip {
     }, options);
     this.anchor.addEventListener('focusin', () => this.show(), options);
     this.anchor.addEventListener('focusout', () => { if (!this.hovered) this.hide(); }, options);
+    // Preserve native focus navigation without sending inspection keys to gameplay.
+    this.anchor.addEventListener('keydown', event => { if (event.key !== 'Escape') event.stopPropagation(); }, options);
     window.addEventListener('scroll', () => this.dismiss(), { ...options, capture: true });
     window.addEventListener('resize', () => this.dismiss(), options);
     document.addEventListener('keydown', event => { if (event.key === 'Escape') this.dismiss(); }, options);
