@@ -2,6 +2,7 @@ import { emptySlotIcon } from './equipment-slot-art.ts';
 import { UITooltipStack } from './ui-tooltip-stack.ts';
 import type { HUDOptions } from './hud.ts';
 import { InventoryHUD } from './inventory-hud.ts';
+import { InventoryStats } from './inventory-stats.ts';
 import { previewCharmReplacement, charmComparisonCandidates } from './charm-comparison.ts';
 import { ITEM_LOCK_ICON } from './item-protection.ts';
 import type { DropItemSource } from './drop-item-command.ts';
@@ -14,7 +15,7 @@ import { goldBalance } from './wallet.ts';
 import { equippedGearPower } from './leaderboard.ts';
 import { formatGold } from './currency-format.ts';
 import type { Player } from './model.ts';
-import type { EquipmentSlot, Item, ItemTier, SkillId } from './character-types.ts';
+import type { Attribute, EquipmentSlot, Item, ItemTier, SkillId } from './character-types.ts';
 import { matchesInventoryFilter, planBestEquipment, type EquipBestChoice, type InventorySort, type InventoryFilter } from './inventory-tools.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
@@ -33,6 +34,7 @@ export interface InventoryPanelActions {
   hudOptions?(): HUDOptions;
   editAppearance?():void;
   openCharacter?(): void;
+  allocate?(attribute: Attribute, amount: number): void;
   equip(index: number, slot?: EquipmentSlot): void;
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
@@ -62,6 +64,8 @@ export class InventoryPanel {
   private readonly lifetime = new AbortController();
   private readonly actions: InventoryPanelActions;
   private readonly hud: InventoryHUD | null;
+  private readonly stats: InventoryStats;
+  private statsVisible = false;
   private focus: ReturnType<typeof trapDialogFocus> | null = null;
   private popupFocus: ReturnType<typeof trapDialogFocus> | null = null;
   private popup: 'sort' | 'weapon' | 'charms' | null = null;
@@ -96,12 +100,12 @@ export class InventoryPanel {
     this.element = document.createElement('div');
     this.element.className = 'character-overlay';
     this.element.hidden = true;
-    this.element.innerHTML = `<section class="ui-window character-window" role="dialog" aria-modal="true" aria-labelledby="character-title">
+    this.element.innerHTML = `<section class="ui-window character-window inventory-window" role="dialog" aria-modal="true" aria-labelledby="character-title">
       <header class="ui-window-header character-header">
         <div class="character-heading"><span class="character-sigil ui-header-emblem" aria-hidden="true">${uiIcon('shield')}</span><h2 class="ui-title" id="character-title">Equipment &amp; inventory</h2></div>
         <div class="character-header-right">${actions.editAppearance?`<button type="button" class="ui-button ui-button--quiet ui-button--icon" data-edit-appearance aria-label="Edit appearance" data-tooltip="Edit appearance" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('palette')}</button>`:''}<button type="button" class="ui-button ui-button--icon" data-close aria-label="Close inventory">${uiIcon('close')}</button></div>
       </header>
-      <nav class="character-controller-nav" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Equipment</span><span data-pad-section="1">Inventory</span><kbd>RB</kbd><small>A Select · B Back</small></nav>
+      <nav class="character-controller-nav" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="2" hidden>Stats</span><span data-pad-section="0">Equipment</span><span data-pad-section="1">Inventory</span><kbd>RB</kbd><small>A Select · B Back</small></nav>
       <div class="character-columns ui-scroll-area">
         <section class="character-equipment" id="character-section-0" data-section="0" aria-label="Character and equipment">
           <div class="character-doll-stage"><div class="character-orbit" aria-hidden="true"></div><canvas class="character-doll" width="560" height="720" aria-label="Your character wearing the current equipment"></canvas>
@@ -163,6 +167,14 @@ export class InventoryPanel {
     </section>`;
     this.element.style.setProperty('--pack-columns', String(PACK_COLUMNS));
     this.window = this.element.querySelector('.character-window')!;
+    this.stats = new InventoryStats(this.window.querySelector('.character-columns')!, this.window, actions.allocate, () => this.hideTooltip());
+    const statsToggle = document.createElement('button');
+    statsToggle.type = 'button'; statsToggle.className = 'ui-button ui-button--quiet';
+    statsToggle.dataset.toggleStats = ''; statsToggle.setAttribute('aria-expanded', 'false');
+    statsToggle.setAttribute('aria-controls', 'inventory-stats');
+    statsToggle.innerHTML = `${uiIcon('character')}<span>Stats</span>`;
+    this.window.querySelector('.character-header-right')!.prepend(statsToggle);
+    statsToggle.addEventListener('click', () => this.toggleStats(), { signal: this.lifetime.signal });
     this.element.querySelector('[data-open-character]')?.addEventListener('click', () => actions.openCharacter?.(), { signal: this.lifetime.signal });
     this.popupLayer = this.element.querySelector('[data-popup-layer]')!;
     this.window.dataset.touchTab = 'bag';
@@ -214,6 +226,19 @@ export class InventoryPanel {
     this.updateSectionHighlight();
     for(const button of this.window.querySelectorAll<HTMLElement>('[data-touch-tab]'))
       button.setAttribute('aria-pressed',String(button.dataset.touchTab===tab));
+  }
+
+  private toggleStats(): void {
+    this.statsVisible = !this.statsVisible;
+    this.hideTooltip(); this.controller.clear();
+    this.window.classList.toggle('has-stats', this.statsVisible);
+    const toggle = this.window.querySelector<HTMLButtonElement>('[data-toggle-stats]')!;
+    toggle.setAttribute('aria-expanded', String(this.statsVisible));
+    this.element.querySelector<HTMLElement>('[data-pad-section="2"]')!.hidden = !this.statsVisible;
+    this.stats.setVisible(this.statsVisible);
+    if (this.statsVisible && this.element.classList.contains('is-controller')) this.selectSection(2);
+    else if (!this.statsVisible && this.section === 2) { this.section = 1; toggle.focus({ preventScroll: true }); }
+    this.updateSectionHighlight(); this.updateScrollFades();
   }
 
   refresh(player: Player): void {
@@ -283,6 +308,7 @@ export class InventoryPanel {
     this.text('[data-gear-power]', number(equippedGearPower(sheet)));
     this.text('[data-gold]', `${formatGold(goldBalance(sheet))} Gold`);
     this.text('[data-weapon-name]', sheet.equipped.weapon?.name ?? 'Unarmed');
+    this.stats.refresh(player);
     this.hud?.refresh(player);
     if (this.drag) this.highlightEquipmentTargets();
     if (this.hovered) this.showTooltip(this.hovered);
@@ -312,7 +338,7 @@ export class InventoryPanel {
     this.animation = 0;
   }
 
-  dispose(): void { this.close(); this.hud?.dispose(); this.tooltip.dispose(); this.inlineExplanations.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
+  dispose(): void { this.close(); this.hud?.dispose(); this.stats.dispose(); this.tooltip.dispose(); this.inlineExplanations.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
 
   private renderCharmComparison(): void {
     if(!this.player)return;
@@ -389,7 +415,10 @@ export class InventoryPanel {
     if (this.popup) { this.controller.update(this.popupPanel(), pad, now); return; }
     this.controller.update(this.window, pad, now, {
       includeControl: target => this.inNavigationSection(target),
-      switchTab: delta => this.selectSection((this.section + delta + 2) % 2),
+      switchTab: delta => {
+        const sections = this.statsVisible ? [2, 0, 1] : [0, 1];
+        this.selectSection(sections[(sections.indexOf(this.section) + delta + sections.length) % sections.length]);
+      },
       activate: target => {
         const location = this.locationFrom(target);
         if (!location) return false;
@@ -406,7 +435,7 @@ export class InventoryPanel {
     const previous = this.sectionFocus.get(index);
     const target = previous && !previous.closest('[hidden], [inert]') && !previous.matches(':disabled') ? previous
       : root.querySelector<HTMLElement>('[data-bag]:not([hidden]), [data-equipment="weapon"]')
-        ?? root.querySelector<HTMLElement>('button:not(:disabled)');
+        ?? root.querySelector<HTMLElement>('button:not(:disabled), [tabindex="0"]');
     target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     this.updateSectionHighlight();
   }
@@ -746,11 +775,12 @@ export class InventoryPanel {
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
     if (!item || !cell || cell.hidden || !this.player) { this.hideTooltip(); return; }
     this.hovered = location;
+    this.stats.hideTooltip();
     this.tooltip.show(item, { sheet: this.player.character, level: this.player.level,
       equipped: location.type === 'equipment', sourceIndex: location.type === 'bag' ? location.index : undefined }, cell);
   }
 
-  private hideTooltip(): void { this.inlineExplanations.hide(); this.hovered = null; this.tooltip.hide(); }
+  private hideTooltip(): void { this.stats.hideTooltip(); this.inlineExplanations.hide(); this.hovered = null; this.tooltip.hide(); }
 
   private animate = (): void => {
     if (this.element.hidden || !this.player) return;

@@ -73,6 +73,8 @@ Open the local [interface review](http://127.0.0.1:5173/ui.html) to compare real
 
 ## Character panels and extension
 
+Inventory has a compact portrait column and an optional **Stats** header toggle. Expanded desktop layouts put the condensed attribute/substat card to the left of equipment and pack, inside the same frame. Attributes stay above independently scrolling derived stats; hover/focus uses the shared Character explanations. Both views consume `characterStatDetails`, and allocation uses character commands. The card starts hidden and retains its toggle only for the current game session. Narrow portrait layouts stack it above gear/pack; phone landscape keeps it beside the selected Bag/Equipment tab, and controller shoulders include Stats only when expanded. The separate Character window stays available.
+
 The Character body fades its bottom 32px while more content remains below. The fade clears at the end or when content fits. Scroll and resize/content measurements update the cue; it never covers pointer input or floating tooltips. Forced-color mode retains an unmasked surface.
 
 The inventory filter uses the shared silver-and-glass window material, compact icon tiles for item types and runtime rarity-colored gems. Pressed borders and checkmarks identify selected choices without relying on color. The groups scroll within the compact dialog on short screens; Clear filters and Done remain in its footer. Every choice retains a 44px minimum target.

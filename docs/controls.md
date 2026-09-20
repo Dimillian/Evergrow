@@ -24,7 +24,7 @@ Two compact icons beside the minimap open Character and Skill atlas directly. Av
 | E / click a nearby NPC, town anchor or event object | Open services, use anchors or interact with a POI |
 | P / minimap Home icon | Cast town portal outside sanctuary; the Home icon stays visible whenever outside sanctuary, including while moving. Casting still requires standing still. P also locates your return portal while in sanctuary |
 | C | Character info, attributes and combat stats |
-| I | Equipment, inventory, charms and assigned skills |
+| I | Equipment, inventory, charms and assigned skills; Stats toggles live attributes and substats alongside gear |
 | T | Skill tree and active skill assignments |
 | J / mini log below minimap | Open Area journal; Accept/Dismiss manages the quest list, Pin/Unpin only sets navigation |
 | Space | Dodge, using one of two regenerating charges |

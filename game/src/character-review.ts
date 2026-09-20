@@ -149,6 +149,7 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   hudOptions: () => ({ reducedMotion: true }),
   openSkills: skill => { show('skills'); tree.inspectNode(skill ? `skill:${skill}` : 'origin', true); tree.setDetailsVisible(true); },
   openCharacter: () => show('character'),
+  allocate: (attribute, amount) => result(executeCharacterCommand(p, { type: 'allocateAttribute', attribute, amount })),
 }));
 const character = life.own(new CharacterPanel(shell.panelMount, { close: () => show('hud'), openInventory: () => show('inventory'), openSkills: () => show('skills'), allocate: (attribute, amount) => result(allocateAttribute(p.character, attribute, amount)) }));
 const tree = life.own(new SkillTreePanel(shell.panelMount, {

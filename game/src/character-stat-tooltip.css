@@ -1,0 +1,24 @@
+.ui-tooltip.character-stat-tooltip { position:fixed; z-index:90; width:360px; max-width:calc(100vw - 24px); max-height:calc(100vh - 24px); box-sizing:border-box; overflow:auto; pointer-events:auto; border-radius:0; padding:16px; white-space:normal; font-size:14px; line-height:1.45; }
+.character-stat-tooltip header { display:flex; align-items:baseline; justify-content:space-between; gap:18px; color:#e5ddbc; }
+.character-stat-tooltip header b { flex:none; color:#cde1de; font-size:20px; }
+.character-stat-tooltip p { margin:12px 0; color:#c1d0d0; }
+.character-stat-tooltip .stat-calculation { margin-top:14px; padding-top:12px; border-top:1px solid #aecad526; color:#a1b7bf; font-size:12px; line-height:1.6; }
+.character-stat-tooltip .stat-calculation span { display:block; }
+.character-stat-tooltip .stat-calculation span + span { margin-top:4px; color:#a1b7bf; font-size:12px; }
+.character-stat-tooltip .stat-source-group { --source-accent:#cfc29e; margin-top:14px; padding-top:12px; border-top:1px solid #aecad526; }
+.character-stat-tooltip .stat-source-group--equipment { --source-accent:#b4cbdc; }
+.character-stat-tooltip .stat-source-group--charms { --source-accent:#a4cbbb; }
+.character-stat-tooltip .stat-source-group--skills { --source-accent:#c5b4e3; }
+.character-stat-tooltip .stat-source-group--effects { --source-accent:#e1bd8f; }
+.character-stat-tooltip .stat-source-group h4 { display:flex; align-items:center; gap:8px; margin:0 0 6px; color:var(--source-accent); font-size:13px; font-weight:400; }
+.character-stat-tooltip .stat-source-group h4 .ui-icon { width:18px; height:18px; }
+.character-stat-tooltip .stat-source-total { margin-left:auto; max-width:55%; min-width:0; color:#e0e8e6; text-align:right; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.character-stat-tooltip dl { margin:0; font-size:13px; }
+.character-stat-tooltip dl div { display:grid; grid-template-columns:minmax(0,1fr) fit-content(45%); align-items:baseline; gap:12px; padding:5px 0 5px 26px; }
+.character-stat-tooltip dt { display:flex; align-items:flex-start; gap:7px; min-width:0; color:#bcc7c4; overflow-wrap:anywhere; }
+.character-stat-tooltip dt > span:last-child { min-width:0; }
+.character-stat-tooltip .stat-source-slot { display:inline-flex; flex:0 0 22px; width:22px; height:22px; line-height:0; color:var(--source-accent); }
+.character-stat-tooltip .stat-source-slot svg { display:block; flex:none; width:22px; height:22px; max-width:22px; max-height:22px; stroke-width:2; }
+.character-stat-tooltip dd { min-width:0; margin:0; color:#e0e8e6; text-align:right; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.character-stat-tooltip .stat-detail-link { margin-bottom:0; }
+.character-stat-tooltip small { display:block; margin-top:10px; color:#879b9f; }

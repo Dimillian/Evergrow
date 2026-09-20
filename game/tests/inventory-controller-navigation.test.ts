@@ -62,16 +62,16 @@ after(() => { for (const [key, descriptor] of previous) {
   if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key);
 } });
 
-function setup(section: number) {
+function setup(section: number, statsVisible = false) {
   const root = new Surface(); root.classes.add('is-controller');
   const header = root.append(new Surface()); header.classes.add('character-header-right');
   const palette = header.append(new Surface(true, 1000, 0)), close = header.append(new Surface(true, 1060, 0));
-  const sections = [0, 1].map(index => {
+  const sections = (statsVisible ? [0, 1, 2] : [0, 1]).map(index => {
     const owner = root.append(new Surface()); owner.dataset.section = String(index);
     return owner.append(new Surface(true, 100 + index * 300, 100));
   });
   const panel = Object.assign(Object.create(InventoryPanel.prototype), {
-    element: root, window: root, hud: null, popup: null, section, controller: new GamepadMenu(), sectionFocus: new Map(),
+    element: root, window: root, hud: null, popup: null, section, statsVisible, controller: new GamepadMenu(), sectionFocus: new Map(),
   }) as { updateGamepad: InstanceType<typeof InventoryPanel>['updateGamepad']; navigate(key: string, target: HTMLElement): boolean };
   for (const button of [palette, close, ...sections]) button.addEventListener('keydown', raw => {
     if (panel.navigate((raw as Key).key, button as unknown as HTMLElement)) raw.preventDefault();
@@ -112,4 +112,11 @@ test('shoulders switch sections from the header while popup navigation remains i
   filter.focus();
   assert.equal(s.panel.navigate('ArrowUp', filter as unknown as HTMLElement), true);
   assert.equal(doc.activeElement, filter, 'popup directions cannot reach the header');
+});
+
+test('expanded stats participate in shoulder navigation beside equipment and inventory', () => {
+  const s = setup(1, true);
+  s.update([PAD.skill2]); assert.equal(doc.activeElement, s.sections[2]);
+  s.update([]); s.update([PAD.skill2]); assert.equal(doc.activeElement, s.sections[0]);
+  s.update([]); s.update([PAD.potion]); assert.equal(doc.activeElement, s.sections[2]);
 });

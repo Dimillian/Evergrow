@@ -238,6 +238,7 @@ export class Game {
         openSkills: skill => { this.openCharacterPanel('skills'); this.skillPanel.inspectNode(skill ? `skill:${skill}` : 'origin', true); this.skillPanel.setDetailsVisible(true); },
         editAppearance:()=>this.editAppearance(),
         openCharacter: () => this.openCharacterPanel('character'),
+        allocate: (attribute, amount) => this.characterAction({ type: 'allocateAttribute', attribute, amount }),
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),

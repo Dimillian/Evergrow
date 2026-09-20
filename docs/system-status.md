@@ -1,5 +1,7 @@
 # Current system status
 
+Local September 20 inventory stats: the default-hidden Stats toggle reveals a compact left column with four attributes, point allocation and live substats alongside a narrower equipped portrait and pack. Gear changes refresh the same stat projection as Character; phone portrait stacks the card, landscape keeps it beside the bag, and controller shoulders include it when expanded. No save changes.
+
 Local September 19 character-window split: C opens identity, progression, attributes and Offense / Defense / Resources tabs; I opens equipment, pack, charms and quick skill assignment. Windows switch through shortcuts or footer links while paused. Headers have no shortcut letters beside Close. Town portal stays on P; unsupported combined-action custom key maps fall back to the new defaults. No character-save or progress reset.
 
 Local September 19 Area journal: explicit unlimited Accept/Accept all, reversible Dismiss to Nearby, independent pins, retained known/completed activities and area browsing. Show on Map returns to selected quest details on close. Existing saves keep progress; old suppression IDs are ignored and previously trimmed completion details recover when encountered. See [Journeys](journeys.md).

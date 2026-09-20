@@ -42,7 +42,7 @@ exploration.reveal(player.x,player.y,1600);
 let panel = new URLSearchParams(location.search).get('panel') || 'world';
 const noop = () => {};
 const close = () => { panel='world'; inventory.close(); character.close(); skills.close(); map.close(); shell.classList.add('playing'); };
-const inventory = life.own(new InventoryPanel(mount,{close,openCharacter:()=>{inventory.close();panel='character';character.open(player,'Aeryn');},equip:noop,unequip:noop,move:noop,equipBest:noop,sort:noop}));
+const inventory = life.own(new InventoryPanel(mount,{close,allocate:noop,openCharacter:()=>{inventory.close();panel='character';character.open(player,'Aeryn');},equip:noop,unequip:noop,move:noop,equipBest:noop,sort:noop}));
 const character = life.own(new CharacterPanel(mount,{close,allocate:noop,openInventory:()=>{character.close();panel='inventory';inventory.open(player);},openSkills:()=>{character.close();panel='skills';skills.open(player);}}));
 const skills = life.own(new SkillTreePanel(mount,{close,develop:noop,assign:noop,allocate:noop}));
 const map = life.own(new WorldMap(world,exploration,mount,close));
