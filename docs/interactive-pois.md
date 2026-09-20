@@ -6,6 +6,10 @@ Local addition: [wilderness boss lairs](wilderness-bosses.md) add three bosses, 
 
 Updated 2026-09-07. This local pass adds recipe-driven encounters, six new landmarks and timed cursed chests. All tuning remains subject to player testing. [World placement](wilderness-and-encounters.md) and [dungeons](dungeons.md) share the same geographic levels and reward owners.
 
+## Interaction panel
+
+The selected action-row panel explains each objective and reward before activation. The place name groups with the level badge, event type and timing; choices have consistent icons, and the close control matches Inventory. Cargo and blessings keep their multiple, directly activated options. Bottom footnotes have been removed for every type. Descriptions use shared recipe timing, blessing effects and reward quantities; no reward or save rules change. `/events.html?choices` previews the same runtime markup and styling.
+
 ## Activities
 
 | Place | Encounter | Reward beyond enemy drops |

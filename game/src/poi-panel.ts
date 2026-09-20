@@ -1,9 +1,7 @@
-import { dungeonTheme } from './dungeon-content.ts';
-import { encounterRewardLevel } from './encounter-scaling.ts';
-import { eventRecipe } from './event-recipes.ts';
 import type { DungeonEntrance } from './dungeon.ts';
-import { BLESSINGS, blessingChoices, type EventSite, type EventChoice } from './poi-content.ts';
-import { escapeUI, trapDialogFocus } from './ui-components.ts';
+import type { EventSite, EventChoice } from './poi-content.ts';
+import { trapDialogFocus } from './ui-components.ts';
+import { dungeonChoicePresentation, eventChoiceMarkup, eventChoicePresentation } from './event-choice-presentation.ts';
 import './poi-panel.css';
 export class EventPanel {
   readonly element: HTMLElement;
@@ -34,21 +32,20 @@ export class EventPanel {
         return;
       if (button.dataset.close !== undefined)
         this.hooks.close();
-      else if(this.entrance) this.hooks.enter?.(this.entrance);
-      else if (this.site)
+      else if(this.entrance && button.hasAttribute('data-enter')) this.hooks.enter?.(this.entrance);
+      else if (this.site && button.hasAttribute('data-choice'))
         this.hooks.choose(this.site, (button.dataset.choice || null) as EventChoice | null);
     }, { signal: this.lifetime.signal });
   }
   openDungeon(entrance:DungeonEntrance) {
-    this.entrance=entrance;this.element.innerHTML=`<section class="ui-window event-window" role="dialog" aria-modal="true" aria-label="Dungeon entrance"><header class="ui-window-header"><h2 class="ui-title">${escapeUI(entrance.name)}</h2><span class="ui-muted">Level ${entrance.level}</span><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><div class="ui-window-body event-choices"><p>${escapeUI(dungeonTheme(entrance.seed,entrance.theme).bossName??'Hollow Warden')} · Lv ${entrance.scaling ? encounterRewardLevel(entrance.scaling,3) : entrance.level}</p><button class="ui-button" data-enter>Enter dungeon</button></div></section>`;
+    this.close();
+    this.entrance=entrance;this.element.innerHTML=eventChoiceMarkup(dungeonChoicePresentation(entrance), true);
     this.element.hidden=false;this.focus=trapDialogFocus(this.element,{signal:this.lifetime.signal});
   }
   open(site: EventSite) {
+    this.close();
     this.site = site;
-    const choices = site.kind === 'caravan' ? [{ id: 'goods', name: 'Recover goods', description: 'Two equipment items' }, { id: 'coin', name: 'Take coin', description: 'A larger gold cache' }]
-      : site.kind === 'standingStones' ? blessingChoices(site).map(id => ({ id, ...BLESSINGS[id] }))
-        : [{ id: '', name: eventRecipe(site)?.action ?? 'Open', description: eventRecipe(site)?.objective ?? 'Claim the reward' }];
-    this.element.innerHTML = `<section class="ui-window event-window" role="dialog" aria-modal="true" aria-labelledby="event-title"><header class="ui-window-header"><h2 class="ui-title" id="event-title">${escapeUI(site.name)}</h2><span class="ui-muted">Level ${site.level}</span><button class="ui-button ui-button--icon" data-close aria-label="Close">×</button></header><div class="ui-window-body event-choices">${choices.map(c => `<button class="ui-button event-choice" data-choice="${c.id}"><strong>${c.name}</strong><span>${c.description}</span></button>`).join('')}</div></section>`;
+    this.element.innerHTML = eventChoiceMarkup(eventChoicePresentation(site));
     this.element.hidden = false;
     this.focus = trapDialogFocus(this.element, { signal: this.lifetime.signal });
   }

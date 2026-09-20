@@ -6,11 +6,15 @@ import { ENEMY_LOOT_TABLES, BOSS_CHEST_LOOT_TABLES } from './loot-content.ts';
 import { siteHash } from './wilderness-sites.ts';
 import type { EventRecord } from './poi-content.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
+/** Quantity alone, shared with event descriptions without generating equipment. */
+export function eventRewardItemCount(site: Pick<EventRecord, 'kind' | 'seed' | 'wavesCleared' | 'choice'>): number {
+  return site.kind==='bossLair'?3:site.kind === 'cursedChest' ? Math.min(10, Math.floor(site.wavesCleared / 2) + Number(site.wavesCleared>0)) : isTrialKind(site.kind)&&!['graveyard','standingStones'].includes(site.kind) ? 2 : site.kind === 'camp' || site.kind === 'graveyard' ? 1 : site.kind === 'caravan' && site.choice === 'goods' ? 2
+    : site.kind === 'reliquary' && siteHash(site.seed, 1, 0x37518) / 4294967296 < .25 ? 1 : 0;
+}
 /** Independent per-component seeds make partial delivery and reload deterministic. */
 export function eventRewards(site: EventRecord, playerLevel=site.level) {
   const random = (salt: number) => siteHash(site.seed, salt, 0x37518) / 4294967296;
-  const count = site.kind==='bossLair'?3:site.kind === 'cursedChest' ? Math.min(10, Math.floor(site.wavesCleared / 2) + Number(site.wavesCleared>0)) : isTrialKind(site.kind)&&!['graveyard','standingStones'].includes(site.kind) ? 2 : site.kind === 'camp' || site.kind === 'graveyard' ? 1 : site.kind === 'caravan' && site.choice === 'goods' ? 2
-    : site.kind === 'reliquary' && random(1) < .25 ? 1 : 0;
+  const count = eventRewardItemCount(site);
   const veteran = site.kind==='bossLair'||isTrialKind(site.kind), weights = ENEMY_LOOT_TABLES[veteran ? 'veteran' : 'normal'].tierWeights;
   const items = Array.from({ length: count }, (_, i) => {
     const table=difficultyLootWeights(site.kind==='bossLair'?BOSS_CHEST_LOOT_TABLES.raid[i]:weights,site.difficulty);
