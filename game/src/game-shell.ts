@@ -86,7 +86,7 @@ export class GameShell {
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
         <button type="button" class="hud-control hud-progression hud-progression--character" data-hud="character" aria-label="Character" aria-haspopup="dialog" data-tooltip-placement="left">${uiIcon('character')}<span class="hud-progression-count" aria-hidden="true" hidden></span></button>
         <button type="button" class="hud-control hud-progression hud-progression--skills" data-hud="skills" aria-label="Skill atlas" aria-haspopup="dialog" data-tooltip-placement="left">${uiIcon('skilltree')}<span class="hud-progression-count" aria-hidden="true" hidden></span></button>
-        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="R" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">R</kbd><i class="portal-progress" aria-hidden="true"></i></button>
+        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>

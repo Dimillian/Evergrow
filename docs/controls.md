@@ -6,7 +6,7 @@ Changes apply immediately and save automatically on this device, across characte
 
 Bindings use physical keyboard positions. Escape remains pause/back and cancels binding capture. Holding Shift reveals loot names by default, and that action can be rebound like other keyboard and mouse controls. OS/browser modifier shortcuts, reload, fullscreen and developer-tools keys are reserved. Tab and ordinary menu navigation keys retain their native behavior in paused panels. On the Tab exploration overlay, gameplay controls remain active; release Tab to close. M opens the full paused map with normal keyboard map navigation. Mouse wheel zoom and left-click interaction with nearby objects remain available. The Controller tab documents the fixed gamepad layout; touch and controller input are independent of keyboard/mouse remapping.
 
-The September 19 split adds independent Character (P) and Inventory (I) actions and moves town portal to R. The preceding combined-action key map is no longer supported and falls back to the new defaults; custom bindings can be set again in Controls. Character progress and skill assignments are unchanged. Press the other window’s binding or its footer link to switch without resuming; its own binding or Escape closes it, returning to Pause if opened there.
+The September 19 split adds independent Character (C) and Inventory (I) actions and keeps town portal on P. The preceding combined-action key map is no longer supported and falls back to the new defaults; custom bindings can be set again in Controls. Character progress and skill assignments are unchanged. Press the other window’s binding or its footer link to switch without resuming; its own binding or Escape closes it, returning to Pause if opened there.
 
 Two compact icons beside the minimap open Character and Skill atlas directly. Available attribute points glow gold; available skill points glow violet. Each shows a small count, stops animating when spent, and uses a static highlight with reduced motion. The existing drawer and touch menu remain available.
 
@@ -22,8 +22,8 @@ Two compact icons beside the minimap open Character and Skill atlas directly. Av
 | Hold left mouse | Repeat the basic weapon attack |
 | Right mouse / 1–4 | Use assigned skills; empty slots do nothing |
 | E / click a nearby NPC, town anchor or event object | Open services, use anchors or interact with a POI |
-| R / portal control below minimap | Cast town portal outside sanctuary; locate your return portal while in sanctuary |
-| P | Character info, attributes and combat stats |
+| P / portal control below minimap | Cast town portal outside sanctuary; locate your return portal while in sanctuary |
+| C | Character info, attributes and combat stats |
 | I | Equipment, inventory, charms and assigned skills |
 | T | Skill tree and active skill assignments |
 | J / mini log below minimap | Open or close Journeys; Track explicitly pins an activity |
@@ -36,7 +36,7 @@ Two compact icons beside the minimap open Character and Skill atlas directly. Av
 | N | Toggle synthesized sound |
 | F3 | Compact performance monitor with selectable live graphs |
 
-A town portal channels for three seconds. Movement, damage, attacking, skills, dodge, Escape, R again or leaving the gameplay input context cancels it. It costs nothing and refills nothing. E/click the town endpoint returns once to your departure point.
+A town portal channels for three seconds. Movement, damage, attacking, skills, dodge, Escape, P again or leaving the gameplay input context cancels it. It costs nothing and refills nothing. E/click the town endpoint returns once to your departure point.
 
 Unlock skills in the tree, then assign them to the five skill slots (RMB or 1–4 by default). Empty slots do nothing. Character, inventory, skill tree, Journeys, the full M map and town-service panels pause combat. Only the held Tab exploration map keeps the world and enemies running. It stays centered on the player and has no frame, shadow or toolbar. Mouse input passes through to normal gameplay: left-click attacks or interacts, right-click uses the assigned skill, and wheel input zooms the player-centered map while Tab is held. Keyboard movement, skills, dodge and potions remain active. Opening another panel closes the glance and pauses gameplay. Travel closes the glance. Losing window focus closes it and pauses the game.
 
