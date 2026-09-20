@@ -16,7 +16,7 @@ Devices whose primary pointer is coarse show touch controls automatically. A rea
 | Dodge | Tap to dodge along movement or current facing; shows charges |
 | Interact | Use the existing nearby interaction resolver; a tap on a nearby world object also works |
 | Portal | Start the town channel, tap again to cancel; in sanctuary locate the return portal |
-| Character / skills / journeys / map / pause | Dedicated touch menu buttons |
+| Character / inventory / skills / journeys / map / pause | Dedicated touch menu buttons |
 | Camera | Pinch with two free fingers on the world, or use zoom buttons in Pause |
 | Sound | Touch-only sound control in Pause, using the same N-key preference |
 

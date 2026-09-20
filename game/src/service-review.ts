@@ -44,7 +44,7 @@ if (role === 'stash') {
     (['weapon','chest','ring','charm'] as const)[i%4],i%4===3?'jade-monolith':undefined,'rare');
 }
 refreshCharacter(p);
-const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {} }));
+const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openInventory() {}, openSkills() {} }));
 const audio=life.own(new GameAudio());
 const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), sort: (target,tab) => { executeCharacterCommand(p, target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}); }, trade: async quote => {
   if(params.has('sound'))await audio.unlock();

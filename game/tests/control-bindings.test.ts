@@ -169,3 +169,16 @@ test('quick-map input distinguishes combat slots from the skill-atlas menu short
   for (const code of ['KeyT', 'KeyC', 'KeyJ', 'KeyM', 'KeyE', 'KeyP'])
     assert.equal(isGameplayAction(bindings.action(code)), false, code);
 });
+
+test('Character, Inventory and portal have separate defaults with no physical key conflicts', () => {
+  const bindings = new ControlBindings();
+  assert.equal(bindings.action('KeyP'), 'character');
+  assert.equal(bindings.action('KeyI'), 'inventory');
+  assert.equal(bindings.action('KeyR'), 'portal');
+  assert.equal(bindings.action('KeyC'), undefined);
+  const keys = CONTROL_ACTIONS.flatMap(action => bindings.get(action.id).filter(Boolean));
+  assert.equal(new Set(keys).size, keys.length);
+  bindings.bind('inventory', 0, 'KeyB');
+  assert.equal(bindings.action('KeyP'), 'character'); assert.equal(bindings.action('KeyR'), 'portal');
+  assert.equal(bindings.action('KeyB'), 'inventory');
+});

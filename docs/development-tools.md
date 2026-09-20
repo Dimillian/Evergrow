@@ -72,6 +72,8 @@ The World workspace’s Dungeon tool (`/dungeon.html?view=gallery&seed=7319`) co
 
 The town service study accepts `tier=village` or `tier=city` to select a real generated town of that tier. It supports all service roles and uses disposable memory.
 
+Characters → Character stats (`/character.html?panel=character`) uses the separate runtime Character window with disposable progression and complete stat tabs. `/character.html` defaults to Inventory, with footer links between both views.
+
 The local `/character.html` review now includes the 12×6 spatial pack, upright item art, inline sorting, drag footprint previews and four dedicated charm rows. It uses the runtime inventory and disposable gear; no playable saves are accessed.
 
 ### Charm review

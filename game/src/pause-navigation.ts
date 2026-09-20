@@ -2,12 +2,13 @@ import type { ControlAction } from './control-bindings.ts';
 import type { UIIconName } from './ui-icons.ts';
 
 export type PauseCategory = 'character' | 'adventure' | 'system';
-export type PauseDestination = 'character' | 'skills' | 'appearance' | 'map' | 'journeys'
+export type PauseDestination = 'character' | 'inventory' | 'skills' | 'appearance' | 'map' | 'journeys'
   | 'chronicle' | 'options' | 'controls' | 'leaderboard' | 'changelog';
 export interface PauseEntry { id: PauseDestination; label: string; description: string; icon: UIIconName; binding?: ControlAction; }
 export const PAUSE_CATEGORIES: readonly { id: PauseCategory; label: string; icon: UIIconName; entries: readonly PauseEntry[] }[] = [
   { id: 'character', label: 'Character', icon: 'sword', entries: [
-    { id: 'character', label: 'Equipment & pack', description: 'Equipment, inventory, attributes and assigned skills', icon: 'inventory', binding: 'character' },
+    { id: 'character', label: 'Character', description: 'Attributes, progression and combat stats', icon: 'character', binding: 'character' },
+    { id: 'inventory', label: 'Equipment & inventory', description: 'Equipped gear, pack, charms and assigned skills', icon: 'inventory', binding: 'inventory' },
     { id: 'skills', label: 'Skill atlas', description: 'Passives, skills and Techniques', icon: 'skilltree', binding: 'skills' },
     { id: 'appearance', label: 'Appearance', description: 'Your character’s look', icon: 'character' },
     { id: 'chronicle', label: 'Chronicle', description: 'Achievements, statistics and Unique collection', icon: 'journal' },

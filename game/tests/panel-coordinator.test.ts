@@ -7,7 +7,7 @@ function setup() {
   const log: string[] = [], active = new Set<string>(), input = new GameInput();
   const sim = new Simulation({ blocked: () => false, move: (x, y, dx, dy) => ({ x: x + dx, y: y + dy }) }, { spawn: false });
   const panel = (name: string) => ({ open: () => { assert.equal(active.size, 0); active.add(name); log.push(`open:${name}`); }, close: () => { active.delete(name); log.push(`close:${name}`); } });
-  const coordinator = new PanelCoordinator({chronicle:panel('chronicle'), journeys: panel('journeys'), event: panel('event'), service: panel('service'), map: panel('map'), character: panel('character'), skills: panel('skills') }, {
+  const coordinator = new PanelCoordinator({chronicle:panel('chronicle'), journeys: panel('journeys'), event: panel('event'), service: panel('service'), map: panel('map'), character: panel('character'), inventory: panel('inventory'), skills: panel('skills') }, {
     clearInput: preserve => { input.clear(preserve); sim.clearInput(preserve); log.push('clear'); },
     changed: phase => log.push(`phase:${phase}`), resumeGameplay: () => { assert.equal(active.size, 0); log.push('focus:game'); }, save: () => log.push('save'),
   });
@@ -21,7 +21,7 @@ test('switching panels closes the old focus owner before opening the next, savin
   assert.deepEqual(log, ['clear', 'close:skills', 'phase:playing', 'focus:game']);
 });
 test('pausing panels clear held movement/actions and simulation velocity on entry and resume', () => {
-  for (const name of ['map', 'character', 'skills', 'service', 'event','chronicle'] as PanelPhase[]) {
+  for (const name of ['map', 'character', 'inventory', 'skills', 'service', 'event','chronicle'] as PanelPhase[]) {
     const { coordinator: c, input, sim } = setup(); c.transition('playing');
     input.keyDown('KeyW'); input.keyDown('Space'); input.pointerDown(0); sim.player.vy = -100;
     assert.ok(c.open(name)); assert.equal(sim.player.vy, 0);
@@ -68,7 +68,7 @@ test('map mode is established before opening the view and only hold mode advance
   const modes: boolean[] = [], movement: boolean[] = [];
   const panel = { open() {}, close() {} };
   const c = new PanelCoordinator({ map: { open() { modes.push(c.mapHeld); }, close() {} },
-    character: panel, skills: panel, journeys: panel, event: panel, service: panel, chronicle: panel }, {
+    character: panel, inventory: panel, skills: panel, journeys: panel, event: panel, service: panel, chronicle: panel }, {
     clearInput: preserve => movement.push(!!preserve), changed() {}, resumeGameplay() {}, save() {},
   });
   c.transition('playing'); assert.equal(c.simulationActive, true);
@@ -81,7 +81,7 @@ test('map mode is established before opening the view and only hold mode advance
   assert.deepEqual(movement, [false, true, false, false, false]);
 });
 test('title and defeat close every active panel without returning focus to gameplay', () => {
-  for (const next of ['ready', 'dead'] as const) for (const name of ['map', 'character', 'skills', 'service', 'event','chronicle'] as PanelPhase[]) {
+  for (const next of ['ready', 'dead'] as const) for (const name of ['map', 'character', 'inventory', 'skills', 'service', 'event','chronicle'] as PanelPhase[]) {
     const { coordinator: c, log, active } = setup(); c.transition('playing'); c.open(name); log.length = 0;
     c.transition(next, true); assert.equal(active.size, 0); assert.equal(c.activePanel, null);
     assert.deepEqual(log, ['clear', `close:${name}`, `phase:${next}`, 'save']);
@@ -102,7 +102,7 @@ test('Chronicle returns to pause when opened from pause, and cannot open at the 
 test("Chronicle returns to character inventory without resuming simulation",()=>{const {coordinator:c,active}=setup();c.transition("playing");c.open("character");c.open("chronicle");assert.deepEqual([...active],["chronicle"]);c.resume();assert.equal(c.phase,"character");assert.deepEqual([...active],["character"]);});
 
 test('every Esc destination opens while paused and closing it keeps gameplay paused', () => {
-  for (const panel of ['character', 'skills', 'map', 'journeys', 'chronicle'] as const) {
+  for (const panel of ['character', 'inventory', 'skills', 'map', 'journeys', 'chronicle'] as const) {
     const { coordinator: c, log, active, input, sim } = setup();
     c.transition('playing'); c.pause(); log.length = 0;
     input.keyDown('KeyW'); input.pointerDown(0); sim.player.vx = 70;
@@ -139,7 +139,7 @@ test('title and defeat discard a previous Esc return destination', () => {
 
 
 test('quick map yields to gameplay panels and releasing Tab cannot dismiss their focus owner', () => {
-  for (const panel of ['character', 'skills', 'journeys', 'event', 'service', 'chronicle'] as const) {
+  for (const panel of ['character', 'inventory', 'skills', 'journeys', 'event', 'service', 'chronicle'] as const) {
     const { coordinator: c, input, sim } = setup();
     c.transition('playing'); c.holdMap();
     input.keyDown('KeyW'); input.pointerDown(0); sim.player.vy = -100;
@@ -159,4 +159,21 @@ test('opening the full map from a quick map upgrades it and survives Tab release
   assert.equal(c.open('map'), true);
   assert.equal(c.mapHeld, false); assert.equal(c.simulationActive, false);
   c.releaseMap(); assert.equal(c.phase, 'map');
+});
+
+test('Character and Inventory switch in either direction without a gameplay frame or overlapping focus owners', () => {
+  for (const [first, second] of [['character', 'inventory'], ['inventory', 'character']] as const) {
+    for (const fromPause of [false, true]) {
+      const { coordinator: c, log, active, input, sim } = setup();
+      c.transition('playing'); if (fromPause) c.pause();
+      assert.ok(c.toggle(first)); assert.equal(c.simulationActive, false);
+      input.keyDown('KeyW'); input.pointerDown(0); sim.player.vx = 90;
+      log.length = 0;
+      assert.ok(c.toggle(second));
+      assert.deepEqual(log, ['clear', `close:${first}`, `phase:${second}`, `open:${second}`, 'save']);
+      assert.deepEqual([...active], [second]); assert.equal(c.simulationActive, false);
+      assert.equal(input.consume({x:0,y:0}, false).attack, false); assert.equal(sim.player.vx, 0);
+      assert.ok(c.toggle(second)); assert.equal(c.phase, fromPause ? 'paused' : 'playing');
+    }
+  }
 });

@@ -38,7 +38,7 @@ if(completion)sim.commitJourneyCheckpoint(staged,completion);
 const exploration=life.own(new Exploration(world,{storage:null}));
 for(let x=camp.x-1200;x<=camp.x+1200;x+=400)for(let y=camp.y-900;y<=camp.y+900;y+=400)exploration.reveal(x,y,480);
 let panel:JourneyPanel;
-const shell=life.own(new GameShell(document.querySelector('#app')!,{play(){},returnToTitle(){},openCharacter(){},openSkills(){},portal(){},openMap:()=>showMap(),openJourneys:()=>openPanel()}));
+const shell=life.own(new GameShell(document.querySelector('#app')!,{play(){},returnToTitle(){},openCharacter(){},openInventory(){},openSkills(){},portal(){},openMap:()=>showMap(),openJourneys:()=>openPanel()}));
 const map=life.own(new WorldMap(world,exploration,shell.mapMount,()=>{map.close();draw();}));
 map.setJourneyMarker(completion?null:publicJourneyMarker(active,true));
 const facts=()=>({x:p.x,y:p.y,level:p.level,time:10,events:sim.eventState,expeditions:sim.expeditions,discovered:(id:string)=>id===active.id,campCleared:()=>false});

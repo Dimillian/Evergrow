@@ -10,7 +10,7 @@ export const HUD_ART = Object.freeze({
 });
 
 export const HUD_MENU_SHORTCUTS = [
-  { id: 'character', label: 'Character', key: 'C' },
+  { id: 'character', label: 'Character', key: 'P' },
   { id: 'inventory', label: 'Inventory', key: 'I' },
   { id: 'skilltree', label: 'Skill tree', key: 'T' },
   { id: 'journal', label: 'Journeys', key: 'J' },

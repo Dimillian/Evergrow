@@ -61,7 +61,7 @@ html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 .touch-mode .character-tabs { gap: 5px; padding: 6px 12px; flex-shrink: 0; }
 .touch-mode .character-columns { display: block; overflow: auto; }
 .touch-mode .character-columns > section { display: none; padding: 12px; overflow: visible; }
-.touch-mode .character-window[data-touch-tab="bag"] .character-inventory, .touch-mode .character-window[data-touch-tab="equipment"] .character-equipment, .touch-mode .character-window[data-touch-tab="stats"] .character-details { display: block; }
+.touch-mode .character-window[data-touch-tab="bag"] .character-inventory, .touch-mode .character-window[data-touch-tab="equipment"] .character-equipment { display: block; }
 .touch-mode .character-window[data-touch-tab="equipment"] .character-equipment { display: flex; }
 .touch-mode .character-bag { min-width: 0; grid-template-columns: repeat(auto-fit,minmax(48px,1fr)); }
 .touch-mode .character-grid-scroll { overflow: visible; }

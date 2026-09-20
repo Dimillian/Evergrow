@@ -9,7 +9,7 @@ import type { GamepadInput } from './gamepad-input.ts';
 
 export interface PauseActions extends SystemWindowActions {
   openChronicle?(): void;
-  openCharacter?(): void; openSkills?(): void; openAppearance?(): void;
+  openCharacter?(): void; openInventory?(): void; openSkills?(): void; openAppearance?(): void;
   openMap?(): void; openJourneys?(): void;
   save?(): Promise<boolean>;
   returnToTitle(): void | Promise<void>;
@@ -28,7 +28,7 @@ export class PauseMenu {
     this.root = root; this.actions = actions; this.signal = signal;
     this.navigation = navigation;
     this.windows = new PauseSystemWindows(root, actions, () => { this.controller.clear(); this.restoreFocus(); });
-    const links = { character: actions.openCharacter, skills: actions.openSkills, appearance: actions.openAppearance,
+    const links = { character: actions.openCharacter, inventory: actions.openInventory, skills: actions.openSkills, appearance: actions.openAppearance,
       map: actions.openMap, journeys: actions.openJourneys, chronicle: actions.openChronicle };
     for (const [id, action] of Object.entries(links))
       root.querySelector<HTMLButtonElement>(`[data-pause-destination="${id}"]`)!.disabled = !action;
@@ -86,6 +86,7 @@ export class PauseMenu {
     this.navigation.focus = destination;
     switch (destination) {
       case 'character': this.actions.openCharacter?.(); return;
+      case 'inventory': this.actions.openInventory?.(); return;
       case 'skills': this.actions.openSkills?.(); return;
       case 'appearance': this.actions.openAppearance?.(); return;
       case 'map': this.actions.openMap?.(); return;

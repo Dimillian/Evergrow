@@ -14,7 +14,7 @@ import { goldBalance } from './wallet.ts';
 import { equippedGearPower } from './leaderboard.ts';
 import { formatGold } from './currency-format.ts';
 import type { Player } from './model.ts';
-import type { Attribute, EquipmentSlot, Item, ItemTier, SkillId } from './character-types.ts';
+import type { EquipmentSlot, Item, ItemTier, SkillId } from './character-types.ts';
 import { matchesInventoryFilter, planBestEquipment, type EquipBestChoice, type InventorySort, type InventoryFilter } from './inventory-tools.ts';
 import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
@@ -22,10 +22,7 @@ import { directionalControl } from './ui-navigation.ts';
 import { INVENTORY_CAPACITY, EQUIPMENT_SLOTS, TIER_NAMES, TIER_COLORS } from './items.ts';
 import { planEquipmentChange, planInventoryMove } from './inventory.ts';
 import { drawCharacterPortrait } from './character-portrait.ts';
-import { characterStatDetails, type StatDetail } from './character-stat-details.ts';
-import { RetainedTooltip } from './retained-tooltip.ts';
-import { effectText, statTerm, effectExplanation } from './effect-terms.ts';
-import { xpForNextLevel } from './progression.ts';
+import { effectExplanation } from './effect-terms.ts';
 import { uiIcon, trapDialogFocus, escapeUI } from './ui-components.ts';
 import './inventory-panel.css';
 
@@ -35,7 +32,7 @@ export interface InventoryPanelActions {
   openSkills?(skill?: SkillId | null): void;
   hudOptions?(): HUDOptions;
   editAppearance?():void;
-  openChronicle?():void;
+  openCharacter?(): void;
   equip(index: number, slot?: EquipmentSlot): void;
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
@@ -43,17 +40,11 @@ export interface InventoryPanelActions {
   drop?(source: DropItemSource): void;
   equipBest(choice?: EquipBestChoice): void;
   sort(mode: InventorySort): void;
-  allocate(attribute: Attribute): void;
 }
 
 
 type ItemLocation = { type: 'bag'; index: number; cell?: number } | { type: 'equipment'; slot: EquipmentSlot };
 type ItemReference = ItemLocation & { id: string };
-const ATTRIBUTE_NAMES: Record<Attribute, string> = { strength: 'Strength', dexterity: 'Dexterity', intelligence: 'Intelligence', vitality: 'Vitality' };
-const ATTRIBUTE_DESCRIPTIONS: Record<Attribute, string> = {
-  strength: 'Physical attack damage', dexterity: 'Attack speed and critical chance',
-  intelligence: 'Spell & elemental damage, mana', vitality: 'Maximum life',
-};
 const SLOT_NAMES: Record<EquipmentSlot, string> = {
   weapon: 'Main hand', offhand: 'Off hand', head: 'Head', chest: 'Chest', gloves: 'Gloves', legs: 'Legs', boots: 'Boots',
   cloak: 'Cloak', amulet: 'Amulet', ring1: 'Ring I', ring2: 'Ring II',
@@ -97,8 +88,6 @@ export class InventoryPanel {
   private readonly sectionFocus = new Map<number, HTMLElement>();
   private readonly tooltip: ItemTooltip;
   private readonly inlineExplanations: UITooltipStack;
-  private readonly statTooltip: RetainedTooltip;
-  private readonly statDetails = new Map<string, StatDetail>();
   private readonly canvas: HTMLCanvasElement;
   private readonly cells = new Map<string, HTMLButtonElement>();
 
@@ -109,10 +98,10 @@ export class InventoryPanel {
     this.element.hidden = true;
     this.element.innerHTML = `<section class="ui-window character-window" role="dialog" aria-modal="true" aria-labelledby="character-title">
       <header class="ui-window-header character-header">
-        <div class="character-heading"><span class="character-sigil ui-header-emblem" aria-hidden="true">${uiIcon('shield')}</span><h2 class="ui-title" id="character-title">Character &amp; inventory</h2></div>
-        <div class="character-header-right">${actions.editAppearance?`<button type="button" class="ui-button ui-button--quiet ui-button--icon" data-edit-appearance aria-label="Edit appearance" data-tooltip="Edit appearance" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('palette')}</button>`:''}<button type="button" class="ui-button ui-button--icon" data-close aria-label="Close character">${uiIcon('close')}</button></div>
+        <div class="character-heading"><span class="character-sigil ui-header-emblem" aria-hidden="true">${uiIcon('shield')}</span><h2 class="ui-title" id="character-title">Equipment &amp; inventory</h2></div>
+        <div class="character-header-right">${actions.editAppearance?`<button type="button" class="ui-button ui-button--quiet ui-button--icon" data-edit-appearance aria-label="Edit appearance" data-tooltip="Edit appearance" data-tooltip-placement="below" data-tooltip-align="end">${uiIcon('palette')}</button>`:''}<button type="button" class="ui-button ui-button--icon" data-close aria-label="Close inventory">${uiIcon('close')}</button></div>
       </header>
-      <nav class="character-controller-nav" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Equipment</span><span data-pad-section="1">Inventory</span><span data-pad-section="2">Stats</span><kbd>RB</kbd><small>A Select · B Back</small></nav>
+      <nav class="character-controller-nav" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Equipment</span><span data-pad-section="1">Inventory</span><kbd>RB</kbd><small>A Select · B Back</small></nav>
       <div class="character-columns ui-scroll-area">
         <section class="character-equipment" id="character-section-0" data-section="0" aria-label="Character and equipment">
           <div class="character-doll-stage"><div class="character-orbit" aria-hidden="true"></div><canvas class="character-doll" width="560" height="720" aria-label="Your character wearing the current equipment"></canvas>
@@ -125,7 +114,6 @@ export class InventoryPanel {
             <div title="Gear quality from level, base stats, enhancement and affix rolls. Not build DPS or Unique skill power."><dt>Gear power</dt><dd data-gear-power></dd></div>
           </dl>
           <div class="character-portrait-footer"><button class="ui-button ui-button--quiet ui-button--icon" data-turn="-1" aria-label="Turn character left">‹</button><div><span class="character-portrait-label">Equipped weapon</span><strong data-weapon-name></strong></div><button class="ui-button ui-button--quiet ui-button--icon" data-turn="1" aria-label="Turn character right">›</button></div>
-          <div class="character-points"><span>${uiIcon('skilltree')}Skill points <strong data-skill-points></strong></span><span>${uiIcon('plus')}Attribute points <strong data-stat-points></strong></span></div>
         </section>
         <section class="character-inventory inventory-pack" id="character-section-1" data-section="1" aria-labelledby="inventory-title">
           <div class="character-section-title character-inventory-heading"><h3 id="inventory-title">Inventory</h3><div class="character-heading-actions">
@@ -146,14 +134,8 @@ export class InventoryPanel {
           </div>
           <p class="character-filter-status" data-filter-status role="status" hidden></p>
         </section>
-        <section class="character-details" id="character-section-2" data-section="2" tabindex="0" aria-labelledby="attributes-title">
-          <div class="character-attributes"><div class="character-section-title"><h3 id="attributes-title">Attributes</h3><span class="character-points-available" data-points-label></span></div>
-            <div class="character-attribute-list">${(Object.keys(ATTRIBUTE_NAMES) as Attribute[]).map(attribute => `<div class="character-attribute"><div tabindex="0" data-stat-detail="${attribute}"><span>${ATTRIBUTE_NAMES[attribute]}</span><small>${ATTRIBUTE_DESCRIPTIONS[attribute]}</small></div><strong data-attribute-value="${attribute}"></strong><button type="button" class="ui-button ui-button--icon character-attribute-add" data-allocate="${attribute}" aria-label="Increase ${ATTRIBUTE_NAMES[attribute]}">${uiIcon('plus')}</button></div>`).join('')}</div>
-          </div>
-          <div class="character-statistics"><div class="character-section-title character-section-title--secondary"><h3 tabindex="0">Combat details</h3><span>Effective</span></div><div data-combat-stats></div></div>
-        </section>
       </div>
-      <footer class="ui-window-footer character-footer"><div class="character-experience"><div><span data-xp-label></span><span data-xp-total></span></div><div class="character-experience-track"><i data-xp-fill></i></div></div>${actions.openChronicle?'<button type="button" class="ui-button ui-button--quiet" data-chronicle>Chronicle</button>':''}<span class="character-footer-status">${uiIcon('diamond')}<span data-allocated-label></span></span></footer>
+      <footer class="ui-window-footer character-footer">${actions.openCharacter ? `<button type="button" class="ui-button ui-button--quiet" data-open-character>${uiIcon('character')} Character stats</button>` : ''}</footer>
       <div class="character-popup-layer" data-popup-layer hidden>
         <section class="character-mini-dialog character-filter-dialog ui-window" id="inventory-sort-dialog" data-mini="sort" role="dialog" aria-modal="true" aria-labelledby="inventory-sort-title" hidden>
           <header class="ui-window-header"><div class="character-filter-title">${uiIcon('sortFilter')}<h3 id="inventory-sort-title">Filter inventory</h3></div><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-popup-close aria-label="Close filters">${uiIcon('close')}</button></header>
@@ -181,17 +163,16 @@ export class InventoryPanel {
     </section>`;
     this.element.style.setProperty('--pack-columns', String(PACK_COLUMNS));
     this.window = this.element.querySelector('.character-window')!;
-    this.element.querySelector('[data-chronicle]')?.addEventListener('click',()=>actions.openChronicle?.(),{signal:this.lifetime.signal});
+    this.element.querySelector('[data-open-character]')?.addEventListener('click', () => actions.openCharacter?.(), { signal: this.lifetime.signal });
     this.popupLayer = this.element.querySelector('[data-popup-layer]')!;
     this.window.dataset.touchTab = 'bag';
     const tabs = document.createElement('nav'); tabs.className = 'character-tabs touch-only'; tabs.setAttribute('aria-label','Character sections');
-    tabs.innerHTML = '<button class="ui-button" data-touch-tab="bag" aria-pressed="true">Bag</button><button class="ui-button" data-touch-tab="equipment" aria-pressed="false">Equipment</button><button class="ui-button" data-touch-tab="stats" aria-pressed="false">Stats</button>';
+    tabs.innerHTML = '<button class="ui-button" data-touch-tab="bag" aria-pressed="true">Bag</button><button class="ui-button" data-touch-tab="equipment" aria-pressed="false">Equipment</button>';
     this.window.querySelector('.character-header-right')!.before(tabs);
     this.sheet = document.createElement('section'); this.sheet.className = 'touch-item-sheet'; this.sheet.hidden = true;
     this.sheet.setAttribute('aria-label','Selected item'); this.window.append(this.sheet);
     this.inlineExplanations = new UITooltipStack(this.window, effectExplanation, this.window, anchor => !anchor.closest('.ui-tooltip'));
     this.tooltip = new ItemTooltip(this.window, 'character-item-tooltip');
-    this.statTooltip = new RetainedTooltip(this.window, 'character-stat-tooltip', 'character-stat-tooltip');
     this.element.querySelector('[data-edit-appearance]')?.addEventListener('click',()=>actions.editAppearance?.());
     this.canvas = this.element.querySelector('.character-doll')!;
     this.element.querySelectorAll<HTMLButtonElement>('[data-location]').forEach(cell => this.cells.set(cell.dataset.location!, cell));
@@ -227,8 +208,8 @@ export class InventoryPanel {
     }
   }
 
-  openTouchTab(tab:'bag'|'stats'):void {
-    this.section=tab==='stats'?2:1;
+  openTouchTab(tab:'bag'|'equipment'):void {
+    this.section=tab==='equipment'?0:1;
     this.window.dataset.touchTab=tab;
     this.updateSectionHighlight();
     for(const button of this.window.querySelectorAll<HTMLElement>('[data-touch-tab]'))
@@ -297,32 +278,11 @@ export class InventoryPanel {
       button.setAttribute('aria-pressed', String(button.dataset.rarity === 'all' ? !this.rarities.size : this.rarities.has(button.dataset.rarity as ItemTier)));
     const active = document.activeElement;
     if (active instanceof HTMLElement && this.element.contains(active) && (active.hidden || active.matches(':disabled'))) this.selectSection(this.section);
-    const sheet = player.character, stats = player.derived;
+    const sheet = player.character;
     this.text('[data-level]', number(player.level));
     this.text('[data-gear-power]', number(equippedGearPower(sheet)));
     this.text('[data-gold]', `${formatGold(goldBalance(sheet))} Gold`);
     this.text('[data-weapon-name]', sheet.equipped.weapon?.name ?? 'Unarmed');
-    this.text('[data-skill-points]', number(sheet.skillPoints));
-    this.text('[data-stat-points]', number(sheet.statPoints));
-    this.text('[data-points-label]', sheet.statPoints ? `${number(sheet.statPoints)} to assign` : 'All assigned');
-    this.text('[data-allocated-label]', `${number(sheet.allocatedNodes.length)} nodes attuned`);
-    this.text('[data-xp-label]', `Level ${player.level} → ${player.level + 1}`);
-    this.text('[data-xp-total]', `${number(player.xp)} / ${number(xpForNextLevel(player.level))} XP`);
-    this.element.querySelector<HTMLElement>('[data-xp-fill]')!.style.width = `${Math.min(100, 100 * player.xp / xpForNextLevel(player.level))}%`;
-    for (const attribute of Object.keys(ATTRIBUTE_NAMES) as Attribute[]) {
-      this.text(`[data-attribute-value="${attribute}"]`, number(stats.attributes[attribute]));
-      const button = this.element.querySelector<HTMLButtonElement>(`[data-allocate="${attribute}"]`)!;
-      button.disabled = sheet.statPoints <= 0;
-      button.dataset.tooltipAlign = 'end';
-      button.dataset.tooltip = `Spend 1 attribute point on ${ATTRIBUTE_NAMES[attribute]}`;
-    }
-    const groups = characterStatDetails(player);
-    this.statDetails.clear();
-    for (const group of groups) for (const row of group.rows) this.statDetails.set(row.id, row);
-    const markup = groups.filter(group => group.tone !== 'attributes').map(group => `<section class="character-stat-group character-stat-group--${group.tone}" aria-labelledby="stats-${group.tone}">
-      <h4 id="stats-${group.tone}">${escapeUI(group.title)}</h4><dl>${group.rows.map(row => `<div class="ui-stat" tabindex="0" data-stat-detail="${escapeUI(row.id)}"><dt class="ui-stat-label">${escapeUI(row.label)}</dt><dd class="ui-stat-value">${escapeUI(row.value)}</dd></div>`).join('')}</dl></section>`).join('');
-    const statContainer = this.element.querySelector('[data-combat-stats]')!;
-    if (statContainer.innerHTML !== markup) { this.statTooltip.hide(); statContainer.innerHTML = markup; }
     this.hud?.refresh(player);
     if (this.drag) this.highlightEquipmentTargets();
     if (this.hovered) this.showTooltip(this.hovered);
@@ -330,7 +290,7 @@ export class InventoryPanel {
   }
 
   private updateScrollFades(): void {
-    for (const pane of this.window.querySelectorAll<HTMLElement>('.character-details, .character-columns')) {
+    for (const pane of this.window.querySelectorAll<HTMLElement>('.character-columns')) {
       const remaining = pane.scrollHeight - pane.clientHeight - pane.scrollTop;
       const scrollable = /^(auto|scroll)$/.test(getComputedStyle(pane).overflowY);
       pane.classList.toggle('has-scroll-below', pane.clientHeight > 0 && scrollable && remaining > 2);
@@ -352,7 +312,7 @@ export class InventoryPanel {
     this.animation = 0;
   }
 
-  dispose(): void { this.close(); this.hud?.dispose(); this.tooltip.dispose(); this.statTooltip.dispose(); this.inlineExplanations.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
+  dispose(): void { this.close(); this.hud?.dispose(); this.tooltip.dispose(); this.inlineExplanations.dispose(); this.lifetime.abort(); this.element.remove(); this.player = null; }
 
   private renderCharmComparison(): void {
     if(!this.player)return;
@@ -429,7 +389,7 @@ export class InventoryPanel {
     if (this.popup) { this.controller.update(this.popupPanel(), pad, now); return; }
     this.controller.update(this.window, pad, now, {
       includeControl: target => this.inNavigationSection(target),
-      switchTab: delta => this.selectSection((this.section + delta + 3) % 3),
+      switchTab: delta => this.selectSection((this.section + delta + 2) % 2),
       activate: target => {
         const location = this.locationFrom(target);
         if (!location) return false;
@@ -445,7 +405,7 @@ export class InventoryPanel {
     this.updateSectionHighlight();
     const previous = this.sectionFocus.get(index);
     const target = previous && !previous.closest('[hidden], [inert]') && !previous.matches(':disabled') ? previous
-      : root.querySelector<HTMLElement>('[data-bag]:not([hidden]), [data-equipment="weapon"], [data-allocate]:not(:disabled), h3[tabindex]')
+      : root.querySelector<HTMLElement>('[data-bag]:not([hidden]), [data-equipment="weapon"]')
         ?? root.querySelector<HTMLElement>('button:not(:disabled)');
     target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     this.updateSectionHighlight();
@@ -459,7 +419,7 @@ export class InventoryPanel {
   }
 
   private navigate(key: string, target: HTMLElement): boolean {
-    const owner = target.closest<HTMLElement>('[data-mini], [data-section], .character-header-right');
+    const owner = target.closest<HTMLElement>('[data-mini], [data-section], .character-header-right, .character-footer');
     if (!owner) return false;
     const popup = owner.hasAttribute('data-mini');
     const root = popup ? owner : this.window;
@@ -469,14 +429,12 @@ export class InventoryPanel {
     const current = controls.indexOf(target);
     if (current < 0) return false;
     const next = directionalControl(controls.map(control => control.getBoundingClientRect()), current, key);
-    if (next === current && owner.dataset.section === '2' && (key === 'ArrowDown' || key === 'ArrowUp'))
-      owner.scrollBy({ top: key === 'ArrowDown' ? 100 : -100 });
-    else { controls[next].focus({ preventScroll: true }); controls[next].scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    { controls[next].focus({ preventScroll: true }); controls[next].scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
     return true;
   }
 
   private inNavigationSection(target: HTMLElement): boolean {
-    return !!target.closest('.character-header-right') || target.closest<HTMLElement>('[data-section]')?.dataset.section === String(this.section);
+    return !!target.closest('.character-header-right, .character-footer') || target.closest<HTMLElement>('[data-section]')?.dataset.section === String(this.section);
   }
 
   private text(selector: string, value: string): void {
@@ -509,9 +467,9 @@ export class InventoryPanel {
 
   private bind(): void {
     const options = { signal: this.lifetime.signal };
-    // Pane sizes change with responsive tabs; content sizes change with stats and fonts.
+    // Pane sizes change with responsive tabs; content sizes change with gear and fonts.
     const scrollFadeObserver = new ResizeObserver(() => this.updateScrollFades());
-    this.window.querySelectorAll('.character-details, .character-columns, .character-attributes, .character-statistics')
+    this.window.querySelectorAll('.character-columns, .character-equipment, .character-inventory')
       .forEach(element => scrollFadeObserver.observe(element));
     this.lifetime.signal.addEventListener('abort', () => scrollFadeObserver.disconnect(), { once: true });
     document.addEventListener('evergrow-input-mode',()=>{this.closeTouchItem();this.hideTooltip();},options);
@@ -520,7 +478,7 @@ export class InventoryPanel {
       const target = event.target as Element;
       // The window also carries data-touch-tab as layout state; only buttons are actions.
       const tab = target.closest<HTMLButtonElement>('button[data-touch-tab]')?.dataset.touchTab;
-      if(tab) { this.section = tab==='equipment'?0:tab==='stats'?2:1; this.updateSectionHighlight(); this.window.dataset.touchTab = tab; for(const b of this.window.querySelectorAll('[data-touch-tab]')) b.setAttribute('aria-pressed',String((b as HTMLElement).dataset.touchTab===tab)); return; }
+      if(tab) { this.section = tab==='equipment'?0:1; this.updateSectionHighlight(); this.window.dataset.touchTab = tab; for(const b of this.window.querySelectorAll('[data-touch-tab]')) b.setAttribute('aria-pressed',String((b as HTMLElement).dataset.touchTab===tab)); return; }
       if(target.closest('[data-compare-charms]')) { this.comparisonRemoved.clear(); this.renderCharmComparison(); this.openPopup('charms',target.closest<HTMLElement>('[data-compare-charms]')!); return; }
       const remove=target.closest<HTMLElement>('[data-compare-remove]')?.dataset.compareRemove;
       if(remove){if(this.comparisonRemoved.has(remove))this.comparisonRemoved.delete(remove);else this.comparisonRemoved.add(remove);this.renderCharmComparison();this.popupPanel().querySelectorAll<HTMLElement>('[data-compare-remove]').forEach(b=>{if(b.dataset.compareRemove===remove)b.focus();});return;}
@@ -549,8 +507,6 @@ export class InventoryPanel {
       }
       const turn = target.closest<HTMLElement>('[data-turn]');
       if (turn) { this.facing += Number(turn.dataset.turn) * Math.PI / 4; return; }
-      const attribute = target.closest<HTMLElement>('[data-allocate]')?.dataset.allocate as Attribute | undefined;
-      if (attribute && Object.hasOwn(ATTRIBUTE_NAMES, attribute)) { this.actions.allocate(attribute); return; }
       const location = this.locationFrom(target);
       if (!location) return;
       if(document.documentElement.classList.contains('touch-mode')) {
@@ -579,14 +535,11 @@ export class InventoryPanel {
     this.element.addEventListener('pointerdown', () => this.element.classList.remove('is-controller'), options);
     this.element.addEventListener('pointerover', event => {
       if (event.pointerType === 'touch' || this.drag || this.element.classList.contains('is-controller')) return;
-      if (this.showStatTooltip(event.target)) return;
       const location = this.locationFrom(event.target);
       if (location) this.showTooltip(location);
     }, options);
     this.element.addEventListener('pointerout', event => {
       if (this.element.classList.contains('is-controller')) return;
-      const anchor = event.target instanceof Element ? event.target.closest('[data-stat-detail]') : null;
-      if (anchor && (!(event.relatedTarget instanceof Node) || (!anchor.contains(event.relatedTarget) && !this.statTooltip.element.contains(event.relatedTarget)))) this.statTooltip.defer();
       const from = this.locationFrom(event.target), to = this.locationFrom(event.relatedTarget);
       if (from && (!to || locationKey(from) !== locationKey(to))) { this.hovered = null; this.tooltip.defer(); }
     }, options);
@@ -595,13 +548,12 @@ export class InventoryPanel {
       if (section) {
         this.section = Number(section.dataset.section); this.sectionFocus.set(this.section, event.target as HTMLElement); this.updateSectionHighlight();
       }
-      if (this.showStatTooltip(event.target)) return;
       const location = this.locationFrom(event.target);
       if (location) this.showTooltip(location);
-      else { this.tooltip.defer(); this.statTooltip.defer(); }
+      else { this.tooltip.defer(); }
     }, options);
     this.element.addEventListener('focusout', event => {
-      this.statTooltip.defer();
+
       if (!this.locationFrom(event.relatedTarget)) { this.hovered = null; this.tooltip.defer(); }
     }, options);
     this.element.addEventListener('keydown', event => {
@@ -790,7 +742,6 @@ export class InventoryPanel {
   private clearDrag(): void { this.element.classList.remove('is-item-dragging'); this.clearDropHighlight(); this.drag = null; this.dragOffset = { x: 0, y: 0 }; this.dragGrids = null; for (const cell of this.cells.values()) cell.classList.remove('is-drop-target', 'is-dragging', 'is-equip-target'); }
 
   private showTooltip(location: ItemLocation): void {
-    this.statTooltip.hide();
     if (this.drag || document.documentElement.classList.contains('touch-mode')) return;
     const item = this.itemAt(location), cell = this.cells.get(locationKey(location));
     if (!item || !cell || cell.hidden || !this.player) { this.hideTooltip(); return; }
@@ -799,17 +750,7 @@ export class InventoryPanel {
       equipped: location.type === 'equipment', sourceIndex: location.type === 'bag' ? location.index : undefined }, cell);
   }
 
-  private showStatTooltip(target: EventTarget | null): boolean {
-    const anchor = target instanceof Element ? target.closest<HTMLElement>('[data-stat-detail]') : null;
-    const detail = anchor && this.statDetails.get(anchor.dataset.statDetail!);
-    if (!anchor || !detail) return false;
-    this.hideTooltip();
-    this.statTooltip.show(`<header><strong>${escapeUI(detail.label)}</strong><b>${escapeUI(detail.value)}</b></header>
-      <p>${effectText(detail.description)}</p>${statTerm(detail.id, 'Details') ? `<p>${statTerm(detail.id, 'Details')}</p>` : ''}<div class="stat-calculation">${detail.calculation.split('\n').map(line => `<span>${escapeUI(line)}</span>`).join('')}</div>
-      ${detail.sources.length ? `<dl>${detail.sources.map(source => `<div><dt>${escapeUI(source.label)}</dt><dd>${escapeUI(source.value)}</dd></div>`).join('')}</dl>` : '<small>No bonuses.</small>'}`, anchor);
-    return true;
-  }
-  private hideTooltip(): void { this.inlineExplanations.hide(); this.hovered = null; this.tooltip.hide(); this.statTooltip.hide(); }
+  private hideTooltip(): void { this.inlineExplanations.hide(); this.hovered = null; this.tooltip.hide(); }
 
   private animate = (): void => {
     if (this.element.hidden || !this.player) return;

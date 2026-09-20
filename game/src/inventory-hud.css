@@ -6,15 +6,12 @@
   background: linear-gradient(180deg, #14243190, #08121dba);
   border-top: 1px solid #9abac64d; overflow: hidden;
 }
-.has-inventory-hud .character-experience { display: none; }
 .inventory-hud-dock { position: absolute; inset: 0; pointer-events: none; }
 .inventory-hud-dock canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .has-inventory-hud .character-footer > :not(.inventory-hud-dock) { position: relative; z-index: 1; }
-.has-inventory-hud .character-footer-status { margin-left: auto; }
 @media (max-width: 660px) {
   .has-inventory-hud .character-footer { padding: 5px 8px; align-items: flex-start; }
-  .has-inventory-hud .character-footer-status { display: none; }
-  .has-inventory-hud .character-footer [data-chronicle] { min-height: 22px; padding: 1px 4px; font-size: 10px; }
+  .has-inventory-hud .character-footer [data-open-character] { min-height: 22px; padding: 1px 4px; font-size: 10px; }
 }
 .inventory-hud-targets { position: absolute; inset: 0; pointer-events: none; }
 .inventory-hud-slot {

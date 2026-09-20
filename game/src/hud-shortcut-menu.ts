@@ -5,7 +5,7 @@ import { trapDialogFocus } from './ui-components.ts';
 import './hud-shortcut-menu.css';
 
 type Destination = typeof HUD_MENU_SHORTCUTS[number]['id'] | 'map';
-const destinationAction: Record<Destination, ControlAction> = { character: 'character', inventory: 'character', skilltree: 'skills', journal: 'journeys', map: 'map' };
+const destinationAction: Record<Destination, ControlAction> = { character: 'character', inventory: 'inventory', skilltree: 'skills', journal: 'journeys', map: 'map' };
 const destinations = [...HUD_MENU_SHORTCUTS, { id: 'map', label: 'World map', key: 'M' }] as const;
 
 /** A small, focus-contained navigation drawer. GameShell owns routing and pause state. */

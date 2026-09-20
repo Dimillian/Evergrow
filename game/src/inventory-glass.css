@@ -1,7 +1,6 @@
 /* Inventory wells reveal the shared frosted panel beneath them. */
 .character-overlay .character-equipment,
 .character-overlay .character-inventory { border-right-color: #b3dbea30; }
-.character-overlay .character-details { background: #08111c18; }
 .character-overlay .character-section-title h3 { color: #c7e4ed; }
 .character-overlay .character-bag.character-tetris,
 .character-overlay .character-charm-grid { background: #040c154d; border-color: #aacddd40; }

@@ -70,6 +70,7 @@ import { SaveHub, type SaveMode } from './save-hub.ts';
 import { SAVE_BUNDLE_LIMIT } from './save-bundle.ts';
 import { CharacterSession } from './character-session.ts';
 import { TitleScreen } from './title-screen.ts';
+import { CharacterPanel } from './character-panel.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { executeCharacterCommand, type CharacterCommand } from './character-commands.ts';
@@ -120,6 +121,7 @@ export class Game {
   private shell: GameShell;
   private groundLootHighlight: GroundLootHighlight;
   private inventoryPanel: InventoryPanel;
+  private characterPanel: CharacterPanel;
   private appearanceEditor?:ReturnType<typeof createAppearanceEditor>;
   private appearanceFromPause = false;
   private appearanceFromHall = false;
@@ -201,10 +203,10 @@ export class Game {
         portal: () => { this.canvas.focus(); this.requestPortal(); },
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
         openChronicle: () => { if(!this.savingAction)this.panels.open('chronicle'); },
-        openAppearance: () => { if (!this.savingAction && this.panels.open('character')) this.editAppearance(true); },
+        openAppearance: () => { if (!this.savingAction && this.panels.open('inventory')) this.editAppearance(true); },
         leaderboard: order => this.saveClient.leaderboard(order), leaderboardAvailable: () => this.saveClient.supported,
         returnToTitle: () => this.returnToTitle(), openMap: () => this.openMap(),
-        openCharacter: () => this.openCharacterPanel('character'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
+        openCharacter: () => this.openCharacterPanel('character'), openInventory: () => this.openCharacterPanel('inventory'), openSkills: () => this.openCharacterPanel('skills'), openJourneys: () => this.journeys.open(),
       }));
       this.lifetime.defer(controls.subscribe(() => { this.clearInput(); this.shell.refreshBindings(); }));
       this.canvas = this.shell.canvas;
@@ -229,7 +231,7 @@ export class Game {
         hudOptions: () => ({ groundEffects: this.sim.groundEffects, gamepad: this.usingGamepad, reducedMotion: this.reducedMotion }),
         openSkills: skill => { this.openCharacterPanel('skills'); this.skillPanel.inspectNode(skill ? `skill:${skill}` : 'origin', true); this.skillPanel.setDetailsVisible(true); },
         editAppearance:()=>this.editAppearance(),
-        openChronicle:()=>{if(!this.savingAction)this.panels.open('chronicle');},
+        openCharacter: () => this.openCharacterPanel('character'),
         equip: (index, slot) => this.characterAction({ type: 'equip', index, slot }),
         unequip: (slot, index) => this.characterAction({ type: 'unequip', slot, index }),
         move: (from, to) => this.characterAction({ type: 'moveItem', from, to }),
@@ -237,6 +239,12 @@ export class Game {
         drop: source => { void this.dropInventoryItem(source); },
         equipBest: choice => this.characterAction({ type: 'equipBest', choice }),
         sort: mode => this.characterAction({ type: 'sortInventory', mode }),
+      }));
+      this.characterPanel = this.lifetime.own(new CharacterPanel(this.shell.panelMount, {
+        close: () => this.closeCharacterPanel(),
+        openInventory: () => this.openCharacterPanel('inventory'),
+        openSkills: () => this.openCharacterPanel('skills'),
+        openChronicle: () => { if (!this.savingAction) this.panels.open('chronicle'); },
         allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
       }));
       this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
@@ -290,7 +298,8 @@ export class Game {
         event: { open: () => { if(this.activeRiftPortal)this.riftPanel.open(this.sim.expeditions,this.sim.player,this.activeRiftPortal); else if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.riftPanel.close(); this.activeRiftPortal=null; this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
         service: { open: () => { if (this.activeNPC) this.servicePanel.open(this.sim.player, this.activeNPC); }, close: () => { this.servicePanel.close(); this.activeNPC = null; } },
         map: { open: () => { const run=currentDungeon(this.sim.expeditions), glance=this.panels.mapHeld; if(run) this.dungeonMap.open(this.sim.dungeonFloor!,run,this.sim.player,glance,this.sim.enemies); else this.worldMap.open(this.sim.player,glance); this.shell.setStatus(glance?'Exploration map open. Movement continues.':'World map open. Game paused.'); }, close: () => { this.worldMap.close(); this.dungeonMap.close(); } },
-        character: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Character and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
+        character: { open: () => { this.characterPanel.open(this.sim.player, this.session.active?.record.name ?? 'Adventurer'); this.shell.setStatus('Character stats open. Game paused.'); }, close: () => this.characterPanel.close() },
+        inventory: { open: () => { this.inventoryPanel.open(this.sim.player); this.shell.setStatus('Equipment and inventory open. Game paused.'); }, close: () => this.inventoryPanel.close() },
         skills: { open: () => { this.skillPanel.open(this.sim.player); this.shell.setStatus('Skill tree open. Game paused.'); }, close: () => this.skillPanel.close() },
       }, {
         clearInput: preserveMovement => this.clearInput(preserveMovement), changed: phase => {
@@ -317,8 +326,8 @@ export class Game {
         menu: action => {
           if(this.savingAction || this.phase !== 'playing') return;
           if(action === 'pause') this.pause();
-          else if(action === 'character') { this.openCharacterPanel('character'); this.inventoryPanel.openTouchTab('stats'); }
-          else if(action === 'inventory') { this.openCharacterPanel('character'); this.inventoryPanel.openTouchTab('bag'); }
+          else if(action === 'character') this.openCharacterPanel('character');
+          else if(action === 'inventory') { this.openCharacterPanel('inventory'); this.inventoryPanel.openTouchTab('bag'); }
           else if(action === 'skills') this.openCharacterPanel('skills');
           else if(action === 'journeys') this.journeys.open();
           else if(action === 'map') this.openMap();
@@ -535,7 +544,7 @@ export class Game {
   private controlShortcut(action: ControlAction | undefined, repeat: boolean, tab = false): boolean {
     // Tab navigates focused interfaces, even when it is a gameplay binding.
     if (tab && this.phase !== 'playing') return false;
-    if ((action === 'character' || action === 'skills') && this.panels.canOpen(action)) {
+    if ((action === 'character' || action === 'inventory' || action === 'skills') && this.panels.canOpen(action)) {
       if (!repeat) this.panels.toggle(action); return true;
     }
     if (action === 'journeys' && (this.panels.canOpen('journeys') || this.phase === 'journeys')) {
@@ -624,8 +633,8 @@ export class Game {
     if(this.disposed)return;
     this.titleScreen.setEditorOpen(false, this.appearanceFromHall);
     this.appearanceFromHall = false;
-    if (this.appearanceFromPause) { this.appearanceFromPause = false; if (this.phase === 'character') this.panels.resume(); }
-    else if(this.phase==='character'){this.inventoryPanel.open(this.sim.player);this.inventoryPanel.element.querySelector<HTMLButtonElement>('[data-edit-appearance]')?.focus();}
+    if (this.appearanceFromPause) { this.appearanceFromPause = false; if (this.phase === 'inventory') this.panels.resume(); }
+    else if(this.phase==='inventory'){this.inventoryPanel.open(this.sim.player);this.inventoryPanel.element.querySelector<HTMLButtonElement>('[data-edit-appearance]')?.focus();}
   }
   private editNewCharacter(index:number,name:string,weapon:StarterLoadoutId,seed:number) {
     if(this.phase!=='ready'||this.hallBusy||this.appearanceEditor)return;
@@ -641,7 +650,7 @@ export class Game {
     });
   }
   private editAppearance(fromPause = false) {
-    if(this.phase!=='character'||this.savingAction||this.appearanceEditor||!this.session.active)return;
+    if(this.phase!=='inventory'||this.savingAction||this.appearanceEditor||!this.session.active)return;
     this.appearanceFromPause = fromPause;
     this.inventoryPanel.close();this.clearInput();
     this.appearanceEditor=createAppearanceEditor(this.shell.panelMount,{sheet:this.sim.player.character,name:this.session.active.record.name,
@@ -880,10 +889,10 @@ export class Game {
 
   private closeMap() { if (this.phase === 'map') this.resume(); }
 
-  private openCharacterPanel(panel: 'character' | 'skills') { if (!this.savingAction) this.panels.open(panel); }
+  private openCharacterPanel(panel: 'character' | 'inventory' | 'skills') { if (!this.savingAction) this.panels.open(panel); }
 
   private closeCharacterPanel() {
-    if (this.phase === 'character' || this.phase === 'skills') this.resume();
+    if (this.phase === 'character' || this.phase === 'inventory' || this.phase === 'skills') this.resume();
   }
 
   private interact(pointer?: {
@@ -1124,7 +1133,7 @@ export class Game {
 
   private async dropInventoryItem(source: DropItemSource) {
     await this.durable(async () => {
-      if (this.phase !== 'character' || !this.session.active) return;
+      if (this.phase !== 'inventory' || !this.session.active) return;
       const result = await executeDropItem(this.sim, source, async checkpoint => {
         const ok = await this.session.save(checkpoint, Date.now());
         if (!ok) this.shell.setSaveStatus(this.session.error, true);
@@ -1143,7 +1152,8 @@ export class Game {
     const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
     if (result.message) this.notify(result.message);
-    if (this.phase === 'character') this.inventoryPanel.refresh(this.sim.player);
+    if (this.phase === 'inventory') this.inventoryPanel.refresh(this.sim.player);
+    if (this.phase === 'character') this.characterPanel.refresh(this.sim.player);
     if (this.phase === 'skills') this.skillPanel.refresh(this.sim.player);
     this.saveCharacter();
   }
@@ -1407,7 +1417,7 @@ export class Game {
       this.input.clear(); this.sim.clearInput(); this.usingGamepad = true; this.touch.setActive(false); this.usingGamepad = true;
       this.padAimAngle = this.sim.player.angle;
     }
-    if (!pad.active) { this.gamepadMenu.clear(); if (this.phase === 'character') this.inventoryPanel.updateGamepad(pad, now); if (this.phase === 'skills') this.skillPanel.updateGamepad(pad, now); return; }
+    if (!pad.active) { this.gamepadMenu.clear(); if (this.phase === 'inventory') this.inventoryPanel.updateGamepad(pad, now); if (this.phase === 'character') this.characterPanel.updateGamepad(pad, now); if (this.phase === 'skills') this.skillPanel.updateGamepad(pad, now); return; }
     if (this.shell.shortcutMenu.isOpen) {
       if (pad.pressed.has(PAD.pause) || pad.pressed.has(PAD.dodge)) this.shell.shortcutMenu.close();
       else this.gamepadMenu.update(this.shell.shortcutMenu.element, pad, now);
@@ -1418,7 +1428,7 @@ export class Game {
       return;
     }
     if (pad.pressed.has(PAD.pause) || (!this.panels.simulationActive && pad.pressed.has(PAD.dodge))) {
-      if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
+      if (this.phase === 'inventory' && this.inventoryPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
       else if (this.phase === 'paused' && !this.shell.backInMenu()) this.resume();
@@ -1431,11 +1441,13 @@ export class Game {
     }
     if (this.panels.simulationActive && !this.savingAction) {
       if (pad.pressed.has(PAD.up)) { this.openCharacterPanel('skills'); return; }
-      if (pad.pressed.has(PAD.left) || pad.pressed.has(PAD.right)) { this.openCharacterPanel('character'); return; }
+      if (pad.pressed.has(PAD.left)) { this.openCharacterPanel('character'); return; }
+      if (pad.pressed.has(PAD.right)) { this.openCharacterPanel('inventory'); return; }
       if (pad.pressed.has(PAD.down)) { this.requestPortal(); return; }
       if (pad.pressed.has(PAD.interact)) this.interact();
     } else {
-      if (this.phase === 'character') { this.inventoryPanel.updateGamepad(pad, now); return; }
+      if (this.phase === 'inventory') { this.inventoryPanel.updateGamepad(pad, now); return; }
+      if (this.phase === 'character') { this.characterPanel.updateGamepad(pad, now); return; }
       if (this.phase === 'skills') { this.skillPanel.updateGamepad(pad, now); return; }
       const root = this.phase === 'ready' ? this.shell.titleMount : this.phase === 'map' ? this.shell.mapMount
         : this.panels.activePanel ? this.shell.panelMount : this.canvas.parentElement!.querySelector<HTMLElement>('#overlay')!;

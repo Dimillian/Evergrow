@@ -17,7 +17,7 @@ import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 
-interface ShellActions extends PauseActions { lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; portal?(): void; play(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
+interface ShellActions extends PauseActions { lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; portal?(): void; play(): void; openMap(): void; openCharacter(): void; openInventory(): void; openSkills(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -81,7 +81,7 @@ export class GameShell {
         <button type="button" class="hud-control" data-hud="menu" aria-haspopup="dialog" aria-label="Open character menus" data-tooltip="Character menus"></button>
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
-        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="P" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">P</kbd><i class="portal-progress" aria-hidden="true"></i></button>
+        <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="R" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">R</kbd><i class="portal-progress" aria-hidden="true"></i></button>
       </nav>
       <div id="title-mount"></div>
       <div id="world-map-mount"></div>
@@ -109,7 +109,8 @@ export class GameShell {
     this.controls.querySelector<HTMLButtonElement>('[data-hud="portal"]')!.disabled = !actions.portal;
     this.controls.querySelector('[data-hud="portal"]')!.addEventListener('click', () => actions.portal?.(), { signal });
     this.shortcutMenu = new HUDShortcutMenu(this.controls, this.controls.querySelector('[data-hud="menu"]')!, id => {
-      if (id === 'character' || id === 'inventory') actions.openCharacter();
+      if (id === 'character') actions.openCharacter();
+      else if (id === 'inventory') actions.openInventory();
       else if (id === 'skilltree') actions.openSkills();
       else if (id === 'map') actions.openMap();
       else actions.openJourneys?.();
@@ -190,7 +191,7 @@ export class GameShell {
     const playing = phase === 'playing';
     if (playing || phase === 'ready' || phase === 'dead') this.pauseNavigation.focus = null;
     if (phase === 'ready') this.pauseNavigation.category = 'character';
-    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
+    const panel = phase === 'map' || phase === 'character' || phase === 'inventory' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
     if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); }

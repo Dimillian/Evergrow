@@ -94,7 +94,7 @@ function render() {
     detail.hidden = !visible;
     if (!visible) explanations.hide();
     if (visible) {
-        const value = `<div class="thor-detail-toolbar"><button class="thor-back" data-action="close-detail" aria-label="Back to pack">‹ <span>Pack</span><kbd>B</kbd></button><button data-action="close-detail" aria-label="Close item">${uiIcon('close')}</button></div><div class="thor-detail-scroll">${d.html}</div><button class="thor-equip" data-equip="${e(d.id)}" ${d.equipped || (s.phase !== 'playing' && s.phase !== 'paused' && s.phase !== 'character') ? 'disabled' : ''}>${d.equipped ? 'Equipped' : 'Equip'}</button>`;
+        const value = `<div class="thor-detail-toolbar"><button class="thor-back" data-action="close-detail" aria-label="Back to pack">‹ <span>Pack</span><kbd>B</kbd></button><button data-action="close-detail" aria-label="Close item">${uiIcon('close')}</button></div><div class="thor-detail-scroll">${d.html}</div><button class="thor-equip" data-equip="${e(d.id)}" ${d.equipped || (s.phase !== 'playing' && s.phase !== 'paused' && s.phase !== 'character' && s.phase !== 'inventory') ? 'disabled' : ''}>${d.equipped ? 'Equipped' : 'Equip'}</button>`;
         detail.style.setProperty('--item-color', d.color);
         if (detail.innerHTML !== value) { explanations.hide(); detail.innerHTML = value; }
     }

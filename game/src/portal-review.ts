@@ -33,7 +33,7 @@ const requestedProgress = Number(params.get('progress') ?? .73), reducedMotion =
 let channelProgress = Number.isFinite(requestedProgress) ? Math.max(.05, Math.min(1, requestedProgress)) : .73;
 let frozen = reducedMotion.matches || !params.has('animate');
 
-const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openSkills() {}, portal() {} }));
+const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openInventory() {}, openSkills() {}, portal() {} }));
 const chart = life.own(new Exploration(world, { storage: null }));
 const map = life.own(new WorldMap(world, chart, shell.mapMount, () => map.close()));
 map.setPortalMarkers(() => portalMapMarkers(sim.travel, band => world.getPortalAnchor(band)));

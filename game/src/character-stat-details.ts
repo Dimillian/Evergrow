@@ -4,8 +4,8 @@ import { MANA_RULES } from './mana-content.ts';
 import { CHARM_REWARD_CAPS } from './charm-content.ts';
 import { ELEMENTS, RESISTANCE_LABELS, RESISTANCE_RULES } from './resistance-content.ts';
 import type { Player, WeaponDefinition } from './model.ts';
-import type { Attribute, StatKey, DerivedCharacterStats } from './character-types.ts';
-import { characterModifierSources, DEXTERITY_BONUSES } from './character-stats.ts';
+import type { Attribute, StatKey, DerivedCharacterStats, EquipmentSlot } from './character-types.ts';
+import { characterModifierSources, DEXTERITY_BONUSES, type ModifierSourceCategory } from './character-stats.ts';
 import { getTreeBonuses } from './skill-tree.ts';
 import { STAT_LABELS, formatStatValue } from './items.ts';
 import { deriveAttackStats, WEAPON_ACTION_RULES } from './equipment.ts';
@@ -15,9 +15,10 @@ import { PLAYER_ABILITIES, PLAYER_DEFAULTS, PLAYER_MOVEMENT } from './combat-con
 import { AFFIX_COMBAT_RULES } from './equipment-affix-content.ts';
 import { SKILL_DEFINITIONS } from './skill-content.ts';
 
+export interface StatSource { category: ModifierSourceCategory | 'base'; label: string; value: string; slot?: EquipmentSlot }
 export interface StatDetail {
   id: string; label: string; amount: number; value: string;
-  description: string; calculation: string; sources: Array<{ label: string; value: string }>;
+  description: string; calculation: string; sources: StatSource[];
 }
 export interface StatDetailGroup { title: string; tone: string; rows: StatDetail[] }
 /** A new derived stat must explicitly declare where players can inspect it. */
@@ -38,14 +39,17 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
   const s = p.derived, sheet = p.character;
   const attributeBonus = (attribute: Attribute, perPoint: number) => n(Math.max(0, s.attributes[attribute] - 10) * perPoint);
   const contributions = characterModifierSources(sheet, getTreeBonuses(sheet.allocatedNodes), p.level);
-  const sources = (keys: StatKey[]) => contributions.flatMap(source => {
+  const sources = (keys: StatKey[]): StatSource[] => contributions.flatMap(source => {
     const values = [...new Set(keys)].filter(key => source.modifiers[key]).map(key => `${formatStatValue(key, source.modifiers[key]!)} ${STAT_LABELS[key]}`);
-    return values.length ? [{ label: source.label, value: values.join(' · ') }] : [];
+    return values.length ? [{ category: source.category, label: source.label, slot: source.slot, value: values.join(' · ') }] : [];
   });
   const row = (id: string, label: string, amount: number, value: string, description: string, calculation: string, keys: StatKey[] = []): StatDetail =>
     ({ id, label, amount, value, description, calculation, sources: sources(keys) });
   const addAttribute = (r: StatDetail, attribute: Attribute) => {
-    r.sources.unshift({ label: `${STAT_LABELS[attribute]} · starting + assigned`, value: n(sheet.attributes[attribute]) });
+    const ownAttribute = r.id === attribute;
+    r.sources.unshift({ category: 'base', label: ownAttribute ? 'Starting points' : `${STAT_LABELS[attribute]} · starting`, value: '10' });
+    const assigned = sheet.attributes[attribute] - 10;
+    if (assigned) r.sources.splice(1, 0, { category: 'base', label: ownAttribute ? 'Assigned points' : `${STAT_LABELS[attribute]} · assigned`, value: `${assigned > 0 ? '+' : ''}${n(assigned)}` });
     return r;
   };
   const attributes = (['strength', 'dexterity', 'intelligence', 'vitality'] as const).map(attribute =>
@@ -54,7 +58,7 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
       dexterity: `+${DEXTERITY_BONUSES.attackSpeedPercent}% attack speed and +${DEXTERITY_BONUSES.critChance}% critical chance per added point.`,
       intelligence: `+${MANA_RULES.perIntelligence} mana and +${ATTRIBUTE_DAMAGE_BONUSES.intelligence}% spell / elemental damage per added point.`,
       vitality: '+6 maximum life per added point.',
-    }[attribute], 'Starting + assigned + gear + charms + skill tree', [attribute]), attribute));
+    }[attribute], '', [attribute]), attribute));
   const weaponRows = (weapon: WeaponDefinition, off = false): StatDetail[] => {
     const a = deriveAttackStats(p.stats, weapon), bolt = weapon.attackKind === 'bolt';
     const prefix = off ? 'off-' : '', attribute = bolt ? 'intelligence' : 'strength';
@@ -62,12 +66,12 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
       'Basic hit before criticals and enemy defenses. Excludes Spellweave; skills use their own potency.',
       `${n(weapon.damage)} weapon × ${n(bolt ? p.stats.spellDamageMultiplier : p.stats.attackDamageMultiplier)}${a.elementalDamage ? ` + ${n(a.elementalDamage)} elemental` : ''} = ${n(a.damage, 0)}`,
       [attribute, bolt ? 'spellDamagePercent' : 'damagePercent', ...(weapon.enchantment ? ['intelligence', 'spellDamagePercent'] as StatKey[] : [])]), attribute);
-    damage.sources.unshift({ label: weapon.name, value: `${n(weapon.damage)} base ${weapon.damageType} damage` });
-    if (weapon.enchantment) damage.sources.push({ label: `${weapon.name} · enchantment`, value: `${n(weapon.enchantment.damage)} × ${n(p.stats.spellDamageMultiplier)} = ${n(a.elementalDamage)} elemental` });
+    damage.sources.unshift({ category: 'equipment', slot: off ? 'offhand' : 'weapon', label: weapon.name, value: `${n(weapon.damage)} base ${weapon.damageType} damage` });
+    if (weapon.enchantment) damage.sources.push({ category: 'equipment', slot: off ? 'offhand' : 'weapon', label: `${weapon.name} · enchantment`, value: `${n(weapon.enchantment.damage)} × ${n(p.stats.spellDamageMultiplier)} = ${n(a.elementalDamage)} elemental` });
     const speed = row(`${prefix}rate`, off ? bolt ? 'Off-hand casts / s' : 'Off-hand attacks / s' : bolt ? 'Casts per second' : 'Attacks per second', a.attacksPerSecond, n(a.attacksPerSecond),
       `Basic ${bolt ? 'casting' : 'attack'} rate. Paired weapons alternate; skills use their own timing.`,
       `${n(weapon.baseAttacksPerSecond)} × ${WEAPON_ACTION_RULES.speedMultiplier} cadence × ${n(bolt ? p.stats.castSpeedMultiplier : p.stats.attackSpeedMultiplier)} speed\nLimit: 0.25–12 / s`, bolt ? ['castSpeedPercent'] : ['dexterity', 'attackSpeedPercent']);
-    speed.sources.unshift({ label: weapon.name, value: `${n(weapon.baseAttacksPerSecond)} base / s` });
+    speed.sources.unshift({ category: 'equipment', slot: off ? 'offhand' : 'weapon', label: weapon.name, value: `${n(weapon.baseAttacksPerSecond)} base / s` });
     if (!bolt) addAttribute(speed, 'dexterity');
     return [damage, speed];
   };
@@ -80,9 +84,9 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
     row('critDamage', 'Critical damage', s.critMultiplier, pct(s.critMultiplier), 'Damage on a critical hit. 150% = 1.5× damage.', `150% + critical damage bonuses\nLimit: 100–500%`, ['critDamage']),
   ];
   const armor = effectiveArmor(p), armorSources = sources(['armor']);
-  if(auraPower(p,'ironroot'))armorSources.push({label:'Ironroot · active',value:`+${n(auraPower(p,'ironroot'))}% armor · ${n(auraPower(p,'ironroot')/8)}% less physical hit damage`});
-  if (sheet.blessing?.remaining && sheet.blessing.kind === 'bulwark') armorSources.push({ label: 'Bulwark blessing', value: '×1.4 armor' });
-  if (armor !== s.armor) armorSources.push({ label: 'Afterguard · active', value: `+${n(s.afterguardPercent)}% armor` });
+  if(auraPower(p,'ironroot'))armorSources.push({category:'effects',label:'Ironroot · active',value:`+${n(auraPower(p,'ironroot'))}% armor · ${n(auraPower(p,'ironroot')/8)}% less physical hit damage`});
+  if (sheet.blessing?.remaining && sheet.blessing.kind === 'bulwark') armorSources.push({ category: 'effects', label: 'Bulwark blessing', value: '×1.4 armor' });
+  if (armor !== s.armor) armorSources.push({ category: 'effects', label: 'Afterguard · active', value: `+${n(s.afterguardPercent)}% armor` });
   const defense = [
     { ...row('armor', 'Armor', armor, n(armor, 0), 'Reduces physical damage. Higher-level enemies require more armor.', `Equipment + skill tree armor\nActive Ironroot, Bulwark and Afterguard multiply the total.`), sources: armorSources },
     { ...row('armorReduction', `Reduction vs level ${p.level}`, armorReduction(armor, p.level), pct(armorReduction(armor, p.level)), `Physical protection against a level ${p.level} attacker. Block applies afterward.`, `${n(armor)} ÷ (${n(armor)} + ${n(120 * itemPowerScale(p.level))}) = ${pct(armorReduction(armor, p.level))}\nCap: 80%`), sources: armorSources },
@@ -91,8 +95,8 @@ export function characterStatDetails(p: Player): StatDetailGroup[] {
   ];
   if (p.equipment.offHand?.kind === 'shield') {
     const shield = p.equipment.offHand.shield;
-    defense[2].sources.unshift({ label: 'Equipped shield', value: `${n(shield.blockChance)}% base chance` });
-    defense[3].sources.unshift({ label: 'Equipped shield', value: `${n(shield.blockReduction)}% base reduction` });
+    defense[2].sources.unshift({ category: 'equipment', slot: 'offhand', label: 'Equipped shield', value: `${n(shield.blockChance)}% base chance` });
+    defense[3].sources.unshift({ category: 'equipment', slot: 'offhand', label: 'Equipped shield', value: `${n(shield.blockReduction)}% base reduction` });
     if (p.guardTime > 0) defense.push(row('activeGuard', 'Active guard reduction', Math.max(p.guardReduction, s.blockReduction), pct(Math.max(p.guardReduction, s.blockReduction)), 'Guaranteed block while guarding.', `Higher of ${pct(p.guardReduction)} guard / ${pct(s.blockReduction)} shield\n${n(p.guardTime)}s remaining`));
   }
   const resistances = ELEMENTS.map(element => row(`${element}Resistance`, RESISTANCE_LABELS[`${element}Resistance`], s.resistances[element], pct(s.resistances[element]),
