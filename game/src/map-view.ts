@@ -39,6 +39,17 @@ export function getMinimapRect(width: number, _height: number): MapRect {
     width: compact ? 150 : 172, height: compact ? 143 : 155 };
 }
 
+/** Direct progression shortcuts sit beside the map, clear of its portal/log column. */
+export function getProgressionShortcutRects(width: number, height: number): Array<MapRect & { id: 'character' | 'skills' }> {
+  const map = getMinimapRect(width, height), size = 32, gap = 2;
+  const stacked = width < 520;
+  return (['character', 'skills'] as const).map((id, index) => ({ id,
+    x: stacked ? map.x - size - 10 : map.x - size * 2 - gap - 10 + index * (size + gap),
+    y: stacked ? map.y + 40 + index * (size + gap) : map.y,
+    width: size, height: size,
+  }));
+}
+
 export function getPortalControlRect(width: number, height: number): MapRect {
   const map = getMinimapRect(width, height);
   return { x: map.x, y: map.y + map.height, width: map.width, height: 25 };

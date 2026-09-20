@@ -21,7 +21,7 @@ export type CharacterCommand =
   | { type: 'equip'; index: number; slot?: EquipmentSlot }
   | { type: 'unequip'; slot: EquipmentSlot; index?: number }
   | { type: 'moveItem'; from: number; to: number }
-  | { type: 'allocateAttribute'; attribute: Attribute }
+  | { type: 'allocateAttribute'; attribute: Attribute; amount?: number }
   | { type: 'allocateNode'; id: string }
   | { type: 'assignSkill'; slot: number; skill: SkillId | null };
 
@@ -44,7 +44,7 @@ export function executeCharacterCommand(player: Player, command: CharacterComman
     case 'equip': result = equipItem(player.character, command.index, player.level, command.slot); break;
     case 'unequip': result = unequipItem(player.character, command.slot, command.index); break;
     case 'moveItem': result = moveInventoryItem(player.character, command.from, command.to); break;
-    case 'allocateAttribute': result = allocateAttribute(player.character, command.attribute); break;
+    case 'allocateAttribute': result = allocateAttribute(player.character, command.attribute, command.amount); break;
     case 'allocateNode': result = allocateSkillRoute(player.character, command.id); break;
     case 'assignSkill': result = assignSkill(player, command.slot, command.skill); break;
     default: {

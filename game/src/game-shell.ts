@@ -8,11 +8,12 @@ import { PORTAL_RULES } from './travel.ts';
 import { portalDestinationLabel, type PortalActionView } from './portal-destination.ts';
 import './travel-ui.css';
 import './hud-sidebar.css';
+import './hud-progression.css';
 import { GameNotifications } from './notifications.ts';
 import { getHUDLayout } from './hud.ts';
 import { HUDShortcutMenu } from './hud-shortcut-menu.ts';
 import type { HUDRect } from './hud.ts';
-import { getMinimapRect, getPortalControlRect } from './map-view.ts';
+import { getMinimapRect, getPortalControlRect, getProgressionShortcutRects } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
@@ -50,6 +51,7 @@ export class GameShell {
   }
   setBuffs(buffs: readonly ActiveBuff[]): void { this.buffs.update(this.controls.hidden ? [] : buffs); }
   private gamepadActive = false;
+  private progressionPoints: readonly [number, number] = [0, 0];
   private pauseMenu: PauseMenu | null = null;
   private saveMessage = '';
   private pauseNavigation: PauseNavigation = { category: 'character', focus: null };
@@ -69,6 +71,7 @@ export class GameShell {
     if (key) key.textContent = this.gamepadActive ? '↓' : controls.label('portal');
     for (const action of ['map', 'portal'] as const) this.controls.querySelector(`[data-hud="${action}"]`)!.removeAttribute('aria-keyshortcuts');
     this.shortcutMenu.refreshBindings();
+    this.refreshProgressionShortcuts();
     this.pauseMenu?.refresh();
   }
 
@@ -81,6 +84,8 @@ export class GameShell {
         <button type="button" class="hud-control" data-hud="menu" aria-haspopup="dialog" aria-label="Open character menus" data-tooltip="Character menus"></button>
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
+        <button type="button" class="hud-control hud-progression hud-progression--character" data-hud="character" aria-label="Character" aria-haspopup="dialog" data-tooltip-placement="left">${uiIcon('character')}<span class="hud-progression-count" aria-hidden="true" hidden></span></button>
+        <button type="button" class="hud-control hud-progression hud-progression--skills" data-hud="skills" aria-label="Skill atlas" aria-haspopup="dialog" data-tooltip-placement="left">${uiIcon('skilltree')}<span class="hud-progression-count" aria-hidden="true" hidden></span></button>
         <button type="button" class="hud-control portal-control hud-sidebar-surface" data-hud="portal" aria-label="Town portal" aria-keyshortcuts="R" data-tooltip="Town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left">${uiIcon('portal')}<span class="portal-label">Town portal</span><kbd class="hud-sidebar-key">R</kbd><i class="portal-progress" aria-hidden="true"></i></button>
       </nav>
       <div id="title-mount"></div>
@@ -106,6 +111,8 @@ export class GameShell {
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
+    this.controls.querySelector('[data-hud="character"]')!.addEventListener('click', actions.openCharacter, { signal });
+    this.controls.querySelector('[data-hud="skills"]')!.addEventListener('click', actions.openSkills, { signal });
     this.controls.querySelector<HTMLButtonElement>('[data-hud="portal"]')!.disabled = !actions.portal;
     this.controls.querySelector('[data-hud="portal"]')!.addEventListener('click', () => actions.portal?.(), { signal });
     this.shortcutMenu = new HUDShortcutMenu(this.controls, this.controls.querySelector('[data-hud="menu"]')!, id => {
@@ -122,7 +129,7 @@ export class GameShell {
   setNavigationVisible(visible: boolean): void {
     if (this.navigationVisible === visible) return;
     this.navigationVisible = visible;
-    for (const id of ['map', 'portal'])
+    for (const id of ['map', 'portal', 'character', 'skills'])
       this.controls.querySelector<HTMLElement>(`[data-hud="${id}"]`)!.hidden = !visible;
   }
 
@@ -137,7 +144,32 @@ export class GameShell {
     for (const shortcut of hud.shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
     place('portal', getPortalControlRect(width, height));
+    for (const shortcut of getProgressionShortcutRects(width, height)) place(shortcut.id, shortcut);
     this.shortcutMenu.position();
+  }
+
+  setProgressionPoints(attributes: number, skills: number): void {
+    this.shortcutMenu.setPoints(attributes, skills);
+    if (this.progressionPoints[0] === attributes && this.progressionPoints[1] === skills) return;
+    this.progressionPoints = [attributes, skills];
+    this.refreshProgressionShortcuts();
+  }
+
+  private refreshProgressionShortcuts(): void {
+    for (const [index, id] of (['character', 'skills'] as const).entries()) {
+      const count = this.progressionPoints[index];
+      const button = this.controls.querySelector<HTMLButtonElement>(`[data-hud="${id}"]`)!;
+      const name = id === 'character' ? 'Character' : 'Skill atlas';
+      const kind = id === 'character' ? 'attribute' : 'skill';
+      const available = count > 0 ? ` · ${count.toLocaleString('en-US')} ${kind} ${count === 1 ? 'point' : 'points'} available` : '';
+      const binding = this.gamepadActive ? id === 'character' ? 'D-pad ←' : 'D-pad ↑' : controls.label(id);
+      button.classList.toggle('has-points', count > 0);
+      button.setAttribute('aria-label', `${name}${available}`);
+      button.dataset.tooltip = `${name} · ${binding}${available}`;
+      const badge = button.querySelector<HTMLElement>('.hud-progression-count')!;
+      badge.hidden = count <= 0;
+      badge.textContent = count > 99 ? '99+' : String(count);
+    }
   }
 
   setPortalState(view: PortalActionView): void {

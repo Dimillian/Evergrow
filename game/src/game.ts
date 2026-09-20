@@ -245,7 +245,7 @@ export class Game {
         openInventory: () => this.openCharacterPanel('inventory'),
         openSkills: () => this.openCharacterPanel('skills'),
         openChronicle: () => { if (!this.savingAction) this.panels.open('chronicle'); },
-        allocate: attribute => this.characterAction({ type: 'allocateAttribute', attribute }),
+        allocate: (attribute, amount) => this.characterAction({ type: 'allocateAttribute', attribute, amount }),
       }));
       this.skillPanel = this.lifetime.own(new SkillTreePanel(this.shell.panelMount, {
         develop: command => this.characterAction(command),
@@ -1282,7 +1282,7 @@ export class Game {
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
     this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
-    this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
+    this.shell.setProgressionPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
     const portalView = this.portalActionView();
     this.shell.setPortalState(portalView);
     if(this.touch.active) this.touch.setPortal(portalView);

@@ -42,6 +42,28 @@ test('full-pack hand conflicts fail atomically, including derived state and reso
   assert.deepEqual(player, before); assert.equal(player.derived, derived);
 });
 
+test('bulk attribute allocation spends up to ten points atomically and refreshes without healing', () => {
+  const player = make(); player.character.statPoints = 17; player.hp = 35; player.mana = 12;
+  assert.ok(executeCharacterCommand(player, { type: 'allocateAttribute', attribute: 'vitality', amount: 10 }).ok);
+  assert.equal(player.character.statPoints, 7); assert.equal(player.derived.attributes.vitality, 20);
+  assert.equal(player.maxHp, 160); assert.equal(player.hp, 35); assert.equal(player.mana, 12);
+  assert.ok(executeCharacterCommand(player, { type: 'allocateAttribute', attribute: 'vitality', amount: 10 }).ok);
+  assert.equal(player.character.statPoints, 0); assert.equal(player.derived.attributes.vitality, 27);
+  assert.equal(player.maxHp, 202); assert.equal(player.hp, 35); assert.equal(player.mana, 12);
+  const before = structuredClone(player);
+  assert.equal(executeCharacterCommand(player, { type: 'allocateAttribute', attribute: 'vitality', amount: 10 }).ok, false);
+  assert.deepEqual(player, before);
+});
+
+test('invalid attribute batch sizes leave points, attributes and projections untouched', () => {
+  const player = make(); player.character.statPoints = 50;
+  const before = structuredClone(player), derived = player.derived;
+  for (const amount of [0, -1, 1.5, 11, NaN, Infinity]) {
+    assert.equal(executeCharacterCommand(player, { type: 'allocateAttribute', attribute: 'strength', amount }).ok, false);
+    assert.deepEqual(player, before); assert.equal(player.derived, derived);
+  }
+});
+
 test('attribute and tree commands spend one point and immediately refresh the character', () => {
   const player = make(); player.character.statPoints = 1; player.hp = 35;
   assert.ok(executeCharacterCommand(player, { type: 'allocateAttribute', attribute: 'vitality' }).ok);

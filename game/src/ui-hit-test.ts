@@ -1,5 +1,5 @@
 import { isHUDPoint } from './hud.ts';
-import { getMinimapRect, getPortalControlRect } from './map-view.ts';
+import { getMinimapRect, getPortalControlRect, getProgressionShortcutRects } from './map-view.ts';
 
 export interface UIRect { x: number; y: number; width: number; height: number; }
 interface ClientRect { left: number; top: number; width: number; height: number; }
@@ -19,6 +19,7 @@ export function isGameUIPoint(x: number, y: number, width: number, height: numbe
   const portal = getPortalControlRect(width, height);
   const sidebar = (!!extra && x >= extra.x && y >= extra.y && x <= extra.x + extra.width && y <= extra.y + extra.height)
     || (x >= portal.x && y >= portal.y && x <= portal.x + portal.width && y <= portal.y + portal.height)
-    || (x >= map.x && y >= map.y && x <= map.x + map.width && y <= map.y + map.height);
+    || (x >= map.x && y >= map.y && x <= map.x + map.width && y <= map.y + map.height)
+    || getProgressionShortcutRects(width, height).some(rect => isUIRectPoint(x, y, rect));
   return isUIRectPoint(x, y, overlay) || isHUDPoint(x, y, width, height) || (navigationVisible && sidebar);
 }

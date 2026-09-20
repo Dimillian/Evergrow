@@ -19,7 +19,7 @@ export interface CharacterPanelActions {
   openInventory(): void;
   openSkills(): void;
   openChronicle?(): void;
-  allocate(attribute: Attribute): void;
+  allocate(attribute: Attribute, amount: number): void;
 }
 const ATTRIBUTES: Record<Attribute, { name: string; description: string }> = {
   strength: { name: 'Strength', description: 'Physical attack damage' },
@@ -78,7 +78,7 @@ export class CharacterPanel {
     this.element.addEventListener('click', event => {
       const target = event.target as Element;
       const attribute = target.closest<HTMLElement>('[data-allocate]')?.dataset.allocate;
-      if (attribute && Object.hasOwn(ATTRIBUTES, attribute)) actions.allocate(attribute as Attribute);
+      if (attribute && Object.hasOwn(ATTRIBUTES, attribute)) actions.allocate(attribute as Attribute, event.shiftKey ? 10 : 1);
       const category = target.closest<HTMLElement>('[data-category]')?.dataset.category as Category | undefined;
       if (category) this.selectCategory(category);
       if (document.documentElement.classList.contains('touch-mode')) this.showDetail(target);
@@ -142,7 +142,7 @@ export class CharacterPanel {
       const button = this.element.querySelector<HTMLButtonElement>(`[data-allocate="${id}"]`)!;
       button.disabled = player.character.statPoints <= 0;
       if (button.disabled && document.activeElement === button) button.closest('.character-attribute')?.querySelector<HTMLElement>('[data-stat-detail]')?.focus({ preventScroll: true });
-      button.dataset.tooltip = `Spend 1 attribute point on ${ATTRIBUTES[id].name}`;
+      button.dataset.tooltip = `Spend 1 attribute point on ${ATTRIBUTES[id].name} · Shift-click: spend up to 10`;
     }
     this.renderStats();
     const canvas = this.element.querySelector('canvas')!; const context = canvas.getContext('2d');
