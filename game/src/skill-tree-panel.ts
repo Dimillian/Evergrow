@@ -2,7 +2,10 @@ import { ATLAS_WEAPON_FILTERS, matchesAtlasSkillFilter, type AtlasWeaponFilter }
 import { RESPEC_GOLD_PER_POINT, respecPoints, planSkillChainRefund, type SkillChainRefund } from './skill-respec.ts';
 import { canAfford, goldBalance } from './wallet.ts';
 import type { SkillPreview } from './skill-preview.ts';
-import { controls } from './control-preferences.ts';
+import { controls, skillTourProgress } from './control-preferences.ts';
+import { SkillTreeTour } from './skill-tree-tour.ts';
+import type { SkillTourStep } from './skill-tree-tour-content.ts';
+import type { AtlasCaption } from './skill-tree-labels.ts';
 import { SKILL_ACTIONS } from './control-bindings.ts';
 import { skillValuesMarkup, skillValueChangesMarkup } from './skill-effect-values.ts';
 import { previewSkillVariant } from './skill-variant-preview.ts';
@@ -86,6 +89,7 @@ export class SkillTreePanel {
   private atlasDirty = true;
   private readonly atlasSurface = document.createElement('canvas');
   private lightPlan?: AtlasLightPlan;
+  private atlasCaptions: AtlasCaption[] = [];
   private lastLightFrame = -Infinity;
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private matching = new Set(SKILL_TREE.nodes.map(node => node.id));
@@ -101,9 +105,21 @@ export class SkillTreePanel {
   private readonly controller = new GamepadMenu();
   private controllerSection = 0;
   private controllerTime = 0;
+  private tour?: SkillTreeTour;
+  private readonly autoTour: boolean;
+  private readonly guideAvailable: boolean;
+  private tourState?: {
+    selected: string | null; centerX: number; centerY: number; zoom: number;
+    fitMode: SkillTreePanel['fitMode']; skillsOnly: boolean; weaponFilter: AtlasWeaponFilter;
+    search: string; searchGroup: string | null; detailsVisible: boolean; scroll: number; mainScroll: number;
+    previewOpen: boolean; disclosures: string[]; focus: HTMLElement | null;
+  };
 
-  constructor(mount: HTMLElement, actions: SkillTreeActions) {
+  constructor(mount: HTMLElement, actions: SkillTreeActions, options: { autoTour?: boolean } = {}) {
     this.actions = actions;
+    this.autoTour = options.autoTour !== false;
+    // Match the runtime's desktop/mobile profile, independent of gamepad input.
+    this.guideAvailable = !window.EvergrowAndroid && !window.matchMedia('(pointer: coarse)').matches;
     this.reducedMotion.addEventListener('change', () => this.invalidate(), { signal: this.life.signal });
     document.addEventListener('visibilitychange', () => this.invalidate(), { signal: this.life.signal });
     this.root = document.createElement('div');
@@ -111,7 +127,7 @@ export class SkillTreePanel {
     this.root.hidden = true;
     this.root.innerHTML = `<section class="ui-window skill-atlas-window" role="dialog" aria-modal="true" aria-labelledby="skill-atlas-title">
       <header class="ui-window-header skill-atlas-header"><h2 class="ui-title" id="skill-atlas-title">Atlas of Becoming</h2>
-        <div class="skill-atlas-points" aria-live="polite"></div><button class="ui-button ui-button--quiet skill-atlas-respec" data-tree="respec">Respec <span class="controller-binding">Y</span></button><button class="ui-button ui-button--quiet ui-button--icon" data-tree="close" aria-label="Close skill tree">${uiIcon('close')}</button></header>
+        <div class="skill-atlas-points" aria-live="polite"></div>${this.guideAvailable ? '<button class="ui-button ui-button--quiet skill-atlas-guide" data-tree="guide" title="Replay the skill tree guide">Guide <span class="controller-binding">RS</span></button>' : ''}<button class="ui-button ui-button--quiet skill-atlas-respec" data-tree="respec">Respec <span class="controller-binding">Y</span></button><button class="ui-button ui-button--quiet ui-button--icon" data-tree="close" aria-label="Close skill tree">${uiIcon('close')}</button></header>
       <nav class="skill-atlas-controller" aria-label="Controller sections"><kbd>LB</kbd><span data-pad-section="0">Tree</span><span data-pad-section="1">Node</span><span data-pad-section="2">Skills</span><kbd>RB</kbd><small data-pad-help></small></nav>
       <div class="skill-atlas-main"><section class="skill-atlas-chart" aria-label="Skill atlas navigation">
         <div class="skill-atlas-toolbar"><label class="skill-atlas-search"><span>${uiIcon('center')}</span><input type="search" placeholder="Find a skill or bonus…" aria-label="Search skills and bonuses" maxlength="80"></label>
@@ -263,6 +279,10 @@ export class SkillTreePanel {
     if (firstOpen) this.showOrigin();
     this.focus?.dispose();
     this.focus = trapDialogFocus(this.root, { signal: this.life.signal, initialFocus: this.canvas, restoreFocus: false });
+    // Let callers finish selecting a skill before capturing the view to restore.
+    if (this.guideAvailable && this.autoTour && skillTourProgress.shouldOffer) queueMicrotask(() => {
+      if (this.shown && skillTourProgress.shouldOffer) this.startTour();
+    });
   }
   refresh(player: Player): void {
     const active = this.root.ownerDocument.activeElement;
@@ -276,7 +296,7 @@ export class SkillTreePanel {
     this.routes = buildSkillRoutes(this.allocated);
     this.points.innerHTML = `<strong>${player.character.skillPoints}</strong><span>SKILL ${player.character.skillPoints === 1 ? 'POINT' : 'POINTS'}</span>`;
     this.updateDetail(); this.updateAssignments(); this.updateSearch(); this.invalidate();
-    if (this.shown && focusedControl) {
+    if (this.shown && !this.tour && focusedControl) {
       const replacement = [...this.root.querySelectorAll<HTMLButtonElement>(`[${focusedControl.attribute}]`)]
         .find(button => button.getAttribute(focusedControl.attribute) === focusedControl.value && !button.disabled);
       (replacement ?? this.canvas).focus({ preventScroll: true });
@@ -284,13 +304,18 @@ export class SkillTreePanel {
   }
   updateGamepad(pad: GamepadInput, now: number): void {
     if (!this.shown) return;
-    const modal = this.respecDialog;
-    if (modal) { this.controller.update(modal, pad, now); return; }
     const elapsed = Math.min(50, Math.max(0, now - this.controllerTime)); this.controllerTime = now;
+    const modal = this.tour?.dialog ?? this.respecDialog;
+    if (modal) {
+      if (pad.active) this.root.classList.add('is-controller');
+      if (this.tour && Math.abs(pad.aim.y) > .2) this.tour.scroll(pad.aim.y * elapsed * .65);
+      this.controller.update(modal, pad, now); return;
+    }
     if (!pad.active) { this.controller.clear(); return; }
     if (!this.root.classList.contains('is-controller')) {
       this.root.classList.add('is-controller'); this.setHovered(null); this.selectControllerSection(0);
     }
+    if (this.guideAvailable && pad.pressed.has(PAD.skill5)) { this.startTour(); return; }
     if (pad.pressed.has(PAD.skill4)) { this.openRespec(); return; }
     if (pad.pressed.has(PAD.skill3)) { this.selectControllerSection(2); return; }
     const region = this.controllerRegion();
@@ -312,19 +337,23 @@ export class SkillTreePanel {
     this.controllerSection = section; this.controller.clear();
     for (const label of this.root.querySelectorAll<HTMLElement>('[data-pad-section]'))
       label.setAttribute('aria-current', String(Number(label.dataset.padSection) === section));
-    this.root.querySelector('[data-pad-help]')!.textContent = section === 0 ? 'A Node · X Assign · LT/RT Zoom · B Back' : 'A Select · RS Scroll · B Back';
+    this.root.querySelector('[data-pad-help]')!.textContent = section === 0
+      ? `A Node · X Assign · LT/RT Zoom${this.guideAvailable ? ' · RS Guide' : ''} · B Back`
+      : `A Select · RS Scroll${this.guideAvailable ? ' / click Guide' : ''} · B Back`;
     const region = this.controllerRegion();
     const target = section === 0 ? this.canvas
       : region.querySelector<HTMLElement>('[data-tree="assign"], [data-tree="allocate"]:not(:disabled), [data-slot]:not(:disabled), button:not(:disabled), select') ?? this.detail;
     target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   close(): void {
+    this.finishTour(false);
     this.closePreview(); this.closeRespec();
     this.cancelSearchFit();
     this.controller.clear(); this.root.classList.remove('is-controller'); this.controllerSection = 0;
     this.clearTouch?.();
     this.lastClickedNode = this.doubleClickedNode = null;
     this.atlasDirty = true; this.lightPlan = undefined;
+    this.atlasCaptions = [];
     this.atlasSurface.width = this.atlasSurface.height = 0;
     clearTimeout(this.hoverExit); this.hoverExit = undefined; this.explanations.hide();
     this.shown = false; this.root.hidden = true; this.focus?.dispose(); this.focus = undefined;
@@ -369,6 +398,7 @@ export class SkillTreePanel {
     this.actions.develop({ type: 'refundNode', id: node.id });
   }
   private click(event: MouseEvent): void {
+    if (this.tour) return;
     const button = (event.target as Element).closest<HTMLButtonElement>('button'); if (!button) return;
     if (button.dataset.slot) {
       const index = Number(button.dataset.slot) - 1, node = this.selected ? SKILL_NODES.get(this.selected) : undefined;
@@ -397,6 +427,7 @@ export class SkillTreePanel {
     if (button.dataset.clear) { this.actions.assign(Number(button.dataset.clear) - 1, null); return; }
     const action = button.dataset.tree;
     if (action === 'close') this.actions.close();
+    else if (action === 'guide') this.startTour();
     else if (action === 'respec') this.openRespec();
     else if (action === 'skills') {
       this.cancelSearchFit(); this.fitMode = null;
@@ -436,8 +467,86 @@ export class SkillTreePanel {
     }
   }
   dismissPopup(): boolean {
+    if (this.tour) { this.finishTour(); return true; }
     if (this.respecDialog) { this.closeRespec(); return true; }
     return false;
+  }
+  private startTour(): void {
+    if (!this.guideAvailable || this.tour || !this.shown || !this.player) return;
+    this.cancelSearchFit(); this.closeRespec(); this.clearTouch?.(); this.drag = undefined;
+    this.lastClickedNode = this.doubleClickedNode = null;
+    this.tourState = {
+      selected: this.selected, centerX: this.centerX, centerY: this.centerY, zoom: this.zoom, fitMode: this.fitMode,
+      skillsOnly: this.skillsOnly, weaponFilter: this.weaponFilter, search: this.search.value, searchGroup: this.activeSearchGroup,
+      detailsVisible: !this.root.classList.contains('is-map-only'), scroll: this.inspection.scrollTop,
+      mainScroll: this.root.querySelector<HTMLElement>('.skill-atlas-main')!.scrollTop,
+      previewOpen: this.previewDisclosure.open,
+      disclosures: [...this.detail.querySelectorAll<HTMLDetailsElement>('details[open][data-inspector-section]')].map(d => d.dataset.inspectorSection!),
+      focus: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+    };
+    this.closePreview(); this.setHovered(null); this.controller.clear();
+    this.root.querySelector<HTMLElement>('.skill-atlas-window')!.inert = true;
+    this.tour = new SkillTreeTour(this.root, {
+      stage: step => this.stageTour(step), bounds: step => this.tourBounds(step), finish: () => this.finishTour(),
+    });
+  }
+  private stageTour(step: SkillTourStep): void {
+    this.closePreview(); this.search.value = ''; this.activeSearchGroup = null;
+    this.skillsOnly = step.id === 'find'; this.weaponFilter = 'all'; this.syncTourFilters();
+    this.inspectNode(step.node, false);
+    const node = SKILL_NODES.get(step.node)!;
+    this.setView(node.x - this.width * .18 / .85, node.y + this.height * .24 / .85, .85);
+    if (step.id === 'inspect') {
+      this.previewDisclosure.open = true;
+      // Keep the inline demonstration visible without scrolling the game page.
+      this.inspection.scrollTop = Math.max(0, this.previewDisclosure.offsetTop - this.detail.offsetTop - 70);
+    }
+    const main = this.root.querySelector<HTMLElement>('.skill-atlas-main')!;
+    main.scrollTop = 0;
+    if (window.innerWidth <= 620 && step.target) {
+      const target = step.id === 'inspect' ? this.previewDisclosure : this.root.querySelector<HTMLElement>(step.target);
+      if (target && main.contains(target)) main.scrollTop = Math.max(0, target.getBoundingClientRect().top - main.getBoundingClientRect().top - 8);
+    }
+  }
+  private syncTourFilters(): void {
+    this.root.querySelector('[data-tree="skills"]')!.setAttribute('aria-pressed', String(this.skillsOnly));
+    this.root.querySelector<HTMLSelectElement>('[data-weapon-filter]')!.value = this.weaponFilter;
+    this.updateSearch();
+  }
+  private tourBounds(step: SkillTourStep): { x: number; y: number; width: number; height: number } | undefined {
+    if (step.target) return this.root.querySelector<HTMLElement>(step.target)?.getBoundingClientRect();
+    const node = SKILL_NODES.get(step.node)!, rect = this.canvas.getBoundingClientRect();
+    const radius = skillNodeScreenRadius(node, this.zoom) + 14;
+    const x = (node.x - this.centerX) * this.zoom + this.width / 2;
+    const y = (node.y - this.centerY) * this.zoom + this.height / 2;
+    // Captions can sit above, below or beside the lens. Reveal their actual plates,
+    // including a rank badge, instead of guessing extra space on one side.
+    const captions = this.atlasCaptions.filter(caption => caption.owner === node.id);
+    const left = Math.min(x - radius, ...captions.map(caption => caption.x));
+    const top = Math.min(y - radius, ...captions.map(caption => caption.y));
+    const right = Math.max(x + radius, ...captions.map(caption => caption.x + caption.width));
+    const bottom = Math.max(y + radius, ...captions.map(caption => caption.y + caption.height));
+    return { x: rect.left + left, y: rect.top + top, width: right - left, height: bottom - top };
+  }
+  private finishTour(restoreFocus = true): void {
+    if (!this.tour) return;
+    this.tour.dispose(); this.tour = undefined; this.controller.clear();
+    this.root.querySelector<HTMLElement>('.skill-atlas-window')!.inert = false;
+    if (this.autoTour) skillTourProgress.dismiss();
+    const state = this.tourState; this.tourState = undefined;
+    if (!state) return;
+    this.closePreview(); this.selected = state.selected;
+    this.search.value = state.search; this.activeSearchGroup = state.searchGroup;
+    this.skillsOnly = state.skillsOnly; this.weaponFilter = state.weaponFilter; this.syncTourFilters();
+    this.updateDetail(); this.updateAssignments(); this.setDetailsVisible(state.detailsVisible);
+    this.setView(state.centerX, state.centerY, state.zoom); this.fitMode = state.fitMode;
+    for (const disclosure of this.detail.querySelectorAll<HTMLDetailsElement>('details[data-inspector-section]'))
+      disclosure.open = state.disclosures.includes(disclosure.dataset.inspectorSection!);
+    this.previewDisclosure.open = restoreFocus && state.previewOpen && state.detailsVisible;
+    this.inspection.scrollTop = state.scroll;
+    this.root.querySelector<HTMLElement>('.skill-atlas-main')!.scrollTop = state.mainScroll;
+    if (restoreFocus) (state.focus?.isConnected && !state.focus.closest('[hidden], [inert]') ? state.focus : this.canvas).focus({ preventScroll: true });
+    this.invalidate();
   }
   private closePreview(): void {
     this.previewRequest++; this.preview?.dispose(); this.preview = undefined;
@@ -636,6 +745,7 @@ export class SkillTreePanel {
     const ratio = Math.min(3, window.devicePixelRatio || 1);
     this.canvas.width = Math.round(this.width * ratio); this.canvas.height = Math.round(this.height * ratio);
     if(this.fitMode)this.fitCurrentRegion();
+    this.tour?.refreshLayout();
     this.invalidate();
   }
   private clampCenter(): void {
@@ -744,7 +854,9 @@ export class SkillTreePanel {
       view.labelExclusions=[...this.root.querySelectorAll<HTMLElement>('.skill-atlas-zoom, .skill-atlas-navigator, .skill-atlas-sidebar-toggle, [data-atlas-context]')].map(element=>{
         const rect=element.getBoundingClientRect();return{x:rect.left-canvasBounds.left,y:rect.top-canvasBounds.top,width:rect.width,height:rect.height};
       });
-      const captions=drawSkillAtlas(base, view); this.drawNavigator(view); this.lightPlan = buildAtlasLightPlan(view, captions); this.atlasDirty = false;
+      const captions=drawSkillAtlas(base, view); this.atlasCaptions = captions;
+      this.drawNavigator(view); this.lightPlan = buildAtlasLightPlan(view, captions); this.atlasDirty = false;
+      this.tour?.refreshLayout();
     }
     if (dirty || now - this.lastLightFrame >= 1000 / 30) {
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(this.atlasSurface, 0, 0);
