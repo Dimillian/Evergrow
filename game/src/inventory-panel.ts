@@ -98,7 +98,7 @@ export class InventoryPanel {
   constructor(mount: HTMLElement, actions: InventoryPanelActions) {
     this.actions = actions;
     this.element = document.createElement('div');
-    this.element.className = 'character-overlay';
+    this.element.className = 'character-overlay inventory-overlay';
     this.element.hidden = true;
     this.element.innerHTML = `<section class="ui-window character-window inventory-window" role="dialog" aria-modal="true" aria-labelledby="character-title">
       <header class="ui-window-header character-header">
@@ -169,11 +169,11 @@ export class InventoryPanel {
     this.window = this.element.querySelector('.character-window')!;
     this.stats = new InventoryStats(this.window.querySelector('.character-columns')!, this.window, actions.allocate, () => this.hideTooltip());
     const statsToggle = document.createElement('button');
-    statsToggle.type = 'button'; statsToggle.className = 'ui-button ui-button--quiet';
+    statsToggle.type = 'button'; statsToggle.className = 'inventory-stats-toggle';
     statsToggle.dataset.toggleStats = ''; statsToggle.setAttribute('aria-expanded', 'false');
     statsToggle.setAttribute('aria-controls', 'inventory-stats');
-    statsToggle.innerHTML = `${uiIcon('character')}<span>Stats</span>`;
-    this.window.querySelector('.character-header-right')!.prepend(statsToggle);
+    statsToggle.innerHTML = '<span class="inventory-stats-toggle-arrow" aria-hidden="true">‹</span><span class="inventory-stats-toggle-label">Stats</span>';
+    this.window.prepend(statsToggle);
     statsToggle.addEventListener('click', () => this.toggleStats(), { signal: this.lifetime.signal });
     this.element.querySelector('[data-open-character]')?.addEventListener('click', () => actions.openCharacter?.(), { signal: this.lifetime.signal });
     this.popupLayer = this.element.querySelector('[data-popup-layer]')!;
@@ -448,7 +448,7 @@ export class InventoryPanel {
   }
 
   private navigate(key: string, target: HTMLElement): boolean {
-    const owner = target.closest<HTMLElement>('[data-mini], [data-section], .character-header-right, .character-footer');
+    const owner = target.closest<HTMLElement>('[data-mini], [data-section], .character-header-right, .character-footer, .inventory-stats-toggle');
     if (!owner) return false;
     const popup = owner.hasAttribute('data-mini');
     const root = popup ? owner : this.window;
@@ -463,7 +463,7 @@ export class InventoryPanel {
   }
 
   private inNavigationSection(target: HTMLElement): boolean {
-    return !!target.closest('.character-header-right, .character-footer') || target.closest<HTMLElement>('[data-section]')?.dataset.section === String(this.section);
+    return !!target.closest('.character-header-right, .character-footer, .inventory-stats-toggle') || target.closest<HTMLElement>('[data-section]')?.dataset.section === String(this.section);
   }
 
   private text(selector: string, value: string): void {

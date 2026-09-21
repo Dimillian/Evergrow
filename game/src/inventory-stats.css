@@ -9,9 +9,24 @@
 .inventory-window .character-orbit { width: 136px; }
 .inventory-window .character-portrait-footer .ui-button { min-width: 28px; width: 28px; padding-inline: 3px; }
 .inventory-window .character-portrait-footer strong { font-size: 12px; }
-.inventory-window [data-toggle-stats] { display: inline-flex; align-items: center; gap: 6px; padding-inline: 10px; font-size: 13px; }
-.inventory-window [data-toggle-stats][aria-expanded="true"] { color: var(--ui-ivory); border-color: var(--ui-silver); background: #a0bdd126; }
-.inventory-window [data-toggle-stats] .ui-icon { width: 17px; height: 17px; }
+.character-overlay.inventory-overlay { padding-left: calc(var(--character-inset) + 32px); }
+.inventory-stats-toggle {
+  position: absolute; right: 100%; top: 50%; transform: translateY(-50%); z-index: 4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  box-sizing: border-box; width: 32px; height: 108px; padding: 8px 0;
+  border: 1px solid #96b8c366; border-right: 0; border-radius: 3px 0 0 3px;
+  background: linear-gradient(90deg, #172532, #101b27); color: var(--ui-silver-dim);
+  box-shadow: -4px 3px 12px #0004, inset 1px 0 #d4e6ef18;
+  font: 13px var(--ui-font); cursor: pointer;
+}
+.inventory-stats-toggle-label { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .08em; }
+.inventory-stats-toggle-arrow { font: 22px/1 system-ui, sans-serif; }
+.inventory-stats-toggle[aria-expanded="true"] { color: var(--ui-ivory); border-color: var(--ui-silver); }
+.inventory-stats-toggle[aria-expanded="true"] .inventory-stats-toggle-arrow { transform: rotate(180deg); }
+.inventory-stats-toggle:hover { color: var(--ui-ivory); background: linear-gradient(90deg, #253a4b, #182a38); }
+.inventory-stats-toggle:focus-visible { outline: 2px solid var(--ui-ivory); outline-offset: 2px; }
+.touch-mode .character-overlay.inventory-overlay { padding-left: calc(max(8px, env(safe-area-inset-left)) + 44px); }
+.touch-mode .inventory-stats-toggle { width: 44px; }
 .inventory-window .inventory-stats {
   display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 16px 12px 12px;
   box-sizing: border-box; border-right: 1px solid #b3dbea30; background: #06101b20;
@@ -44,6 +59,7 @@
 /* Touch retains Bag/Equipment navigation with the optional card above either. */
 .touch-mode .inventory-window .inventory-stats:not([hidden]) { display: flex; max-height: 280px; padding: 12px; border-bottom: 1px solid #b3dbea30; }
 .touch-mode .inventory-stat-attribute .ui-button { width: 44px; height: 44px; min-height: 44px; flex-basis: 44px; }
+.touch-mode .inventory-stat-attribute .inventory-stat-row { font-size: 12px; gap: 4px; }
 .touch-mode .inventory-stats-attributes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; }
 @media (min-width: 660px) and (max-height: 560px) {
   .touch-mode .inventory-window.has-stats .character-columns { display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
@@ -57,5 +73,6 @@
 }
 @media (forced-colors: active) {
   .inventory-window .inventory-stats, .inventory-stats-attributes { border-color: CanvasText; }
-  .inventory-window [data-toggle-stats][aria-expanded="true"] { border-color: Highlight; }
+  .inventory-stats-toggle { background: Canvas; color: ButtonText; border-color: ButtonText; box-shadow: none; }
+  .inventory-stats-toggle[aria-expanded="true"] { color: Highlight; border-color: Highlight; }
 }
