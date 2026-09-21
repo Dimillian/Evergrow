@@ -68,6 +68,7 @@ function setup(section: number, statsVisible = false) {
   const palette = header.append(new Surface(true, 1000, 0)), close = header.append(new Surface(true, 1060, 0));
   const sections = (statsVisible ? [0, 1, 2] : [0, 1]).map(index => {
     const owner = root.append(new Surface()); owner.dataset.section = String(index);
+    if (index === section) owner.classes.add('is-selected-section');
     return owner.append(new Surface(true, 100 + index * 300, 100));
   });
   const panel = Object.assign(Object.create(InventoryPanel.prototype), {
@@ -117,6 +118,7 @@ test('shoulders switch sections from the header while popup navigation remains i
 test('expanded stats participate in shoulder navigation beside equipment and inventory', () => {
   const s = setup(1, true);
   s.update([PAD.skill2]); assert.equal(doc.activeElement, s.sections[2]);
+  assert.ok(s.sections[1].parent!.classes.has('is-selected-section'), 'the bag stays displayed while the stats drawer owns focus');
   s.update([]); s.update([PAD.skill2]); assert.equal(doc.activeElement, s.sections[0]);
   s.update([]); s.update([PAD.potion]); assert.equal(doc.activeElement, s.sections[2]);
 });

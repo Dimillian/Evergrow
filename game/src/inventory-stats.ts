@@ -14,11 +14,13 @@ export class InventoryStats {
   private readonly details = new Map<string, StatDetail>();
   private signature = '';
   private player: Player | null = null;
+  private visible = false;
 
   constructor(mount: HTMLElement, tooltipMount: HTMLElement, allocate?: (attribute: Attribute, amount: number) => void, inspecting?: () => void) {
     this.element = document.createElement('section');
-    this.element.className = 'inventory-stats'; this.element.id = 'inventory-stats';
-    this.element.dataset.section = '2'; this.element.hidden = true;
+    this.element.className = 'inventory-stats ui-window'; this.element.id = 'inventory-stats';
+    this.element.dataset.section = '2'; this.element.inert = true;
+    this.element.setAttribute('aria-hidden', 'true');
     this.element.setAttribute('aria-label', 'Attributes and combat stats');
     this.element.innerHTML = '<header><h3>Attributes</h3><span data-stat-points></span></header><div class="inventory-stats-attributes"></div><div class="inventory-stats-details ui-scroll-area"></div>';
     mount.prepend(this.element);
@@ -43,13 +45,14 @@ export class InventoryStats {
   }
 
   setVisible(visible: boolean): void {
-    this.element.hidden = !visible; this.hideTooltip();
+    this.visible = visible; this.element.inert = !visible;
+    this.element.setAttribute('aria-hidden', String(!visible)); this.hideTooltip();
     if (visible && this.player) this.refresh(this.player);
   }
 
   refresh(player: Player): void {
     this.player = player;
-    if (this.element.hidden) return;
+    if (!this.visible) return;
     this.hideTooltip();
     const groups = characterStatDetails(player);
     this.details.clear();

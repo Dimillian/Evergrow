@@ -66,6 +66,7 @@ export class InventoryPanel {
   private readonly hud: InventoryHUD | null;
   private readonly stats: InventoryStats;
   private statsVisible = false;
+  private statsReturnSection = 1;
   private focus: ReturnType<typeof trapDialogFocus> | null = null;
   private popupFocus: ReturnType<typeof trapDialogFocus> | null = null;
   private popup: 'sort' | 'weapon' | 'charms' | null = null;
@@ -167,7 +168,9 @@ export class InventoryPanel {
     </section>`;
     this.element.style.setProperty('--pack-columns', String(PACK_COLUMNS));
     this.window = this.element.querySelector('.character-window')!;
-    this.stats = new InventoryStats(this.window.querySelector('.character-columns')!, this.window, actions.allocate, () => this.hideTooltip());
+    const statsDrawer = document.createElement('div'); statsDrawer.className = 'inventory-stats-drawer';
+    this.window.prepend(statsDrawer);
+    this.stats = new InventoryStats(statsDrawer, this.window, actions.allocate, () => this.hideTooltip());
     const statsToggle = document.createElement('button');
     statsToggle.type = 'button'; statsToggle.className = 'inventory-stats-toggle';
     statsToggle.dataset.toggleStats = ''; statsToggle.setAttribute('aria-expanded', 'false');
@@ -212,6 +215,7 @@ export class InventoryPanel {
     this.player = player;
     const wasOpen = !this.element.hidden;
     this.element.hidden = false;
+    this.positionStatsDrawer();
     this.refresh(player);
     if (!wasOpen) {
       this.focus = trapDialogFocus(this.hud ? this.element : this.window, { signal: this.lifetime.signal, restoreFocus: false,
@@ -231,14 +235,23 @@ export class InventoryPanel {
   private toggleStats(): void {
     this.statsVisible = !this.statsVisible;
     this.hideTooltip(); this.controller.clear();
+    this.positionStatsDrawer();
     this.window.classList.toggle('has-stats', this.statsVisible);
     const toggle = this.window.querySelector<HTMLButtonElement>('[data-toggle-stats]')!;
     toggle.setAttribute('aria-expanded', String(this.statsVisible));
     this.element.querySelector<HTMLElement>('[data-pad-section="2"]')!.hidden = !this.statsVisible;
     this.stats.setVisible(this.statsVisible);
     if (this.statsVisible && this.element.classList.contains('is-controller')) this.selectSection(2);
-    else if (!this.statsVisible && this.section === 2) { this.section = 1; toggle.focus({ preventScroll: true }); }
+    else if (!this.statsVisible && this.section === 2) { this.section = this.statsReturnSection; toggle.focus({ preventScroll: true }); }
     this.updateSectionHighlight(); this.updateScrollFades();
+  }
+
+  private positionStatsDrawer(): void {
+    if (this.element.hidden) return;
+    const tabWidth = parseFloat(getComputedStyle(this.window).getPropertyValue('--stats-tab-width')) || 32;
+    // Use the available left gutter; small viewports overlap the inventory instead of moving it.
+    const outset = Math.min(226, Math.max(0, this.window.getBoundingClientRect().left - tabWidth - 8));
+    this.window.style.setProperty('--stats-outset', `${outset}px`);
   }
 
   refresh(player: Player): void {
@@ -429,6 +442,7 @@ export class InventoryPanel {
   }
 
   private selectSection(index: number): void {
+    if (index === 2 && this.section !== 2) this.statsReturnSection = this.section;
     this.section = index;
     const root = this.element.querySelector<HTMLElement>(`[data-section="${index}"]`)!;
     this.updateSectionHighlight();
@@ -443,8 +457,11 @@ export class InventoryPanel {
   private updateSectionHighlight(): void {
     for (const label of this.element.querySelectorAll<HTMLElement>('[data-pad-section]'))
       label.setAttribute('aria-current', String(Number(label.dataset.padSection) === this.section));
-    for (const section of this.element.querySelectorAll<HTMLElement>('[data-section]'))
+    for (const section of this.element.querySelectorAll<HTMLElement>('[data-section]')) {
+      // Keep the last gear/bag section on screen while the separate drawer has focus.
+      if (this.section === 2 && section.dataset.section !== '2') continue;
       section.classList.toggle('is-selected-section', Number(section.dataset.section) === this.section);
+    }
   }
 
   private navigate(key: string, target: HTMLElement): boolean {
@@ -497,7 +514,7 @@ export class InventoryPanel {
   private bind(): void {
     const options = { signal: this.lifetime.signal };
     // Pane sizes change with responsive tabs; content sizes change with gear and fonts.
-    const scrollFadeObserver = new ResizeObserver(() => this.updateScrollFades());
+    const scrollFadeObserver = new ResizeObserver(() => { this.updateScrollFades(); this.positionStatsDrawer(); });
     this.window.querySelectorAll('.character-columns, .character-equipment, .character-inventory')
       .forEach(element => scrollFadeObserver.observe(element));
     this.lifetime.signal.addEventListener('abort', () => scrollFadeObserver.disconnect(), { once: true });
@@ -575,6 +592,7 @@ export class InventoryPanel {
     this.element.addEventListener('focusin', event => {
       const section = (event.target as Element).closest<HTMLElement>('[data-section]');
       if (section) {
+        if (section.dataset.section === '2' && this.section !== 2) this.statsReturnSection = this.section;
         this.section = Number(section.dataset.section); this.sectionFocus.set(this.section, event.target as HTMLElement); this.updateSectionHighlight();
       }
       const location = this.locationFrom(event.target);
@@ -682,7 +700,7 @@ export class InventoryPanel {
     this.window.addEventListener('scroll', event => {
       if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) { this.hideTooltip(); this.updateScrollFades(); }
     }, { ...options, capture: true, passive: true });
-    window.addEventListener('resize', () => { this.hideTooltip(); this.dismissPopup(); }, options);
+    window.addEventListener('resize', () => { this.hideTooltip(); this.dismissPopup(); this.positionStatsDrawer(); }, options);
     window.addEventListener('blur', () => this.clearDrag(), options);
   }
 

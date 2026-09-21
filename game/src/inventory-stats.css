@@ -1,9 +1,7 @@
 @import './character-stat-tooltip.css';
-/* A quiet optional column inside the existing inventory frame. */
-.character-window.inventory-window { width: min(900px, 100%); }
+/* The inventory keeps its geometry while a separate stats drawer opens. */
+.character-window.inventory-window { width: min(900px, 100%); --stats-tab-width: 32px; --stats-outset: 0px; }
 .inventory-window .character-columns { grid-template-columns: 270px minmax(426px, 1fr); }
-.character-window.inventory-window.has-stats { width: min(1120px, 100%); }
-.inventory-window.has-stats .character-columns { grid-template-columns: 226px 250px minmax(0, 1fr); }
 .inventory-window .character-equipment { padding-inline: 14px; }
 .inventory-window .character-doll { height: 330px; }
 .inventory-window .character-orbit { width: 136px; }
@@ -11,9 +9,10 @@
 .inventory-window .character-portrait-footer strong { font-size: 12px; }
 .character-overlay.inventory-overlay { padding-left: calc(var(--character-inset) + 32px); }
 .inventory-stats-toggle {
-  position: absolute; right: 100%; top: 50%; transform: translateY(-50%); z-index: 4;
+  position: absolute; right: 100%; top: 50%; transform: translate(0, -50%); z-index: 11;
+  transition: transform .2s ease;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  box-sizing: border-box; width: 32px; height: 132px; padding: 8px 0;
+  box-sizing: border-box; width: var(--stats-tab-width); height: 132px; padding: 8px 0;
   border: 1px solid #96b8c366; border-right: 0; border-radius: 3px 0 0 3px;
   background: linear-gradient(90deg, #172532, #101b27); color: var(--ui-silver-dim);
   box-shadow: -4px 3px 12px #0004, inset 1px 0 #d4e6ef18;
@@ -26,12 +25,23 @@
 .inventory-stats-toggle:hover { color: var(--ui-ivory); background: linear-gradient(90deg, #253a4b, #182a38); }
 .inventory-stats-toggle:focus-visible { outline: 2px solid var(--ui-ivory); outline-offset: 2px; }
 .touch-mode .character-overlay.inventory-overlay { padding-left: calc(max(8px, env(safe-area-inset-left)) + 44px); }
-.touch-mode .inventory-stats-toggle { width: 44px; }
+.touch-mode .inventory-window { --stats-tab-width: 44px; }
+.inventory-window.has-stats .inventory-stats-toggle { transform: translate(calc(-1 * var(--stats-outset)), -50%); }
+.inventory-stats-drawer {
+  position: absolute; left: calc(-1 * var(--stats-outset)); top: -1px; bottom: -1px;
+  width: min(226px, 100%); z-index: 10; overflow: clip; visibility: hidden; pointer-events: none;
+  transition: visibility 0s .2s;
+}
+.inventory-window.has-stats .inventory-stats-drawer { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.inventory-stats-drawer > .inventory-stats { height: 100%; width: 100%; transform: translateX(100%); transition: transform .2s ease; }
+.inventory-window.has-stats .inventory-stats { transform: translateX(0); }
+@media (prefers-reduced-motion: reduce) {
+  .inventory-stats-toggle, .inventory-stats-drawer, .inventory-stats-drawer > .inventory-stats { transition: none; }
+}
 .inventory-window .inventory-stats {
   display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 16px 12px 12px;
-  box-sizing: border-box; border-right: 1px solid #b3dbea30; background: #06101b20;
+  box-sizing: border-box; border: 1px solid #b3dbea55; border-right: 0;
 }
-.inventory-window .inventory-stats[hidden] { display: none; }
 .inventory-stats > header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
 .inventory-stats h3 { margin: 0; font-size: 15px; font-weight: 400; color: var(--ui-silver); }
 .inventory-stats [data-stat-points] { font-size: 11px; color: var(--ui-silver-dim); }
@@ -48,29 +58,11 @@
 .inventory-stat-row:hover, .inventory-stat-row:focus-visible { background: #a0bdd112; outline: 1px solid #b3dbea55; outline-offset: -1px; }
 .inventory-stat-attribute .inventory-stat-row { font-size: 13px; }
 .inventory-stat-attribute .inventory-stat-row strong { font-size: 16px; }
-@media (max-width: 940px) and (min-width: 821px) {
-  .inventory-window.has-stats .character-columns { grid-template-columns: 200px 220px minmax(0, 1fr); }
-  .inventory-window.has-stats .character-inventory { padding-inline: 12px; }
-}
 @media (max-width: 820px) {
-  .inventory-window .character-columns, .inventory-window.has-stats .character-columns { grid-template-columns: 1fr; grid-template-rows: auto; }
-  .inventory-window .inventory-stats { order: -1; flex-shrink: 0; max-height: 300px; border-right: 0; border-bottom: 1px solid #b3dbea30; }
+  .inventory-window .character-columns { grid-template-columns: 1fr; grid-template-rows: auto; }
 }
-/* Touch retains Bag/Equipment navigation with the optional card above either. */
-.touch-mode .inventory-window .inventory-stats:not([hidden]) { display: flex; max-height: 280px; padding: 12px; border-bottom: 1px solid #b3dbea30; }
 .touch-mode .inventory-stat-attribute .ui-button { width: 44px; height: 44px; min-height: 44px; flex-basis: 44px; }
 .touch-mode .inventory-stat-attribute .inventory-stat-row { font-size: 12px; gap: 4px; }
-.touch-mode .inventory-stats-attributes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; }
-@media (min-width: 660px) and (max-height: 560px) {
-  .touch-mode .inventory-window.has-stats .character-columns { display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
-  .touch-mode .inventory-window.has-stats .inventory-stats:not([hidden]) { grid-column: 1; grid-row: 1; max-height: none; height: 100%; border-right: 1px solid #b3dbea30; }
-  .touch-mode .inventory-window.has-stats .inventory-stats-attributes { grid-template-columns: 1fr; }
-  .touch-mode .inventory-window.has-stats :is(.character-inventory, .character-equipment) { grid-column: 2; grid-row: 1; min-height: 0; overflow-y: auto; }
-}
-@media (max-width: 1080px) {
-  .character-overlay.is-controller .inventory-stats:not(.is-selected-section) { display: none; }
-  .character-overlay.is-controller .inventory-stats.is-selected-section:not([hidden]) { display: flex; max-height: none; }
-}
 @media (forced-colors: active) {
   .inventory-window .inventory-stats, .inventory-stats-attributes { border-color: CanvasText; }
   .inventory-stats-toggle { background: Canvas; color: ButtonText; border-color: ButtonText; box-shadow: none; }

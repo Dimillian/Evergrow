@@ -20,24 +20,27 @@ function setup() {
   } });
   const attributes = pane(), details = pane(), points = { textContent: '' };
   const element = {
-    hidden: true, dataset: { canAllocate: 'true' },
+    inert: true, dataset: { canAllocate: 'true' }, setAttribute() {},
     querySelector(selector: string) { return selector === '.inventory-stats-attributes' ? attributes : selector === '.inventory-stats-details' ? details : points; },
     querySelectorAll(selector: string) {
       return selector === '[data-inventory-stat]' ? [...values].map(([id, value]) => ({ dataset: { inventoryStat: id }, querySelector: () => value })) : [];
     },
   };
-  const card = Object.assign(Object.create(InventoryStats.prototype), { element, details: new Map(), signature: '', player: null, tooltip: { hide() {} } }) as InstanceType<typeof InventoryStats>;
+  const card = Object.assign(Object.create(InventoryStats.prototype), { element, visible: false, details: new Map(), signature: '', player: null, tooltip: { hide() {} } }) as InstanceType<typeof InventoryStats>;
   return { card, element, values, points };
 }
 
 test('hidden inventory stats defer rendering and show every current attribute and substat on expansion', () => {
-  const { card, values, points } = setup(), player = initialPlayer(0, 0);
+  const { card, element, values, points } = setup(), player = initialPlayer(0, 0);
   card.refresh(player); assert.equal(values.size, 0);
+  assert.equal(element.inert, true);
   player.character.statPoints = 3;
   card.setVisible(true);
+  assert.equal(element.inert, false);
   const expected = characterStatDetails(player).flatMap(group => group.rows);
   assert.deepEqual([...values].map(([id, value]) => [id, value.textContent]), expected.map(row => [row.id, row.value]));
   assert.equal(points.textContent, '3 available');
+  card.setVisible(false); assert.equal(element.inert, true, 'closing removes controls from focus before the slide finishes');
 });
 
 test('equipping and unequipping update the visible stats without rebuilding unchanged rows or healing', () => {
