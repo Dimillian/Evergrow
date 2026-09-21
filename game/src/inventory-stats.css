@@ -13,13 +13,13 @@
 .inventory-stats-toggle {
   position: absolute; right: 100%; top: 50%; transform: translateY(-50%); z-index: 4;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  box-sizing: border-box; width: 32px; height: 108px; padding: 8px 0;
+  box-sizing: border-box; width: 32px; height: 132px; padding: 8px 0;
   border: 1px solid #96b8c366; border-right: 0; border-radius: 3px 0 0 3px;
   background: linear-gradient(90deg, #172532, #101b27); color: var(--ui-silver-dim);
   box-shadow: -4px 3px 12px #0004, inset 1px 0 #d4e6ef18;
   font: 13px var(--ui-font); cursor: pointer;
 }
-.inventory-stats-toggle-label { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .08em; }
+.inventory-stats-toggle-label { writing-mode: vertical-rl; text-orientation: upright; text-transform: uppercase; letter-spacing: .08em; }
 .inventory-stats-toggle-arrow { font: 22px/1 system-ui, sans-serif; }
 .inventory-stats-toggle[aria-expanded="true"] { color: var(--ui-ivory); border-color: var(--ui-silver); }
 .inventory-stats-toggle[aria-expanded="true"] .inventory-stats-toggle-arrow { transform: rotate(180deg); }
