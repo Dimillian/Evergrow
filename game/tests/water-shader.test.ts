@@ -36,6 +36,11 @@ test('water uploads only dirty field textures, reuses allocations and restores a
   assert.deepEqual(draw(), [0, 2, 3]); assert(uploads.every(u => !u.allocate));
   fluid.fit({ ...bounds, x: -368 }, wet);
   assert.deepEqual(draw(), [0, 1, 2, 3]); assert(uploads.every(u => !u.allocate));
+  for (let trip = 0; trip < 12; trip++) {
+    fluid.reset(); fluid.fit(bounds, () => ({ ...wet(), depth: trip % 2 ? 1 : .5 }));
+    assert.deepEqual(draw(), [0, 1, 2, 3]);
+    assert(uploads.every(u => !u.allocate), 'travel replaces water contents in existing GPU storage');
+  }
   target.canvas.width = 1000;
   draw(); assert.deepEqual(uploads.filter(u => u.allocate).map(u => u.unit), [0]);
   handlers.get('webglcontextlost')!({ preventDefault() {} });

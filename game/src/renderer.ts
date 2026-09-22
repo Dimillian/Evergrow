@@ -59,6 +59,7 @@ import { goldBalance } from './wallet.ts';
 import { BiomeLife } from './biome-life.ts';
 import { BiomeLifeArt } from './biome-life-art.ts';
 import { biomeWind } from './biome-wind.ts';
+import { canopyCombatTargets, canopyNeedsFade } from './canopy-visibility.ts';
 import { AtmosphereArt } from './atmosphere-art.ts';
 import { GroundDressing } from './ground-art.ts';
 import { drawGroundLoot, drawLootLabels, drawResourcePickups } from './loot-art.ts';
@@ -217,6 +218,7 @@ export class Renderer {
 
   get combatViewport() { const v = this.lastDisplayedView; return { x: v.left, y: v.top, width: v.width, height: v.height }; }
   get terrainStats() { return this.groundLayer.stats; }
+  get terrainSettling() { return this.groundLayer.settling; }
   get worldHeight() { return this.view.height; }
   get worldBounds() { return { x: this.view.left, y: this.view.top, width: this.view.width, height: this.view.height }; }
   spawnExclusionBounds(player: Player) {
@@ -274,19 +276,28 @@ export class Renderer {
     this.lastDisplayedView = this.view; this.visibility.reset();
   }
 
-  reset() {
+  reset(mode: 'full' | 'travel' = 'full') {
+    // Travel clears the old scene, but bounded art caches and GPU/worker owners
+    // can follow the next view/world through their normal invalidation paths.
+    if (mode === 'full') {
+      this.outdoorLightEffects.reset(); this.dungeonLightEffects.reset();
+      this.sceneShadows.reset(); this.atmosphere.reset(); this.propSurfaceLight.reset();
+      this.groundLayer.reset(); this.groundDressing.reset(); this.settlementArt.reset();
+      this.waterArt.reset();
+    } else {
+      this.settlementArt.resetVisibility(); this.waterArt.clearScene();
+    }
     this.areaBanner.clear();
     this.eventProgressPresentation.reset();
-    this.outdoorLightEffects.reset();
-    this.dungeonLightEffects.reset(); this.emission = undefined;
+    this.emission = undefined;
     this.battleBarks.reset();
-    this.water.reset(); this.waterArt.reset(); this.lighting.reset(); this.sceneShadows.reset(); this.atmosphere.reset(); this.propSurfaceLight.reset();
+    this.water.reset(); this.lighting.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
     this.view = cameraView(this.width, this.height, 0, 0, this.cameraZoom.value);
     this.lastDisplayedView = this.view;
-    this.riftAtmosphere.reset(); this.groundLayer.reset(); this.groundDressing.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
-    this.settlementArt.reset(); this.indoorBlend = 0; this.residents=[]; this.residentSpeech=null; this.residentCooldown=0;
+    this.riftAtmosphere.reset(); this.biomeLife.reset(); this.crownOpacity.clear(); this.visualTime = 0;
+    this.indoorBlend = 0; this.residents=[]; this.residentSpeech=null; this.residentCooldown=0;
     this.materials.reset(); this.deaths.reset(); resetDeathArt(); this.ghosts = []; this.ghostTimer = 0;
     this.hurt = 0; this.shake = 0; this.kickX = this.kickY = 0;
     this.damageTrails.clear(); this.playerHealthTrail = 100; this.playerHealthHold = 0;
@@ -725,15 +736,15 @@ export class Renderer {
 
   private actorsAndProps(sim: Simulation, world: World, px: number, py: number, alpha: number, dt: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player;
+    const canopyEnemies = this.cryptFloor ? [] : canopyCombatTargets(sim.enemies, this.view, alpha, px, py,
+      (x, y) => !!world.getBuildingAt(x, y));
     const entries: Array<{ y: number; stage?: FrameStage; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, stage: 'props', draw: () => {
       // Prefetched offscreen props retain collision/light coverage without generating unseen sprites.
       if (prop.x + 115 < this.view.left || prop.x - 115 > this.view.left + this.view.width
         || prop.y + 10 < this.view.top || prop.y - 230 > this.view.top + this.view.height) return;
       const sprite = this.propSprite(prop);
       const definition = propDefinition(prop.kind);
-      const crown = definition.canopy;
-      const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
-        && Math.abs(px - prop.x - crown.offsetX * prop.scale) < crown.radius * prop.scale;
+      const occludes = canopyNeedsFade(prop, px, py, canopyEnemies);
       let foliageOpacity = occludes ? .24 : 1;
       if (settings.reducedMotion) {
         if (occludes) this.crownOpacity.set(prop.id, foliageOpacity);

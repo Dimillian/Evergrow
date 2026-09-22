@@ -21,7 +21,8 @@ export class WaterArt {
   private maskImage: ImageData | undefined;
   private active = false;
   private view = { left: 0, top: 0, width: 1, height: 1 };
-  reset() { this.shader.reset(); this.active = false; this.propStamps.length = 0; this.propDraws.length = 0; this.staticKey = ''; }
+  clearScene() { this.active = false; this.propDraws.length = 0; this.staticKey = ''; }
+  reset() { this.shader.reset(); this.propStamps.length = 0; this.clearScene(); }
   begin(f: WaterSimulation, view: { left: number; top: number; width: number; height: number }) {
     this.view = view; this.propDraws.length = 0;
     this.active = Number.isFinite(f.left) && f.hasWater;

@@ -65,3 +65,55 @@ test('graph summaries use frame-count over elapsed time and all dropdown metrics
   assert.equal(new Set(PERFORMANCE_GRAPHS.map(graph => graph.id)).size, 6);
   for (const graph of PERFORMANCE_GRAPHS) for (const series of graph.series) assert.ok(Number.isFinite(frameValue(samples, 0, series.metric)));
 });
+
+test('panel callbacks outside and inside the game frame contribute CPU exactly once', () => {
+  let clock = 0; const p = new FrameProfiler(true, () => clock);
+  p.panelWork(() => { clock += 5; });
+  p.begin(0, 'character');
+  p.panelWork(() => { clock += 3; });
+  clock += 2; p.finish();
+  let report = p.snapshot();
+  assert.equal(report.metrics.panels.max, 8);
+  assert.equal(report.metrics.frameCPU.max, 10);
+  assert.equal(report.metrics.other.max, 2);
+  p.begin(16, 'playing'); clock += 1; p.finish();
+  report = p.snapshot();
+  assert.equal(report.timeline[1].panels, 0);
+  assert.equal(report.timeline[1].frameInterval, 0);
+  assert.deepEqual(report.timeline.map(f => f.phase), ['character', 'playing']);
+  assert.deepEqual(report.history.map(b => b.phase), ['character', 'playing']);
+  assert.equal(report.history[0].meanPanels, 8);
+  assert.throws(() => p.panelWork(() => { clock += 4; throw Error('draw'); }));
+  p.begin(32, 'playing'); p.finish();
+  assert.equal(p.snapshot().timeline[2].panels, 4);
+  p.panelWork(() => { clock += 10; }); p.reset();
+  assert.equal(p.snapshot().history.length, 0);
+  p.begin(48); p.finish(); assert.equal(p.snapshot().metrics.panels.max, 0);
+});
+
+test('long history retains the baseline after raw frames wrap, with bounded phase-labelled buckets', () => {
+  const p = new FrameProfiler(true, () => 0);
+  for (let i = 0; i < 1200; i++) { p.begin(i * 1000 / 60, i < 600 ? 'playing' : 'service:blacksmith'); p.finish(); }
+  const report = p.snapshot();
+  assert.equal(report.timeline[0].phase, 'service:blacksmith');
+  assert.equal(report.history[0].phase, 'playing');
+  assert.ok(Math.abs(report.history[0].fps! - 60) < .01);
+  const frozen = p.snapshot();
+  for (let i = 1200; i < 3600; i++) { p.begin(i * 1000, 'playing'); p.finish(); }
+  assert.equal(p.snapshot().history.length, 1800);
+  assert.equal(frozen.history[0].start, 0, 'a frozen report is independent of live buckets');
+  p.setEnabled(false); p.panelWork(() => {}); p.begin(4_000_000); p.finish();
+  assert.equal(p.snapshot().history.length, 0);
+});
+
+test('tooltip rendering nested in a panel refresh is counted once', () => {
+  let now = 0; const p = new FrameProfiler(true, () => now);
+  p.panelWork(() => { now += 2; p.panelWork(() => { now += 3; }); now += 1; });
+  p.begin(0, 'character'); p.finish();
+  assert.equal(p.snapshot().metrics.panels.max, 6);
+  assert.equal(p.snapshot().metrics.frameCPU.max, 6);
+  assert.throws(() => p.panelWork(() => { p.panelWork(() => { now += 4; throw Error('tooltip'); }); }));
+  p.panelWork(() => { now += 2; });
+  p.begin(16, 'character'); p.finish();
+  assert.equal(p.snapshot().timeline[1].panels, 6, 'failed nested work releases the measurement guard');
+});

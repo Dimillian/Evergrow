@@ -31,3 +31,11 @@ test('Long suspension resumes once without rendering a catch-up burst',()=>{
   assert.equal(pacer.ready(60000+1000/60),true);
   assert.equal(pacer.ready(NaN),false);
 });
+
+test('inventory portrait draws at 30 Hz across desktop refresh rates', () => {
+  for (const hz of [60, 90, 120, 144, 240]) {
+    const pacer = new FramePacer(30); let count = 0;
+    for (let i = 0; i < hz * 10; i++) if (pacer.ready(i * 1000 / hz)) count++;
+    assert.equal(count, 300, `${hz} Hz`);
+  }
+});

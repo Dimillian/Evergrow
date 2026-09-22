@@ -7,6 +7,7 @@ import { freshEvents } from '../src/poi-content.ts';
 import { freshExpeditions } from '../src/dungeon-state.ts';
 import { JourneyHUDPreferences } from '../src/journey-hud-settings.ts';
 import { presentationProfile } from '../src/presentation-viewport.ts';
+import { MenuBackdrop } from '../src/menu-backdrop.ts';
 const css=registerHooks({load(url,context,next){
   if(url.endsWith('.css'))return {format:'module',source:'',shortCircuit:true};
   if(url.endsWith('/music-content.ts'))return {format:'module',source:'export const MUSIC_FILES = {};',shortCircuit:true};
@@ -173,6 +174,7 @@ test('Game resize moves the settings preview both ways while controller updates 
     refreshUI(){throw Error('Paused resize must not depend on timed refresh');},
   });
   const game=Object.assign(Object.create(Game.prototype),{canvas:{},uiCanvas:{},mouse:{},renderer,sim,journeys:controller,
+    menuBackdrop:new MenuBackdrop(),
     presentation:presentationProfile({android:false,coarsePointer:false}),
     touch:{active:false,clear(){},refreshLayout(){}},shell:{resizeControls(){}},worldMap:{resize(){}}});
   assert.equal(panel.mini.parentElement,hudMount);assert.notEqual(panel.element.style.paddingRight,'');

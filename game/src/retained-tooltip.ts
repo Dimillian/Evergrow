@@ -25,12 +25,14 @@ export class RetainedTooltip extends UITooltip {
     window.addEventListener('resize', () => this.hide(), options);
   }
   override show(markup: string, anchor: HTMLElement, bounds: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'> = anchor.getBoundingClientRect()): void {
-    clearTimeout(this.timer); this.timer = undefined;
+    this.retain();
     if (!this.element.isConnected) this.mount.append(this.element);
     if (this.source === anchor && this.markup === markup && !this.element.hidden) return;
     this.explanations.hide(); this.source = anchor; this.markup = markup;
     super.show(markup, anchor, bounds);
   }
+  /** Re-entering the same source cancels dismissal without rebuilding its content. */
+  retain(): void { clearTimeout(this.timer); this.timer = undefined; }
   defer(): void {
     if (this.timer !== undefined) return;
     this.timer = setTimeout(() => {
@@ -43,4 +45,3 @@ export class RetainedTooltip extends UITooltip {
   override hide(): void { clearTimeout(this.timer); this.timer = undefined; this.explanations?.hide(); this.source = undefined; super.hide(); this.onHide?.(); }
   override dispose(): void { this.hide(); this.explanations.dispose(); this.life.abort(); super.dispose(); }
 }
-

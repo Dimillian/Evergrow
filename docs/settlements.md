@@ -70,7 +70,7 @@ Headless tests cover tier composition, seeded reproducibility, immutable layouts
 
 The shared world clock fades exterior lighting in through dusk: warm window panes preserve their dark mullions, soft window light falls onto the ground, stall lanterns use their actual left-post position, and hearths/torches retain warm luminous cores after ambient darkening. Tents do not emit phantom house-window lights. Facade light fades with the existing roof cutaway when entering a home. Reduced motion freezes flicker, while the clock remains tied to active play. No new particles, saved state or light-budget increase is involved.
 
-Static fortification timbers/masonry are cached per immutable building, keeping each span's existing actor depth. Their shared directional shadows remain live. The LRU is limited to 512 spans and six million pixels (24 MB of RGBA pixels, excluding browser overhead); renderer resets release it. Animated fires, awnings and roof cutaways are not frozen by this cache.
+Static fortification timbers/masonry are cached per immutable building, keeping each span's existing actor depth. Their shared directional shadows remain live. The LRU is limited to 512 spans and six million pixels (24 MB of RGBA pixels, excluding browser overhead); full renderer resets release it. Portal travel retains the bounded art cache and resets roof cutaways separately. Animated fires, awnings and roof cutaways are not frozen by this cache.
 
 `/layouts.html?lighting&view=village&seed=406135043&hour=22` adds a live 30 Hz study, a time slider, Noon/Dusk/Night presets, a one-minute day cycle, PNG export and opt-in CPU timings. It uses the runtime renderer and disposable paused simulation; it never plays or reads a character save.
 

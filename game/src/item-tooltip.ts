@@ -3,6 +3,9 @@ import type { Item } from './character-types.ts';
 import { itemHoverCards, type ItemPresentation } from './item-ui.ts';
 import { RetainedTooltip } from './retained-tooltip.ts';
 import './item-ui.css';
+import type { FrameProfiler } from './frame-profiler.ts';
+
+export const ITEM_TOOLTIP_DWELL = 140;
 
 /** Equipment content uses the shared tooltip surface, positioning and focus association. */
 export class ItemTooltip {
@@ -10,14 +13,19 @@ export class ItemTooltip {
   private readonly surface: RetainedTooltip;
   private readonly life = new AbortController();
   private readonly comparison: ItemComparisonInput;
+  private readonly profiler?: FrameProfiler;
+  private hoverTimer?: ReturnType<typeof setTimeout>;
+  private pending?: { item: Item; view: ItemPresentation; anchor: HTMLElement };
   private current?: { item: Item; view: ItemPresentation; anchor: HTMLElement; bounds: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'> };
 
-  constructor(mount: HTMLElement, id: string) {
+  constructor(mount: HTMLElement, id: string, profiler?: FrameProfiler) {
+    this.profiler = profiler;
     this.surface = new RetainedTooltip(mount, id, 'ui-item-tooltip-group');
     this.element = this.surface.element;
     this.surface.onHide = () => {
-      this.comparison.resetFocus();
+      this.cancelHover();
       this.current = undefined;
+      this.comparison.resetFocus();
     };
     this.comparison = new ItemComparisonInput(window, () => {
       const current = this.current;
@@ -32,8 +40,36 @@ export class ItemTooltip {
       }
     });
   }
+  /** Only the latest settled mouse target earns comparison/layout work. Explicit
+   * selection and character refresh use show() and remain immediate. */
+  hover(item: Item, view: ItemPresentation, anchor: HTMLElement): void {
+    if (this.current?.anchor === anchor && this.current.item === item && !this.element.hidden) {
+      this.cancelHover(); this.surface.retain(); return;
+    }
+    if (this.pending?.anchor === anchor && this.pending.item === item) {
+      this.pending.view = view; return;
+    }
+    this.hide();
+    this.pending = { item, view, anchor };
+    this.hoverTimer = setTimeout(() => {
+      const next = this.pending;
+      this.hoverTimer = undefined; this.pending = undefined;
+      if (!next || document.hidden || !next.anchor.isConnected || !next.anchor.matches(':hover') || !next.anchor.getClientRects().length) return;
+      this.show(next.item, next.view, next.anchor);
+    }, ITEM_TOOLTIP_DWELL);
+  }
+  private cancelHover(): void {
+    clearTimeout(this.hoverTimer); this.hoverTimer = undefined; this.pending = undefined;
+  }
   show(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds = anchor.getBoundingClientRect() as Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
+    this.cancelHover();
+    if (this.profiler) this.profiler.panelWork(() => this.showContents(item, view, anchor, bounds));
+    else this.showContents(item, view, anchor, bounds);
+  }
+  private showContents(item: Item, view: ItemPresentation, anchor: HTMLElement, bounds: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>): void {
     if (this.current?.anchor !== anchor || this.current?.item.id !== item.id) {
+      // Resetting Alt comparison can notify synchronously; never rebuild the old item.
+      this.current = undefined;
       this.comparison.resetFocus();
     }
     this.current = { item, view, anchor, bounds };
@@ -68,7 +104,7 @@ export class ItemTooltip {
       card.style.order = String(index === 0 ? nearest : index <= nearest ? index - 1 : index);
     });
   }
-  defer(): void { this.surface.defer(); }
-  hide(): void { this.comparison.resetFocus(); this.current = undefined; this.surface.hide(); }
-  dispose(): void { this.life.abort(); this.current = undefined; this.surface.dispose(); }
+  defer(): void { this.cancelHover(); if (!this.element.hidden) this.surface.defer(); }
+  hide(): void { this.cancelHover(); this.current = undefined; this.comparison.resetFocus(); this.surface.hide(); }
+  dispose(): void { this.cancelHover(); this.life.abort(); this.current = undefined; this.surface.dispose(); }
 }

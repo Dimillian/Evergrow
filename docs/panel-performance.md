@@ -1,4 +1,33 @@
-# Map and skill-atlas performance
+# Panel performance
+
+## NPC and inventory windows · September 19, 2026
+
+Inventory portraits draw at 30 Hz independently of desktop refresh rate. Reduced motion retains the portrait until equipment/stat refresh, rotation, reopening or the motion preference changes. The inventory HUD retains its own drawing schedule and controls remain responsive. The panel still owns one animation callback and cancels it on close. NPC windows discard their generated stock SVGs/gradients and stock cache on close; opening already rebuilds this presentation from current character/commerce state.
+
+The performance monitor now measures NPC panel rebuilds, inventory refresh and inventory animation, including callbacks outside the main game frame. These costs appear under **NPC / inventory** and are included once in CPU work. Between-frame work is assigned to the next recorded frame. GPU compositing, DOM style/layout outside those calls and other independent panel animations are still outside these CPU measurements.
+
+JSON exports include the phase on every raw frame and up to 1,800 approximately one-second summary buckets, split when the phase changes. NPC phases include the service role. This retains roughly 30 minutes of history at a steady phase, less with frequent transitions, while the live graph/raw timeline retains its 600-frame bound. Reset/disable clears both histories; frozen exports keep a detached copy of both.
+
+The supplied September 19 capture retained only the final ~10 seconds (~59 FPS overall), so it did not establish progressive degradation across the full session. Inspection found bounded panel instances and close-time callback/focus cleanup. These changes reduce measured/identifiable presentation work and closed-window retention; they do not establish a browser resource leak or prove that the reported lasting FPS decline is resolved. Code tests cover portrait cadence/reduced-motion invalidation, repeated vendor cleanup, phase history wrap/reset/freeze and exactly-once panel CPU accounting. Gameplay acceptance remains user-tested.
+
+## Repeated item hovers · September 19, 2026
+
+The subsequent version-2 capture records ~60 FPS before inventory, ~32–45 FPS during extended inspection, and ~58 FPS after closing inventory. Recorded panel CPU stays around 1–2 ms per frame while frame intervals worsen, so this capture implicates presentation work beyond the recorded JavaScript without proving a cumulative memory leak.
+
+- Large item comparison cards now paint opaque smoked gradients rather than applying a separate live backdrop blur to each card over animated world/portrait canvases. Colors, rarity accents, text and comparison layout remain; the background is no longer translucent. The short engraving glint no longer retains animation fill state after finishing.
+- Inventory/vendor pointer entry ignores movement between descendants of the same item slot. Mouse changes use the settled-target delay described below; explicit selections and Shift/Alt retain their immediate handlers.
+- Comparison displacement and candidate stat rows share one equipment preview instead of deriving the same build twice. Resetting Alt comparison on switch/dismissal no longer synchronously redraws the previous item.
+- Pointer-triggered item-tooltip construction and positioning are now included in panel CPU measurements. Nested tooltip work during an already measured panel refresh counts once.
+
+A headless comparison of 24 generated items and both Alt positions produced identical markup hashes before/after. Median generation cost across seven 500-hover batches dropped from ~0.412 ms to ~0.217 ms per hover on the development Mac. This measures JavaScript generation only, not browser FPS or GPU/compositor time. Lifecycle tests repeatedly switch/hide two-card comparisons, verify one retained host, preserve character state and check comparison reset behavior. Browser gameplay verification remains with the user.
+
+## Rapid pointer sweeps · September 19, 2026
+
+The next capture shows ~60 FPS before inventory, temporary ~45 FPS during rapid inspection, then 60 FPS again without closing inventory. Inventory and NPC item hovers now require 140 ms on the latest source before constructing comparison markup or measuring its layout. Passing through another slot replaces the one pending request; leaving, closing, resizing or disposing cancels it. The callback also checks that the source is still hovered, connected and visible and that the document is foreground. Re-entering the displayed source only cancels its exit timer. Explicit clicks, keyboard/controller focus and character refresh still render immediately; comparison-key changes remain immediate on a visible card.
+
+A timer-driven code test sweeps across 100 targets without constructing any intermediate cards or reading their geometry, then constructs only the settled target. Cancellation and immediate-selection tests cover stale requests and cleanup. All 18 focused tooltip/comparison/profiler tests and the production build passed. This bounds rapid-hover construction work; actual browser FPS and the feel of the short delay remain user-tested.
+
+## Earlier map and skill-atlas work
 
 The September 6, 2026 pass targets repeated Canvas work and cold map generation. It changes presentation only; world generation, discovery, allocation and combat remain owned by their existing systems.
 

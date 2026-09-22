@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GroundLayer } from '../src/ground-layer.ts';
 import { World, TILE_SIZE } from '../src/world.ts';
+import type { TerrainStream } from '../src/terrain-stream.ts';
 
 type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number };
 type Tile = HTMLCanvasElement & { tileX: number; tileY: number };
@@ -62,6 +63,36 @@ function fixture() {
   };
   return { layer, world, canvases, draw };
 }
+
+test('menu retention waits for missing tiles, final crossfades and worker fallback', t => {
+  let now = 1000, queued = 1, tile: { bitmap: HTMLCanvasElement; ready: number } | undefined;
+  t.mock.method(performance, 'now', () => now);
+  const { layer, world, draw } = fixture();
+  world.drawGroundPreview = () => {};
+  draw(20, 30, 540, 450);
+  assert.equal(layer.settling, false, 'synchronous terrain is already complete');
+  const stream = {
+    failed: false, get queued() { return queued; }, update() {}, get: () => tile, dispose() {},
+  };
+  (layer as unknown as { stream: TerrainStream }).stream = stream as unknown as TerrainStream;
+  draw(20, 30, 540, 450);
+  assert.equal(layer.settling, true);
+  queued = 0; tile = { bitmap: new RecordingCanvas() as unknown as HTMLCanvasElement, ready: now };
+  draw(20, 30, 540, 450);
+  assert.equal(layer.settling, true, 'queue empty does not mean final tile is opaque');
+  now += 159; draw(20, 30, 540, 450);
+  assert.equal(layer.settling, true);
+  now++; draw(20, 30, 540, 450);
+  assert.equal(layer.settling, false, 'only the fully composed terrain can be retained');
+  stream.failed = true;
+  assert.equal(layer.settling, true);
+  const before = world.requests;
+  draw(20, 30, 540, 450);
+  assert.ok(world.requests > before, 'failed workers replace previews with synchronous terrain');
+  assert.equal(layer.settling, false);
+  layer.reset();
+  assert.equal(layer.settling, false);
+});
 
 test('fractional cameras sample one complete terrain surface across positive and negative tile boundaries', () => {
   const { draw, canvases } = fixture();

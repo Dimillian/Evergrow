@@ -8,7 +8,8 @@
 .ui-item-grid { display: grid; grid-template-columns: repeat(auto-fill, var(--ui-item-cell-size)); gap: var(--ui-item-cell-gap); align-content: start; }
 .ui-item-grid .ui-item-slot { width: var(--ui-item-cell-size); height: var(--ui-item-cell-size); min-height: 0; }
 
-.ui-item-slot { --ui-slot: 46px; padding: 3px; min-width: 0; width: 100%; aspect-ratio: 1; border-radius: 0; border-color: #819ba527; cursor: pointer; transition: border-color 120ms, background 120ms, box-shadow 120ms; touch-action: manipulation; }
+/* Immediate highlights avoid overlapping paint animations during rapid inventory sweeps. */
+.ui-item-slot { --ui-slot: 46px; padding: 3px; min-width: 0; width: 100%; aspect-ratio: 1; border-radius: 0; border-color: #819ba527; cursor: pointer; transition: none; touch-action: manipulation; }
 .ui-item-slot::before { inset: 3px; border-color: #99b7c210; }
 .ui-item-slot svg { width: 85%; height: 85%; pointer-events: none; }
 .ui-item-slot[data-filled='true'] { --tier-wash: 20%; background: linear-gradient(145deg, color-mix(in srgb, var(--item-color) var(--tier-wash), #101b25), #0b121b 62%), #0b151e; border-color: color-mix(in srgb, var(--item-color) 72%, #172530); box-shadow: inset 0 1px color-mix(in srgb, var(--item-color) 30%, transparent), inset 0 -5px 15px color-mix(in srgb, var(--item-color) 9%, transparent); }
@@ -77,7 +78,6 @@
 @media (max-width: 620px) {
   .ui-item-tooltip-group { grid-template-columns: 1fr; width: min(310px, calc(100vw - 16px)); }
 }
-@media (prefers-reduced-motion: reduce) { .ui-item-slot { transition: none; } }
 @media (forced-colors: active) { .ui-item-slot, .ui-item-tooltip { border-color: ButtonText; } .ui-item-slot:focus-visible { outline: 2px solid Highlight; } }
 .ui-rarity-badge { display: inline-flex; align-items: center; gap: 5px; color: var(--item-color); font: 600 10px "Evergrow Numerals", system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 .ui-rarity-badge::before { content: ''; width: 4px; height: 4px; background: currentColor; transform: rotate(45deg); }
@@ -118,4 +118,3 @@
 .ui-item-alt-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; padding: 2px 7px; margin: 4px 0 0; border-radius: 3px; border: 1px solid #96b8c32e; background: #0c182470; color: #a5bfc9; font: inherit; font-size: 11px; line-height: normal; text-align: left; transition: background 120ms, border-color 120ms, color 120ms; }
 .ui-item-alt-toggle:hover, .ui-item-alt-toggle:focus-visible { background: #182939; border-color: #96b8c366; color: #e6f2f5; outline: none; }
 .ui-item-alt-toggle kbd { display: inline-block; padding: 1px 4px; border: 1px solid #96b8c366; border-radius: 2px; background: #081119; color: #c4dbe2; font: 600 10px 'Evergrow Numerals', system-ui, sans-serif; line-height: 1.2; }
-
