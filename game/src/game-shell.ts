@@ -8,6 +8,8 @@ import type { GamepadInput } from './gamepad-input.ts';
 import './travel-ui.css';
 import { GameNotifications } from './notifications.ts';
 import { getHUDLayout } from './hud.ts';
+import { potionHUDRect } from './hud-layout.ts';
+import { PotionTooltip } from './potion-tooltip.ts';
 import { HUDShortcutMenu } from './hud-shortcut-menu.ts';
 import type { HUDRect } from './hud.ts';
 import { getMinimapRect, getMinimapHomeRect, getMinimapDifficultyRect } from './map-view.ts';
@@ -36,6 +38,7 @@ export class GameShell {
   readonly shortcutMenu: HUDShortcutMenu;
   readonly buffs: BuffBar;
   readonly targetBuffs: BuffBar;
+  readonly potionTooltip: PotionTooltip;
   private targetId: number | null = null;
   setTargetEffects(target: { id: number; buffs: readonly ActiveBuff[]; x: number; y: number; opacity: number } | null): void {
     if (target?.id !== this.targetId) this.targetBuffs.hide();
@@ -104,6 +107,7 @@ export class GameShell {
     this.buffs = new BuffBar(this.controls);
     this.targetBuffs = new BuffBar(this.controls, 'Target effects');
     this.targetBuffs.element.classList.add('target-buff-bar');
+    this.potionTooltip = new PotionTooltip(this.controls);
     const signal = this.abort.signal;
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="difficulty"]')!.addEventListener('click',()=>actions.openDifficulty?.(),{signal});
@@ -146,6 +150,7 @@ export class GameShell {
       button.style.width = `${rect.width / width * 100}%`; button.style.height = `${rect.height / height * 100}%`;
     };
     const hud = getHUDLayout(width, height);
+    this.potionTooltip.place(potionHUDRect(hud), width, height);
     this.buffs.element.style.bottom = `${(height - hud.y + 8) / height * 100}%`;
     for (const shortcut of hud.shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
@@ -196,7 +201,7 @@ export class GameShell {
     const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
-    if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); }
+    if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); this.potionTooltip.dismiss(); }
     this.element.classList.toggle('playing', playing);
     if (playing || panel || phase === 'ready') {
       this.overlay.innerHTML = '';
@@ -219,6 +224,7 @@ export class GameShell {
   }
 
   dispose(): void {
+    this.potionTooltip.dispose();
     this.buffs.dispose(); this.targetBuffs.dispose();
     this.shortcutMenu.dispose();
     this.notifications.dispose();

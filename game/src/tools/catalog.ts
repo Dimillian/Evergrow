@@ -65,7 +65,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'portal',group:'world',name:'Portals',path:'/portal.html',description:'Town travel effects and portal artwork.'},
   {id:'chronicle',group:'interface',name:'Chronicle',path:'/chronicle.html',description:'Account and character milestones, achievements and detailed statistics with sample history.'},
   {id:'ui',group:'interface',name:'Windows & components',path:'/ui.html',description:'Start, pause, defeat, map and shared controls at desktop or narrow widths.'},
-  {id:'hud',group:'interface',name:'HUD states',path:'/hud.html',description:'Healthy, damaged and depleted resources and enemy plates.'},
+  {id:'hud',group:'interface',name:'HUD states',path:'/hud.html',description:'Finalized floating HUD with healthy, damaged and depleted resources, half-ring potion/dodge charges, potion explanations and enemy plates.',tags:'potion sprint dodge utility charges tooltip'},
   {id:'rewards',group:'interface',name:'Reward animations',path:'/rewards.html',description:'Replay gold, XP and level-up feedback with optional sound.'},
   {id:'music',group:'interface',name:'Soundtrack studies',path:'/music.html',description:'Listen to local menu, wilderness and dungeon music auditions.'},
   {id:'notifications',group:'interface',name:'Notifications',path:'/notifications.html',description:'Item pickups and discovery messages.'},

@@ -18,12 +18,13 @@
       a:hover { background: #26312c; } a:focus-visible { outline: 2px solid #d9c394; outline-offset: 3px; }
       canvas { display: block; width: 100%; height: auto; }
       footer { margin-top: 12px; }
+      .review-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
       @media (max-width: 560px) { body { padding: 14px; } header { align-items: flex-start; } h1 { font-size: 24px; } p { font-size: 13px; } a { padding: 9px 12px; } }
     </style>
   </head>
   <body>
     <main id="hud-review" aria-busy="true">
-      <header><div><h1>Floating HUD</h1><p>Three frozen resource states · native display resolution</p></div><a id="save-png" hidden>Save PNG</a></header>
+      <header><div><h1>Floating HUD</h1><p>Three frozen resource states · native display resolution</p></div><div class="review-actions"><a id="recharge-preview" href="?motion">Animate recharge</a><a id="save-png" hidden>Save PNG</a></div></header>
       <canvas id="hud-sheet" role="img" aria-label="The game's floating HUD in healthy, damaged, and depleted resource states."></canvas>
       <footer><p id="review-status" role="status">Preparing HUD review…</p></footer>
     </main>
