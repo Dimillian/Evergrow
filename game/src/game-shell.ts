@@ -52,7 +52,7 @@ export class GameShell {
   private saveMessage = '';
   private pauseNavigation: PauseNavigation = { category: 'character', focus: null };
   backInMenu(): boolean { return this.pauseMenu?.back() ?? false; }
-  showDifficultyMenu(): void { this.pauseMenu?.openDifficulty(); }
+  showDifficultyMenu(): void { this.pauseMenu?.openDifficulty(this.actions.play); }
   private difficultyBadge?: WorldDifficulty;
   setDifficultyBadge(id:WorldDifficulty): void {
     if(this.difficultyBadge===id)return;
