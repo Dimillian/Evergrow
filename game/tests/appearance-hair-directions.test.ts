@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_APPEARANCE, HAIR_STYLES, HAIR_PALETTES } from '../src/appearance-content.ts';
+import { DEFAULT_APPEARANCE, HAIR_STYLES, HAIR_PALETTES, SKIN_PALETTES } from '../src/appearance-content.ts';
 import { appearanceHeadShapes } from '../src/appearance-shapes.ts';
 import { profileHairShapes, backHairShapes } from '../src/appearance-hair-directions.ts';
 import { hairShapes } from '../src/appearance-hair-shapes.ts';
@@ -14,6 +14,18 @@ function inside(point:Point,polygon:readonly Point[]):boolean {
   }
   return hit;
 }
+
+test('shaved front and diagonal scalps are skin through the crown and temples',()=>{
+  for(const skin of SKIN_PALETTES)for(const angle of [Math.PI/4,Math.PI/2,Math.PI*3/4]) {
+    const look={...DEFAULT_APPEARANCE,skin:skin.id,hair:'bald' as const,facialHair:'none' as const,accessory:'none' as const};
+    const shapes=appearanceHeadShapes(look,angle,false);
+    for(const point of [[0,-3.7],[-2.4,-2.8],[2.3,-2.7],[-3.2,0],[3.3,.5]] as Point[]) {
+      const visible=shapes.filter(s=>s.fill&&inside(point,s.points)).at(-1)?.fill;
+      assert.ok(visible===skin.base||visible===skin.shadow||visible===skin.light,`${skin.id}: scalp at ${point} must be skin, got ${visible}`);
+    }
+    for(const hairColor of HAIR_PALETTES)assert.deepEqual(appearanceHeadShapes({...look,hairColor:hairColor.id},angle,false),shapes,'shaved scalp is independent of hair color');
+  }
+});
 
 test('all profile hairstyles leave the visible eye, nose and mouth clear',()=>{
   for(const {id}of HAIR_STYLES) {
