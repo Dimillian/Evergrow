@@ -13,6 +13,8 @@ const ICONS = {
   portal: '<path d="M6 20V10a6 6 0 0 1 12 0v10M3 20h18M9 17v-7a3 3 0 0 1 6 0v7"/><path d="m12 11 1 2-1 2-1-2Z"/>',
   star: '<path d="M12 3c1.2 5.1 3.9 7.8 9 9-5.1 1.2-7.8 3.9-9 9-1.2-5.1-3.9-7.8-9-9 5.1-1.2 7.8-3.9 9-9Z"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
+  hourglass: '<path d="M6 3h12M6 21h12M7 3v4l10 10v4M17 3v4L7 17v4M9 6h6M9 18h6"/>',
+  seal: '<path d="m12 2 8 5v10l-8 5-8-5V7ZM12 6l-2 5 4 2-2 5M4 7l4 3m8 4 4 3"/>',
   trash: '<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   minus: '<path d="M5 12h14"/>',

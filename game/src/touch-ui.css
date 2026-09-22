@@ -118,7 +118,7 @@ html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 .touch-mode .menu-body { min-height: 0; overflow: auto; padding: 14px 20px; }
 .touch-mode .menu-seal { display: none; }
 .touch-mode .menu-brand, .touch-mode .event-window .ui-window-header { flex-shrink: 0; }
-.touch-mode .event-choices { min-height: 0; overflow: auto; padding: 12px; }
+.touch-mode .event-body { min-height: 0; overflow: auto; padding: 12px; }
 .touch-mode .journey-columns { min-height: 0; flex: 1; }
 .touch-mode .journey-list-row, .touch-mode .journey-mini-row { min-height: 44px; }
 .touch-mode .journey-panel { padding: max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom)); }

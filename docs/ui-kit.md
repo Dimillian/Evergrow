@@ -83,6 +83,10 @@ The character window retains its three columns without a separate section-naviga
 
 Compose the shared window, wells, slots, stat rows, badges, and tooltip surfaces. Keep equipment and item state outside the presentation helpers. Use the game's existing phase/input boundary when opening a new modal, and register its bounds with UI hit testing. Maintain 44px interactive targets, responsive overflow, native-resolution text, and keyboard access. Expand the shared primitives when a repeated pattern is needed instead of creating another independent panel theme.
 
+## Event choices
+
+Event interactions use the selected action-row layout: a compact standard header with inventory's SVG close control, followed by the place name and a grouped level badge/type/timing row. The objective explains what must be done; full-width icon rows describe each action and its reward. Multi-choice cargo and blessings use the same rows and activate directly. There are no bottom footnotes or a separate confirmation footer. Timed battle, enemy-clear, defense, seal, equipment, gold and blessing icons retain consistent meanings. `event-choice-presentation.ts` supplies shared runtime/review content and markup; `poi-panel.ts` retains modal focus and existing command callbacks. Dungeon entry uses the same frame and action row. The body scrolls on short screens while the close control remains visible. Review at `/events.html?choices`.
+
 ## Experience presentation
 
 `hud-experience.ts` supplies the violet XP rail, level label, and exact current/required XP. It consumes `progression.ts` thresholds rather than duplicating the curve. Its feedback state lives with the renderer, resets with a new run, and never modifies player progression. The layout and pointer boundary include the XP rail and labels. Keep XP distinct from the blue mana glass and retain native text rendering.
