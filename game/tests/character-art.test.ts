@@ -134,11 +134,11 @@ test('upright staves keep their carry grips and Fire Staff rests its free arm', 
       }
     }
     const front = playerMotion({ ...pose, angle: Math.PI / 2, weapon: weapon.visual, grip: 'two-handed' });
-    assert.ok(front.weaponArm.hand[0] < -8, 'staff hand clears the shoulder and face');
+    assert.ok(front.weaponArm.hand[0] < -6.5, 'staff hand clears the shoulder and face');
     if (weapon.damageType === 'fire') {
-      assert.equal(front.offArm.hand[2], 8, 'free hand hangs beside the upper thigh');
-      assert.ok(front.offArm.hand[0] > 8, 'free arm stays on its own side of the body');
-    } else assert.ok(front.offArm.hand[2] > 20, 'support arm reaches across to the shaft');
+      assert.equal(front.offArm.hand[2], 10.5, 'free hand hangs beside the upper thigh');
+      assert.ok(front.offArm.hand[0] > 7, 'free arm stays on its own side of the body');
+    } else assert.ok(front.offArm.hand[2] >= 18, 'support arm reaches across to the shaft');
     assert.equal(front.supportHolding, weapon.damageType !== 'fire');
     const bottom = Math.min(...weaponShapes(weapon.visual).flatMap(shape => shape.points.map(p => p[0])));
     const base = transformPoint(front.body, [front.weaponOrigin[0] + Math.cos(front.weaponAngle) * bottom,

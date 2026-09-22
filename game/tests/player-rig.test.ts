@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getPlayerArmRig, type CharacterPose } from '../src/art.ts';
-import { projectArmPoint, type ArmRig, type RigPoint } from '../src/player-arm-rig.ts';
+import { projectArmPoint, PLAYER_ARM_LENGTHS, type ArmRig, type RigPoint } from '../src/player-arm-rig.ts';
 import { createStartingEquipment, getGripLength, getSupportGripOffset, getWeaponGrip, STARTING_SWORD, UNARMED_WEAPON } from '../src/equipment.ts';
 import { playerPose } from '../src/character-pose.ts';
 import { Simulation } from '../src/simulation.ts';
@@ -24,14 +24,14 @@ const distance = (a: readonly number[], b: readonly number[]) => Math.hypot(...a
 const near = (actual: number, expected: number, message: string, tolerance = 1e-8) =>
   assert.ok(Math.abs(actual - expected) < tolerance, `${message}: expected ${expected}, received ${actual}`);
 
-function validateArm(arm: ArmRig, description: string, proportion = 1): void {
+function validateArm(arm: ArmRig, description: string): void {
   for (const joint of [arm.shoulder, arm.elbow, arm.hand]) {
     assert.ok(joint.every(Number.isFinite), `${description}: every joint is finite`);
   }
   near(distance(arm.shoulder, arm.elbow), arm.upperLength, `${description}: upper-arm length`);
   near(distance(arm.elbow, arm.hand), arm.forearmLength, `${description}: forearm length`);
-  assert.ok(arm.upperLength >= 9.1 * proportion && arm.forearmLength >= 10.8 * proportion, `${description}: facing never shrinks bones`);
-  near(arm.upperLength / arm.forearmLength, 9.1 / 10.8, `${description}: long reaches preserve limb proportions`);
+  assert.ok(arm.upperLength >= PLAYER_ARM_LENGTHS.upper && arm.forearmLength >= PLAYER_ARM_LENGTHS.forearm, `${description}: facing never shrinks bones`);
+  near(arm.upperLength / arm.forearmLength, PLAYER_ARM_LENGTHS.upper / PLAYER_ARM_LENGTHS.forearm, `${description}: long reaches preserve limb proportions`);
 }
 
 function assertContinuous(a: ReturnType<typeof getPlayerArmRig>, b: ReturnType<typeof getPlayerArmRig>, description: string): void {
@@ -49,8 +49,8 @@ test('unarmed empty arms rest beside the thighs with matching shallow bends at e
     const rig = getPlayerArmRig(pose);
     assert.equal(playerMotion(pose).supportHolding, false);
     for (const [side, arm] of [[1, rig.weapon], [-1, rig.offhand]] as const) {
-      validateArm(arm, 'unarmed rest', .86);
-      assert.ok(arm.upperLength + arm.forearmLength < 17.2, 'relaxed unarmed limbs retain their shorter span');
+      validateArm(arm, 'unarmed rest');
+      assert.ok(arm.upperLength + arm.forearmLength < 17.2, 'relaxed limbs retain their anatomical span');
       assert.ok(arm.hand[2] >= 10 && arm.hand[2] <= 11, 'palm rests beside the upper thigh rather than the knee');
       const lateral = (-Math.sin(angle) * arm.hand[0] + Math.cos(angle) * arm.hand[1]) * side;
       assert.ok(lateral > 7 && lateral < 9, 'hand clears the torso without flaring outward');
@@ -62,7 +62,7 @@ test('unarmed empty arms rest beside the thighs with matching shallow bends at e
     near(rig.weapon.hand[2], rig.offhand.hand[2], 'both empty hands rest at the same height');
     for (const phase of [0, 1.3, 4.1]) for (const action of actions) {
       const moving = getPlayerArmRig({ ...pose, ...action, moving: 1, gaitPhase: phase });
-      validateArm(moving.weapon, 'unarmed action', .86); validateArm(moving.offhand, 'unarmed action', .86);
+      validateArm(moving.weapon, 'unarmed action'); validateArm(moving.offhand, 'unarmed action');
     }
     assertContinuous(rig, getPlayerArmRig({ ...pose, attack: 1 - 1e-7 }), 'unarmed attack returns to rest');
     const shield = { kind: 'shield', visual: SHIELD_PROFILES[0].visual } as const;
@@ -145,7 +145,7 @@ test('bows attach to the string, supported staves grip the shaft and fire staves
       const lead = projectArmPoint(rig.weapon.hand), support = projectArmPoint(rig.offhand.hand);
       if (weapon.family === 'staff' && weapon.damageType === 'fire') {
         assert.equal(motion.supportHolding, false);
-        near(rig.offhand.hand[2], 8, 'fire staff free hand rests beside the thigh');
+        near(rig.offhand.hand[2], 10.5, 'fire staff free hand rests beside the upper thigh');
         continue;
       }
       if (weapon.family === 'staff') assert.equal(motion.supportHolding, true);
@@ -284,5 +284,73 @@ test('dual-wield hand attachments stay continuous at the start and end of every 
     assertContinuous(getPlayerArmRig(before), getPlayerArmRig(after), `off-hand boundary ${boundary}`);
     const a = playerMotion(before), b = playerMotion(after);
     assert.ok(Math.abs(a.offWeaponAngle - b.offWeaponAngle) < .001, 'off-hand weapon returns smoothly to its own guard angle');
+  }
+});
+
+test('all generated loadouts retain one arm anatomy throughout idle and travel',()=>{
+  for(const weapon of [UNARMED_WEAPON,...WEAPON_PROFILES]) {
+    for(let facing=0;facing<32;facing++)for(let phase=0;phase<24;phase++)for(const moving of [0,1]) {
+      const angle=facing*TAU/32;
+      const rig=getPlayerArmRig({...rest,angle,attackAngle:angle,weapon:weapon.visual,
+        grip:weapon.hands===1?'one-handed':'two-handed',gaitPhase:phase*TAU/24,moving});
+      for(const arm of [rig.weapon,rig.offhand]) {
+        near(arm.upperLength,PLAYER_ARM_LENGTHS.upper,`${weapon.id}: carry must not lengthen upper arms`);
+        near(arm.forearmLength,PLAYER_ARM_LENGTHS.forearm,`${weapon.id}: carry must not lengthen forearms`);
+        assert.ok(arm.upperLength>arm.forearmLength,'upper arm is longer than forearm');
+      }
+    }
+  }
+});
+
+test('upright staff supporting palm is lower in height, not farther into ground depth',()=>{
+  for(const weapon of WEAPON_PROFILES.filter(w=>w.family==='staff'&&w.damageType!=='fire')) {
+    for(let direction=0;direction<32;direction++) {
+      const angle=direction*TAU/32;
+      const rig=getPlayerArmRig({...rest,angle,attackAngle:angle,weapon:weapon.visual,grip:'two-handed'});
+      near(rig.weapon.hand[1],rig.offhand.hand[1],'both palms share shaft ground depth');
+      assert.ok(rig.weapon.hand[2]-rig.offhand.hand[2]>7.9,'support grip sits below lead grip');
+    }
+  }
+});
+
+
+test('standard attacks, casts and melee gestures stay within the shared arm span', () => {
+  for (const weapon of [UNARMED_WEAPON, ...WEAPON_PROFILES]) {
+    const melee = ['sword', 'dagger', 'axe', 'mace'].includes(weapon.visual.kind);
+    const poses: Partial<CharacterPose>[] = [
+      ...Array.from({length: 21}, (_, i) => ({attack: i / 20})),
+      ...Array.from({length: 21}, (_, i) => ({cast: i / 20})),
+      ...(melee ? (['thrust', 'slam', 'bash'] as const).flatMap(gesture =>
+        Array.from({length: 21}, (_, i) => ({gesture, cast: i / 20}))) : []),
+    ];
+    for (let facing = 0; facing < 32; facing++) for (const action of poses) for (const moving of [0, 1]) {
+      const angle = facing * TAU / 32;
+      const rig = getPlayerArmRig({...rest, ...action, angle, attackAngle: angle,
+        weapon: weapon.visual, grip: weapon.hands === 1 ? 'one-handed' : 'two-handed', moving, gaitPhase: 1.7});
+      for (const arm of [rig.weapon, rig.offhand]) {
+        near(arm.upperLength, PLAYER_ARM_LENGTHS.upper, `${weapon.id} ${JSON.stringify(action)}: upper arm`);
+        near(arm.forearmLength, PLAYER_ARM_LENGTHS.forearm, `${weapon.id} ${JSON.stringify(action)}: forearm`);
+      }
+    }
+  }
+});
+
+
+test('paired weapons keep anatomical arms when either hand attacks or casts', () => {
+  const sword = WEAPON_PROFILES.find(w => w.id === 'longsword')!;
+  for (const id of ['rondel-dagger', 'cinder-wand']) {
+    const off = WEAPON_PROFILES.find(w => w.id === id)!;
+    for (const attackHand of ['main', 'off'] as const) for (let facing = 0; facing < 16; facing++) {
+      const angle = facing * TAU / 16;
+      for (let phase = 0; phase <= 20; phase++) for (const action of [{attack: phase / 20}, {cast: phase / 20}]) {
+        const rig = getPlayerArmRig({...rest, ...action, angle, attackAngle: angle, weapon: sword.visual,
+          grip: 'one-handed', offHand: {kind: 'weapon', visual: off.visual}, attackHand,
+          attackKind: attackHand === 'off' && off.visual.kind === 'wand' ? 'ranged' : 'melee', moving: 1, gaitPhase: 1.7});
+        for (const arm of [rig.weapon, rig.offhand]) {
+          near(arm.upperLength, PLAYER_ARM_LENGTHS.upper, `${id} ${attackHand}: upper arm`);
+          near(arm.forearmLength, PLAYER_ARM_LENGTHS.forearm, `${id} ${attackHand}: forearm`);
+        }
+      }
+    }
   }
 });

@@ -18,10 +18,13 @@ export function meleeStroke(facing: number, progress: number, start: number, end
   // This keeps a readable projected silhouette through the front-facing stroke.
   const pitch = .85 - 1.1 * smooth(clamp(active / .65));
   const axis: RigPoint = [Math.cos(yaw) * Math.cos(pitch), Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch)];
-  const lateral = side * (9 - cut * 13), reach = 6 + cut * 6;
+  const lateral = side * (8 - cut * 10), reach = 6 + cut * 3.8;
   const palm: RigPoint = [Math.cos(facing) * reach - Math.sin(facing) * lateral,
     Math.sin(facing) * reach + Math.cos(facing) * lateral, 27 - cut * 7];
-  const restAxis: RigPoint = [Math.cos(restAngle), Math.sin(restAngle), (ARM_DEPTH_SCALE - 1) * Math.sin(restAngle)];
+  // Match the upright carry grip in height/depth space at both boundaries.
+  // Its screen projection is unchanged, but the support arm no longer jumps
+  // forward into depth when an attack starts.
+  const restAxis: RigPoint = [Math.cos(restAngle), 0, -Math.sin(restAngle)];
   const blend = progress <= 0 ? 0 : progress < start ? smooth(progress / start)
     : progress <= end ? 1 : 1 - smooth(clamp((recovery - .65) / .35));
   const direction = mix(restAxis, axis, blend);

@@ -87,12 +87,22 @@ export function heldShield(ctx: CanvasRenderingContext2D, hand: Point, angle: nu
   ctx.restore();
 }
 
+/** Rounded joint ends close the triangular gaps left by separate limb quads. */
+function roundedLimb(ctx:CanvasRenderingContext2D,from:Point,to:Point,fromWidth:number,toWidth:number,fill: string):void {
+  taper(ctx,from,to,fromWidth,toWidth,fill);
+  ctx.fillStyle=fill;
+  for(const [point,width]of [[from,fromWidth],[to,toWidth]] as const){
+    ctx.beginPath();ctx.arc(...point,width/2,0,Math.PI*2);ctx.fill();
+  }
+}
+
 export function upperArm(ctx: CanvasRenderingContext2D, shoulder: Point, elbow: Point, color: Color): void {
-  taper(ctx, shoulder, elbow, 3.8, 3, color('#263a39'));
+  roundedLimb(ctx, shoulder, elbow, 3.25, 2.45, color('#263a39'));
+  taper(ctx, shoulder, elbow, 1.55, 1.1, color('#344a43'));
 }
 
 export function forearm(ctx: CanvasRenderingContext2D, elbow: Point, hand: Point, piece: ArmorPiece | null, color: Color): void {
-  taper(ctx, elbow, hand, 3, 1.8, color('#5b5145'));
+  roundedLimb(ctx, elbow, hand, 2.45, 1.65, color('#5b5145'));
   if (piece) {
     const cuff: Point = [elbow[0] * .28 + hand[0] * .72, elbow[1] * .28 + hand[1] * .72];
     armorSegment(ctx,elbow,cuff,piece,color,'bracer');
@@ -139,8 +149,8 @@ export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nu
   // The side wall remains a solid volume as the front plate turns edge-on.
   ctx.save(); ctx.scale(turn.width, 1);
   const hem = piece?.style === 'cloth' ? 17 : 11;
-  polygon(ctx, [[-5.8,-6],[-2.8,-7],[2.8,-7],[5.8,-5.8],[6,3],[5,hem],[-5,hem],[-6,3]],color(m.shadow));
-  polygon(ctx, [[-4.8,-5.7],[-2.5,-6.5],[2.5,-6.5],[4.8,-5.4],[5,3],[4.1,hem-.8],[-4.1,hem-.8],[-5,3]],color(m.base));
+  polygon(ctx, [[-5.8,-6],[-2.8,-7],[2.8,-7],[5.8,-5.8],[5.4,-.5],[4.7,4.5],[5,hem],[-5,hem],[-4.7,4.5],[-5.4,-.5]],color(m.shadow));
+  polygon(ctx, [[-4.8,-5.7],[-2.5,-6.5],[2.5,-6.5],[4.8,-5.4],[4.7,-.4],[4.1,4.5],[4.3,hem-.8],[-4.3,hem-.8],[-4.1,4.5],[-4.7,-.4]],color(m.base));
   line(ctx,[[-3.8,-4.8],[-4.2,2],[-3.5,hem-1]],color(m.edge),.45);
   line(ctx,[[-4.4,7.8],[4.4,7.8]],color(piece?.style==='cloth'?m.trim:'#644834'),1.7);
   ctx.restore();
@@ -153,7 +163,12 @@ export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nu
     line(ctx,[[-4.6,7.8],[4.6,7.8]],color(piece?.style==='cloth'?m.trim:'#644834'),1.7);
     ctx.restore();return;
   }
-  polygon(ctx, [[-6, -7], [6, -7], [7, 6], [4, 11], [-5, 11], [-7, 4]], color('#1b3338'));
+  polygon(ctx, [[-5.8,-6.6],[-3,-7],[3,-7],[5.8,-6.6],[5.35,-1],[4.45,4.7],
+    [5,10.3],[-4.8,10.3],[-4.55,4.5],[-5.4,-1]], color('#1b3338'));
+  if (!piece) {
+    polygon(ctx,[[-4.8,-5.3],[-2.4,-5],[-2.8,1.8],[-3.8,4],[-4.6,.2]],color('#29443f'));
+    line(ctx,[[-4.7,-4.9],[0,-3.9],[4.7,-4.9]],color('#496257'),.4);
+  }
   // Dark quilted fabric remains visible between separately attached armor pieces.
   for (let row = 0; row < 3; row++) {
     line(ctx, [[-4.5, 4 + row * 2], [0, 5 + row * 2], [4, 4 + row * 2]], color('#496257'), 0.6);
@@ -173,7 +188,8 @@ export function shoulderArmor(ctx: CanvasRenderingContext2D, anchor: Point, elbo
   ctx.save();
   ctx.translate(...anchor);
   // Mount and orientation both follow the upper arm, including in rear/side views.
-  ctx.rotate(-Math.atan2(elbow[0] - anchor[0], Math.max(2, elbow[1] - anchor[1])));
+  ctx.rotate(-Math.atan2(elbow[0] - anchor[0], elbow[1] - anchor[1]));
+  ctx.scale(.8,.8);
   ctx.translate(-1.5, 0);
   drawGearShapes(ctx, armorShapes('shoulder', piece), color);
   ctx.restore();

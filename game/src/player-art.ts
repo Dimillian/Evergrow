@@ -110,6 +110,7 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   const armLayers = [weaponArm, offArm].flatMap(arm => [
     { depth: (arm.shoulder[1] + arm.elbow[1]) / 2,
       draw: () => upperArm(ctx, projectArmPoint(arm.shoulder), projectArmPoint(arm.elbow), color) },
+    { depth: arm.shoulder[1], draw: () => shoulderArmor(ctx, projectArmPoint(arm.shoulder), projectArmPoint(arm.elbow), outfit.shoulders, color) },
     { depth: supportHolding ? (weaponBehind ? -1 : 1) : (arm.elbow[1] + arm.hand[1]) / 2,
       draw: () => forearm(ctx, projectArmPoint(arm.elbow), projectArmPoint(arm.hand), outfit.hands, color) },
   ]).sort((a, b) => a.depth - b.depth);
@@ -140,10 +141,6 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
   ctx.restore();
   if (back) cape();
   for (const layer of armLayers) if (layer.depth >= 0) layer.draw();
-  const caps = [weaponArm, offArm].sort((a, b) => a.shoulder[1] - b.shoulder[1]);
-  for (const arm of caps) {
-    shoulderArmor(ctx, projectArmPoint(arm.shoulder), projectArmPoint(arm.elbow), outfit.shoulders, color);
-  }
   // The neck counterbalances the moving torso; small facial features stay legible.
   ctx.save(); ctx.translate(lean * -12, -bob * 0.3);
   headArmor(ctx, outfit.head, color, pose.angle, pose.appearance);
