@@ -1,3 +1,4 @@
+import { weaponEnhancementRank } from './enhancement-art.ts';
 import { hasGreaterAffix } from './item-roll-content.ts';
 import { dropIdleHop } from './drop-idle-motion.ts';
 import { treasurePose } from './treasure-flight.ts';
@@ -38,7 +39,7 @@ export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly Grou
     }
     // Equipment rests on the floor, not suspended inside a beam of light.
     c.save(); c.translate(flight.landed?x:flight.x, (flight.landed?y:flight.y)-3-flight.height); c.rotate(flight.spin); c.rotate(Math.sin(drop.item.seed) * .18); c.scale(1.2, .95);
-    drawGearShapes(c, itemDropShapes(drop.item), value => value); c.restore();
+    drawGearShapes(c, itemDropShapes(drop.item), value => value, undefined, weaponEnhancementRank(drop.item), reducedMotion ? 0 : time); c.restore();
     if(!flight.landed)continue;
     c.strokeStyle = color + (precious ? 'ae' : '65'); c.lineWidth = .7;
     for (const side of [-1, 1]) {

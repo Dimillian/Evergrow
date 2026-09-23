@@ -1,3 +1,4 @@
+import { weaponEnhancementRank } from './enhancement-art.ts';
 import './character-editor.css';
 import { bindArmorTintPrompt } from './armor-tint-prompt.ts';
 import { trapDialogFocus, escapeUI } from './ui-components.ts';
@@ -98,6 +99,8 @@ function pose(time: number, source:CharacterSheet=sheet, angle=facing): Characte
   const off = source.equipped.offhand;
   return { kind: 'player', appearance, time, angle, attackAngle: angle, moving: 0, attack: 0, hitFlash: 0, dodging: false,
     outfit: tintedOutfit(outfitFromEquipment(source),tints,showHelmet),
+    weaponEnhancement: weaponEnhancementRank(source.equipped.weapon),
+    offHandEnhancement: weaponEnhancementRank(source.equipped.offhand),
     weapon: main.visual, grip: main.hands === 2 ? 'two-handed' : 'one-handed',
     offHand: off?.shield ? { kind: 'shield', visual: off.shield.visual } : off?.focus ? { kind: 'focus', visual: off.focus.visual } : off?.weapon ? {kind:'weapon',visual:off.weapon.visual}:null };
 }

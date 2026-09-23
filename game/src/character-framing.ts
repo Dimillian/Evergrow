@@ -1,3 +1,4 @@
+import { enhancementFinish } from './enhancement-art.ts';
 import { focusShapes } from './focus-shapes.ts';
 import { appearanceHeadShapes } from './appearance-shapes.ts';
 import type { CharacterPose } from './art-types.ts';
@@ -44,8 +45,10 @@ export function characterBounds(pose: CharacterPose): CharacterBounds {
       add([hand[0] + x * scale * Math.cos(angle) - y * Math.sin(angle), hand[1] + x * scale * Math.sin(angle) + y * Math.cos(angle)]);
     }
   }
-  return { left: Math.min(...points.map(p => p[0])) - 3, right: Math.max(...points.map(p => p[0])) + 3,
-    top: Math.min(...points.map(p => p[1])) - 3, bottom: Math.max(...points.map(p => p[1])) + 3 };
+  const rank = Math.max(pose.weaponEnhancement ?? 0, pose.offHand?.kind === 'weapon' ? pose.offHandEnhancement ?? 0 : 0);
+  const padding = 3 + (enhancementFinish(rank)?.spread ?? 0) * PLAYER_ART_SCALE * 1.2;
+  return { left: Math.min(...points.map(p => p[0])) - padding, right: Math.max(...points.map(p => p[0])) + padding,
+    top: Math.min(...points.map(p => p[1])) - padding, bottom: Math.max(...points.map(p => p[1])) + padding };
 }
 
 /** One scale on both axes: a narrow portrait must never squash the figure. */

@@ -1,3 +1,4 @@
+import { drawEnhancementGlow, drawEnhancementMotion } from './enhancement-art.ts';
 import { armorAccessoryShapes, type ArmorAccessory } from './armor-accessory-shapes.ts';
 import { bootShapes } from './boot-shapes.ts';
 import { bootProjection } from './boot-projection.ts';
@@ -32,7 +33,8 @@ export const STARTER_OUTFIT: CharacterOutfit = {
 };
 
 const shadingCache = new WeakMap<GearShape,{key:string;stops:Array<readonly [number,string]>}>();
-export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color, project?: (point: Point) => Point): void {
+export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color, project?: (point: Point) => Point, enhancement = 0, time = 0): void {
+  drawEnhancementGlow(ctx, shapes, enhancement, project, time);
   const matrix = ctx.getTransform(), fine = Math.hypot(matrix.a, matrix.b) >= 2.4;
   const lighting = gearCanvasLight(ctx), facing = Math.round(Math.atan2(matrix.b,matrix.a)*128)/128;
   const lightKey=`${facing}:${lighting.direction.map(v=>Math.round(v*64)).join(',')}:${lighting.color}:${Math.round(lighting.power*64)}`;
@@ -64,12 +66,13 @@ export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly G
     }
     if (shape.stroke) line(ctx, points, color(stops ? stops[1][1] : shape.stroke), shape.width ?? .7);
   }
+  drawEnhancementMotion(ctx, shapes, enhancement, time, project);
 }
 
 export function heldWeapon(ctx: CanvasRenderingContext2D, hand: Point, angle: number, color: Color,
-  visual = STARTING_SWORD.visual, draw = 0, time = 0, charge = 0, lengthScale = 1): void {
+  visual = STARTING_SWORD.visual, draw = 0, time = 0, charge = 0, lengthScale = 1, enhancement = 0): void {
   ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(angle); ctx.scale(lengthScale, 1);
-  drawGearShapes(ctx, weaponShapes(visual, draw), color);
+  drawGearShapes(ctx, weaponShapes(visual, draw), color, undefined, enhancement, time);
   drawWeaponEnchantment(ctx, visual, time, charge);
   ctx.restore();
 }
@@ -95,7 +98,7 @@ export function forearm(ctx: CanvasRenderingContext2D, elbow: Point, hand: Point
   taper(ctx, elbow, hand, 3, 1.8, color('#5b5145'));
   if (piece) {
     const cuff: Point = [elbow[0] * .28 + hand[0] * .72, elbow[1] * .28 + hand[1] * .72];
-    armorSegment(ctx,elbow,cuff,piece,color,'bracer');
+    armorSegment(ctx,elbow,cuff,piece,color,'bracer',1);
   }
 }
 
@@ -158,7 +161,10 @@ export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | nu
   for (let row = 0; row < 3; row++) {
     line(ctx, [[-4.5, 4 + row * 2], [0, 5 + row * 2], [4, 4 + row * 2]], color('#496257'), 0.6);
   }
-  if (piece) drawGearShapes(ctx, armorShapes('chest', piece), color);
+  if (piece) {
+    const shapes=armorShapes('chest',piece);
+    drawGearShapes(ctx,shapes,color);
+  }
   if(piece?.style==='cloth'){ctx.restore();return;}
   line(ctx, [[-5.3, 8.1], [5.3, 8.1]], color('#644834'), 2);
   ctx.fillStyle = color('#d4ae72'); ctx.fillRect(-1.4, 6.8, 2.8, 2.4);

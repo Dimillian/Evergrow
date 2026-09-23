@@ -121,7 +121,7 @@ The save-free `game/scripts/atlas-balance.ts` CLI extends this workspace with 20
 
 ### Merchant refresh and enhancement workbench
 
-`/services.html?tier=city` stages the spatial Weapons / Armor / Accessories stock trays and paid refreshes. `/services.html?operation=enhance&item=1` opens the shared item showcase and exact enhancement gains. Both use the same runtime panel and pure commerce planner with disposable in-memory items and gold.
+Equipment → **Merchant layout** (`/services.html?tier=city&layout=stock`) stages the spatial Weapons / Armor / Accessories stock trays and paid refreshes. Its Fixture selector covers `stock`, `empty-stock`, `sold-out`, `enhance`, `sell`, `empty-sell`, `buyback` and `empty-buyback`; Reset restores disposable gear, gold and commerce state. Runtime tabs remain available to inspect transitions. See the [layout audit](service-layout-audit.md). `/services.html?operation=enhance&item=1` opens the shared item showcase and exact enhancement gains. Both use the same runtime panel and pure commerce planner with disposable in-memory items and gold.
 
 ### Procedural skill icons
 
@@ -173,3 +173,26 @@ Character hall (`/title.html`) now stages wallet balances, effective attribute d
 The existing Journey review (`/journeys.html?view=journal`) stages the production Area journal with disposable accepted, nearby and completed activities. Accept, Dismiss, independent Pin and area browsing use the shared state planner. Show on Map focuses the selected activity, and closing it returns to the same details. No playable character storage is used.
 
 The Progression workspace also has **World difficulty** (`/progression.html?view=difficulty`): shared procedural crests, the actual selector with disposable actions, and level-50 scaling reference. This view never reads or writes character saves.
+
+
+## Enhancement workbench
+
+Equipment → **Enhancement workbench** (`/services.html?operation=enhance&study`) extends the existing service review with disposable item/state fixtures and animation controls. **Replay enhance** restores the chosen starting item/rank and uses the real Enhance button. **Pause / Resume**, **1× / ½× / ¼×** and **Charge** scrubbing operate on the runtime bar and CSS particles; scrubbing holds just before commitment, and Resume crosses the normal final-tick boundary. The runtime Cancel and Skip animation controls remain available.
+
+Choose Longsword, Shield, Armor or Charm, rank +0–10, and Ready / No selection / Not enough gold / Fully enhanced / Save error. The error preset simulates persistence rejection and retains gear and gold. Sound is optional; `sample`, `rank`, `state`, `speed` and `sound` are preserved in the URL. Reset restores the fixture after manual item selection or enhancement. Closing the panel leaves the preview controls available to reopen it. Hidden tabs pause motion and system reduced motion remains authoritative. The study uses no combat ticks, sessions, repositories or playable saves; tool code and styles remain outside the production entry graph.
+
+Every rank uses the same cancellable 1.6-second charge. The guaranteed completion has its normal success animation; the Save error preset independently verifies persistence-error feedback. No failed-enhancement preset or RNG outcome overrides remain.
+
+The enhancement study’s **Rank** control also previews the earned +6–+10 glow on weapon art. Other item fixtures retain their normal art. Compare +5 with each higher rank, or choose **Fully enhanced** for the white-gold +10 finish. The earned sheen, embers, filaments and +10 flares animate continuously. **Replay glow** restarts the selected item’s cosmetic loop without submitting a purchase; Pause/Resume and speed controls also work on it. Infinite cosmetic loops run through CSS without keeping the toolbar’s polling frame alive. Reduced motion keeps a still finish. Earned motion hides during the distinct forge charge/saving phase.
+
+## Economy estimates
+
+Data & audits → **Economy** (`/progression.html?view=economy`, also linked from Progression & loot) estimates gross income and enhancement affordability. `tools/economy-model.ts` consumes runtime gold rolls, enemy loot, vendor sale prices, source XP, difficulty, event reward bundles, item generation, enhancement prices and useful-rank skips. It owns disposable samples only; it does not load saves, run combat or tune runtime rules.
+
+Set character/source levels, biome, base enemy, goblin share, Champion/Elite shares, difficulty, kills per minute including travel, session duration, gold/XP bonuses, coin collection and item selling fractions. Optional camp, chapel, beast-den or cursed-chest completion rewards are additive; count the activity's enemy kills in the main kill rate to avoid double counting. All selected enemies have the exact source level entered; geographical variation and rank level offsets are not inferred. Item level, kind, rarity, material and current enhancement independently define a reproducible target. The default is level 5, four ordinary Stalker kills per minute, fifteen minutes, all coins collected and half of equipment drops sold, with no activity completions or bonuses.
+
+Results separate coin and sale income, show gold per session/hour and expected gold/time to the next level from zero XP, then compare the same play style at matching source/character levels 1, 5, 10, 20 and 50. These are fixed-level rate estimates, not a cumulative level-1-to-50 journey. Enhancement rows follow the actual item's free skips and show exact upgrade cost, time at the selected income rate, and cumulative cost from the owned rank. Enhancements are guaranteed through +10 with the original 65%-per-rank cost growth. Income and time remain estimates; time assumes all gross income is available for that item.
+
+The selected view uses 2,048 fixed seeds per nonzero enemy/rank group and at most 512 activity seeds; level comparisons use 1,024 enemy seeds. Rank/type shares are weighted explicitly. Batches yield between level comparisons and stale results are discarded on edits/navigation. Calculate updates the URL; **Export report** downloads assumptions, estimates, target item, upgrade rows and level comparisons as JSON. **Reset baseline** restores the defaults. Editing invalidates the report until recalculated. No animation loops are created.
+
+The sale fraction applies uniformly to loot value; it does not simulate rarity-based selling, keeping upgrades or bag capacity. First-kill guarantees, containers, Journeys, dungeon/rift/boss rewards and other spending are excluded. Chronicle totals remain the measurement source for real playtime and gold acquired; this tool estimates supplied assumptions and does not infer kill rates from the combat system. `game/tests/economy.test.ts` compares sampled rewards directly with runtime kill commitment, plus activity bundles, mixtures, zero rates, difficulty/bonus rounding, free skips and URL bounds.

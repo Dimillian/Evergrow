@@ -27,7 +27,9 @@ test('enhancement skips rounded-away ranks, charges one step and never sells a n
     const quote=quoteService(s,smith,1,{type:'improve',source:{bag:0},operation:'enhance'});
     if(next===null){assert.equal(quote.ok,false);assert.throws(()=>improveItem(item,'enhance',1,1));continue;}
     assert.ok(quote.ok);const plan=planService(s,smith,1,quote.quote);assert.ok(plan.ok && plan.item);
-    assert.notDeepEqual(plan.item.affixes,item.affixes);assert.equal(plan.item.recipe.enhancement,next);
+    const preview=improveItem(item,'enhance',1,1);
+    assert.notDeepEqual(preview.affixes,item.affixes);assert.equal(preview.recipe.enhancement,next);
+    assert.deepEqual(plan.item,preview);
     assert.equal(plan.character.gold,s.gold-improvementPrice(item,'enhance',1));
     for(let rank=item.recipe.enhancement+1;rank<next;rank++)assert.deepEqual(deriveItem({...item,recipe:{...item.recipe,enhancement:rank}}).affixes,item.affixes);
   }
