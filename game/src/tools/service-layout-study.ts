@@ -19,6 +19,7 @@ export class ServiceLayoutStudy {
   private readonly toolbar = document.createElement('aside');
   private readonly abort = new AbortController();
   private readonly resize: ResizeObserver;
+  private readonly observer: MutationObserver;
   private readonly baseline: Player['character'];
   private readonly scenario: HTMLSelectElement;
 
@@ -40,12 +41,19 @@ export class ServiceLayoutStudy {
       history.replaceState(null,'',url); this.scenario.focus();
     },options);
     this.toolbar.querySelector('button')!.addEventListener('click',()=>this.reset(),options);
-    document.body.append(this.toolbar);
+    this.observer=new MutationObserver(()=>this.attach());
+    this.observer.observe(panel.element,{childList:true,attributes:true,attributeFilter:['hidden']});
     this.resize = new ResizeObserver(()=>document.documentElement.style.setProperty('--service-layout-top',`${this.toolbar.getBoundingClientRect().height+12}px`));
     this.resize.observe(this.toolbar);
     this.reset();
   }
+  private attach(): void {
+    // Keep the controls in the active dialog's focus scope, or reachable after closing it.
+    const mount=this.panel.element.hidden?document.body:this.panel.element;
+    if (this.toolbar.parentElement!==mount) mount.prepend(this.toolbar);
+  }
   private reset(): void {
+    const focused=this.toolbar.contains(document.activeElement)?document.activeElement as HTMLElement:null;
     // Close first so resetting a fixture cancels any pending presentation charge.
     this.panel.close();
     this.player.character = structuredClone(this.baseline);
@@ -71,10 +79,12 @@ export class ServiceLayoutStudy {
     else if (scenario==='empty-sell') this.activate('[data-tab="sell"]');
     else if (scenario==='buyback'||scenario==='empty-buyback') this.activate('[data-tab="buyback"]');
     else if (scenario==='empty-stock') this.activate('[data-stock-category="accessories"]');
+    this.attach();
+    focused?.focus({preventScroll:true});
   }
   private activate(selector: string): void { this.panel.element.querySelector<HTMLButtonElement>(selector)?.click(); }
   dispose(): void {
-    this.abort.abort(); this.resize.disconnect(); this.toolbar.remove();
+    this.abort.abort(); this.observer.disconnect(); this.resize.disconnect(); this.toolbar.remove();
     document.documentElement.classList.remove('service-layout-study');
     document.documentElement.style.removeProperty('--service-layout-top');
   }
