@@ -28,6 +28,11 @@ type PreviewState = 'available' | 'progress' | 'opening' | 'completed' | 'claime
 let disposed = false, frame = 0, world: World | undefined, fx: PostFX | undefined, panel: EventPanel | undefined;
 async function boot() {
   if (!import.meta.env.DEV) throw new Error('Local review only.');
+  if (new URLSearchParams(location.search).has('choices')) {
+    const study = await import('./tools/event-choice-study.ts');
+    await study.mountChoiceStudy(root, lifetime.signal);
+    return;
+  }
   installUITheme(); await loadGameFont(); if (disposed) return;
   world = new World(7319); const scene = world;
   const landmarks = scene.getWildernessSites(-8000, -8000, 16000, 16000);
@@ -37,7 +42,7 @@ async function boot() {
   const renderer = new Renderer(), display = document.createElement('canvas'), canvas = document.createElement('canvas');
   for (const c of [display, canvas]) { c.width = 1920; c.height = 1280; }
   canvas.className = 'layout-review-scene'; canvas.setAttribute('role', 'img');
-  root.innerHTML = `<header class="layout-review-header"><h1>World events</h1></header>
+  root.innerHTML = `<header class="layout-review-header"><h1>World events</h1><a class="layout-review-download" href="/events.html?choices">Choice UI ↗</a></header>
     <nav class="layout-review-views event-review-events" aria-label="World event"></nav>
     <div class="event-review-settings">
       <div class="event-review-state"><span class="event-review-label">Preview state</span><div class="event-review-segments" role="group" aria-label="Preview state"><button data-preview-state="available" aria-pressed="true">Available</button><button data-preview-state="progress" aria-pressed="false">In progress</button><button data-preview-state="opening" aria-pressed="false">Opening</button><button data-preview-state="completed" aria-pressed="false">Completed</button><button data-preview-state="claimed" aria-pressed="false">Claimed</button></div></div>

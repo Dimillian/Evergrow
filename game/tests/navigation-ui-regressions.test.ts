@@ -13,7 +13,82 @@ const assets = registerHooks({ load(url, context, next) {
 } });
 const { Game } = await import('../src/game.ts');
 const { GameShell } = await import('../src/game-shell.ts');
+const { PauseMenu } = await import('../src/pause-menu.ts');
 assets.deregister();
+
+test('difficulty closes to its entry point through Escape, Back and the close button', async t => {
+  class Surface extends EventTarget {
+    hidden = false; innerHTML = ''; textContent = ''; className = ''; tabIndex = 0; scrollTop = 0;
+    dataset: Record<string, string> = {};
+    sections = new Map<string, Surface>(); children: Surface[] = [];
+    ownerDocument = doc;
+    append(child: Surface) { this.children.push(child); }
+    remove() {} setAttribute() {} removeAttribute() {}
+    hasAttribute() { return false; } matches() { return false; } closest() { return null; }
+    getClientRects() { return [{}]; }
+    contains(node: unknown): boolean { return node === this || [...this.sections.values(), ...this.children].some(s => s.contains(node)); }
+    focus() { doc.activeElement = this; }
+    querySelector(selector: string): Surface {
+      if (!this.sections.has(selector)) this.sections.set(selector, new Surface());
+      return this.sections.get(selector)!;
+    }
+    querySelectorAll() { return []; }
+  }
+  const doc = Object.assign(new EventTarget(), {
+    activeElement: null as Surface | null,
+    defaultView: { getComputedStyle: () => ({ visibility: 'visible' }) },
+    createElement: () => new Surface(),
+  });
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis, 'document', { value: doc, configurable: true });
+  t.after(() => { if (original) Object.defineProperty(globalThis, 'document', original); else Reflect.deleteProperty(globalThis, 'document'); });
+  const root = new Surface(), life = new AbortController();
+  let resumed = 0, finishSave!: (result: { ok: boolean; message: string }) => void;
+  const navigation = { category: 'adventure' as const, focus: null };
+  const menu = new PauseMenu(root as unknown as HTMLElement, {
+    returnToTitle() { assert.fail('closing difficulty must never exit the character'); },
+    setDifficulty: () => new Promise(resolve => { finishSave = resolve; }),
+  }, life.signal, navigation);
+  t.after(() => life.abort());
+  const shell = Object.assign(Object.create(GameShell.prototype), {
+    pauseMenu: menu, actions: { play: () => { resumed++; } },
+  });
+  const openFromMenu = () => {
+    const event = new Event('click');
+    Object.defineProperty(event, 'target', { value: { closest: () => ({ dataset: { pauseDestination: 'difficulty' } }) } });
+    root.dispatchEvent(event);
+  };
+  const window = () => root.children.at(-1)!;
+  for (const close of ['escape', 'back', 'button']) {
+    for (const fromGame of [true, false]) {
+      const before = resumed;
+      if (fromGame) shell.showDifficultyMenu(); else openFromMenu();
+      assert.equal(root.querySelector('.pause-menu-stack').hidden, true);
+      assert.match(window().innerHTML, fromGame ? /Back to game/ : /Back to menu/);
+      if (close === 'escape') {
+        const event = Object.assign(new Event('keydown', { cancelable: true }), { key: 'Escape' });
+        window().dispatchEvent(event);
+        assert.equal(event.defaultPrevented, true);
+      } else if (close === 'back') assert.equal(shell.backInMenu(), true);
+      else window().querySelector('[data-system-close]').dispatchEvent(new Event('click'));
+      assert.equal(resumed, before + Number(fromGame));
+      assert.equal(shell.backInMenu(), false, 'the close is consumed exactly once');
+      if (!fromGame) assert.equal(doc.activeElement, root.querySelector('[data-pause-destination="difficulty"]'));
+    }
+  }
+  shell.showDifficultyMenu();
+  window().querySelector('[data-system-difficulty]').querySelector('[data-difficulty-apply]').dispatchEvent(new Event('click'));
+  const before = resumed;
+  assert.equal(shell.backInMenu(), true);
+  assert.equal(resumed, before, 'Back cannot resume gameplay during a durable difficulty change');
+  finishSave({ ok: false, message: 'Disk full' });
+  await Promise.resolve();
+  assert.equal(shell.backInMenu(), true);
+  assert.equal(resumed, before + 1, 'a failed save retains the original return destination');
+  shell.showDifficultyMenu();
+  life.abort();
+  assert.equal(resumed, before + 1, 'teardown must not resume gameplay');
+});
 
 test('Home restores canvas focus before starting or cancelling a portal action', t => {
   const originals = new Map(['document', 'window', 'cancelAnimationFrame'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));

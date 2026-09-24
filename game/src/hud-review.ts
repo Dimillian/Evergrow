@@ -5,6 +5,11 @@ import { Simulation } from './simulation.ts';
 import { scaledEnemyStats } from './zone-progression.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
 import type { Player, WorldQuery } from './model.ts';
+import { potionHUDRect } from './hud-layout.ts';
+import { PotionTooltip } from './potion-tooltip.ts';
+import { potionPresentation } from './potion-presentation.ts';
+import { controls } from './control-preferences.ts';
+import { PLAYER_ABILITIES } from './combat-content.ts';
 
 // This dev-only entry never binds gameplay input, ticks a simulation or accesses saves.
 const params = new URLSearchParams(location.search);
@@ -19,11 +24,18 @@ const ENEMY_PLATE_OFFSET = 56;
 const root = document.querySelector<HTMLElement>('#hud-review')!;
 if (narrow) root.style.maxWidth = '390px';
 const canvas = document.querySelector<HTMLCanvasElement>('#hud-sheet')!;
+const reviewSurface = document.createElement('div'); reviewSurface.style.position = 'relative';
+canvas.before(reviewSurface); reviewSurface.append(canvas);
+const potionTips: PotionTooltip[] = [];
 const status = document.querySelector<HTMLElement>('#review-status')!;
 const download = document.querySelector<HTMLAnchorElement>('#save-png')!;
+const previewLink = document.querySelector<HTMLAnchorElement>('#recharge-preview')!;
+const previewURL = new URL(location.href);
+if (motion) previewURL.searchParams.delete('motion'); else previewURL.searchParams.set('motion', '');
+previewLink.href = previewURL.href; previewLink.textContent = motion ? 'Freeze study' : 'Animate recharge';
+previewLink.hidden = platesOnly || reducedMotion;
 const abort = new AbortController();
 let disposed = false;
-
 interface Stage {
   name: string; detail: string; player: Player; time: number; options: HUDOptions;
   enemy: Parameters<typeof drawEnemyPlate>[1];
@@ -39,7 +51,7 @@ function makeStages(): Stage[] {
   const healthy = player(), damaged = player(), depleted = player();
   healthy.mana = 94;
   healthy.xp = 60;
-  damaged.hp = 39; damaged.mana = 68; damaged.dodgeCharges = 1; damaged.dodgeRecharge = 1.2;
+  damaged.hp = 39; damaged.mana = 68; damaged.flasks = 1; damaged.dodgeCharges = 1; damaged.dodgeRecharge = 1.2;
   damaged.level = 2; damaged.xp = 90;
   damaged.character.statPoints = 5; damaged.character.skillPoints = 1;
   depleted.hp = 16; depleted.mana = 7; depleted.flasks = 0; depleted.dodgeCharges = 0;
@@ -49,10 +61,10 @@ function makeStages(): Stage[] {
   return [
     { name: 'Healthy', detail: 'Full vitality · abilities ready', player: healthy, time: 5.7, options: {},
       enemy: { kind: 'stalker', hp: 48, maxHp: 48, level: 1, rank: 'normal' } },
-    { name: 'Damaged', detail: 'Recent impact · trailing vitality · one dodge charge', player: damaged,
-      time: 9.2, options: { healthTrail: .83, hitPulse: .5 }, enemy: { kind: 'brute', hp: Math.round(brute.maxHp * .62), maxHp: brute.maxHp, level: 2, rank: 'veteran', burnTime: 2.4, burnDps: 6, slowTime: 1.2, slowFactor: .8 },
+    { name: 'Damaged', detail: 'Recent impact · one potion charge · one dodge charge', player: damaged,
+      time: 9.2, options: { healthTrail: .83, hitPulse: .5, potionRecharge: .5 }, enemy: { kind: 'brute', hp: Math.round(brute.maxHp * .62), maxHp: brute.maxHp, level: 2, rank: 'veteran', burnTime: 2.4, burnDps: 6, slowTime: 1.2, slowFactor: .8 },
       enemyOptions: { healthTrail: brute.maxHp * .87, hitPulse: .5 } },
-    { name: 'Depleted', detail: 'Low resources · recovery timers · empty flask', player: depleted, time: 14.4, options: {},
+    { name: 'Depleted', detail: 'Low resources · recovery timers · empty flask', player: depleted, time: 14.4, options: { potionRecharge: .25 },
       enemy: { kind: 'caster', hp: Math.round(caster.maxHp * .14), maxHp: caster.maxHp, level: 4, rank: 'elite', burnTime: 1.8, burnDps: 8, slowTime: 2.1, slowFactor: .6, stagger: .4 } },
   ];
 }
@@ -97,6 +109,7 @@ async function boot() {
   const allStages = makeStages();
   const selected = allStages.find(stage => stage.name.toLowerCase() === params.get('state'));
   const stages = selected ? [selected] : allStages;
+  if (!platesOnly) stages.forEach(() => potionTips.push(new PotionTooltip(reviewSurface)));
   function draw() {
     const width = canvas.getBoundingClientRect().width;
     if (width <= 0 || disposed) return;
@@ -121,16 +134,37 @@ async function boot() {
     c.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
     c.fillStyle = '#090f14'; c.fillRect(0, 0, width, height);
     stages.forEach((stage, index) => {
+      let previewPlayer = stage.player, potionRecharge = stage.options.potionRecharge ?? 0;
+      const chargingPreview = motion && !reducedMotion && stage.name !== 'Healthy';
+      if (chargingPreview) {
+        // Authored presentation only: one illustrative kill every .8 seconds; no simulation ticks.
+        const potionDuration = PLAYER_ABILITIES.potion.killsPerCharge * .8;
+        const potionElapsed = motionTime % (potionDuration + 1.2);
+        const dodgeElapsed = motionTime % (PLAYER_ABILITIES.dodge.recharge + 1.2);
+        const potionReady = potionElapsed >= potionDuration;
+        const dodgeReady = dodgeElapsed >= PLAYER_ABILITIES.dodge.recharge;
+        previewPlayer = { ...stage.player, flasks: stage.player.flasks + Number(potionReady),
+          dodgeCharges: stage.player.dodgeCharges + Number(dodgeReady),
+          dodgeRecharge: dodgeReady ? 0 : dodgeElapsed, healCooldown: 0 };
+        potionRecharge = potionReady ? 0 : Math.floor(potionElapsed / .8) / PLAYER_ABILITIES.potion.killsPerCharge;
+      }
       c.save(); c.translate(0, index * (panelHeight + PANEL_GAP));
       c.beginPath(); c.rect(0, 0, width, panelHeight); c.clip();
       ground(c, width, panelHeight);
       text(c, platesOnly ? stage.enemy.rank : stage.name, 20, 15, platesOnly ? 1.2 : 1.7, '#dfd0ab');
-      if (!platesOnly) text(c, stage.detail, 20, 38, Math.min(1.05, (width - 40) / Math.max(1, textWidth(stage.detail))), '#849e99');
+      const detail = chargingPreview ? 'Staged refill · potion: one kill / 0.8s · dodge: real cadence' : stage.detail;
+      if (!platesOnly) text(c, detail, 20, 38, Math.min(1.05, (width - 40) / Math.max(1, textWidth(detail))), '#849e99');
       c.save(); c.translate(0, plateOffset); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
       drawEnemyPlate(c, stage.enemy, logicalWidth, plateViewportHeight, { ...stage.enemyOptions, time: stage.time + motionTime, reducedMotion });
       c.restore();
       c.save(); c.scale(HUD_DISPLAY_SCALE, HUD_DISPLAY_SCALE);
-      if (!platesOnly) drawFloatingHUD(c, stage.player, logicalWidth, panelHeight / HUD_DISPLAY_SCALE, stage.time + motionTime, { ...stage.options, reducedMotion });
+      if (!platesOnly) drawFloatingHUD(c, previewPlayer, logicalWidth, panelHeight / HUD_DISPLAY_SCALE, stage.time + motionTime, { ...stage.options, reducedMotion, potionRecharge });
+      if (!platesOnly) {
+        const bounds = potionHUDRect(getHUDLayout(logicalWidth, panelHeight / HUD_DISPLAY_SCALE));
+        potionTips[index].place({ x: bounds.x * HUD_DISPLAY_SCALE, y: index * (panelHeight + PANEL_GAP) + bounds.y * HUD_DISPLAY_SCALE,
+          width: bounds.width * HUD_DISPLAY_SCALE, height: bounds.height * HUD_DISPLAY_SCALE }, width, height);
+        potionTips[index].update(potionPresentation(previewPlayer), controls.label('heal'), true);
+      }
       c.restore();
       c.strokeStyle = '#354642'; c.lineWidth = 1; c.strokeRect(.5, .5, width - 1, panelHeight - 1);
       c.restore();
@@ -144,11 +178,12 @@ async function boot() {
   draw();
   download.addEventListener('click', () => { download.href = canvas.toDataURL('image/png'); }, { signal: abort.signal });
   if (motion && !reducedMotion) {
-    root.querySelector('header p')!.textContent = 'Living glass and energy currents · staged resources';
-    const start = performance.now();
+    root.querySelector('header p')!.textContent = 'Muted recharge → bright when ready · staged refills';
+    let previous = performance.now();
     const animate = (now: number) => {
       if (disposed) return;
-      motionTime = (now - start) / 1000; draw(); frame = requestAnimationFrame(animate);
+      if (!document.hidden) { motionTime += Math.min(.1, (now - previous) / 1000); draw(); }
+      previous = now; frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
   }
@@ -165,4 +200,4 @@ void boot().catch(error => {
   root.setAttribute('aria-busy', 'false'); status.setAttribute('role', 'alert');
   status.textContent = error instanceof Error ? error.message : 'The HUD could not be drawn.';
 });
-if (import.meta.hot) import.meta.hot.dispose(() => { disposed = true; cancelAnimationFrame(frame); abort.abort(); });
+if (import.meta.hot) import.meta.hot.dispose(() => { disposed = true; cancelAnimationFrame(frame); abort.abort(); potionTips.forEach(tip => tip.dispose()); });

@@ -81,7 +81,9 @@ export class PauseMenu {
     this.root.querySelector('.pause-detail')!.scrollTop = 0;
     this.controller.clear();
   }
-  openDifficulty(): void { this.selectCategory('adventure');this.open('difficulty'); }
+  openDifficulty(returnToGame: () => void): void {
+    if (!this.busy) this.windows.open('difficulty', returnToGame);
+  }
   private open(destination: PauseDestination): void {
     if (this.busy) return;
     this.navigation.focus = destination;

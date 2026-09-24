@@ -84,6 +84,8 @@ Supported effects include life/mana, armor, attack/spell damage, attack speed, c
 
 The dual potion restores 42% of maximum life and 40% of maximum mana, with two charges and one recovered charge per eight kills. Every third kill drops a 12%-maximum-life pickup; other kills drop a 16%-maximum-mana pickup. These retain their starting values of 42 / 12 / 16 at 100 maximum resources while remaining useful as gear and attributes grow. No recovery exceeds the missing resource.
 
+The desktop HUD uses Silver vial for the potion and Phantom step for dodge. Two separated half-rings show available charges: bright rose for potion, bright jade for dodge. Only the next empty half fills in a muted shade while charging: potion advances once per kill toward its eight-kill refill; dodge follows its real recharge timer, including cooldown modifiers. The half becomes bright only when a charge is awarded. Cooldown numbers remain separate. Hovering or keyboard-focusing the potion opens its shared explanation, including both restoration percentages with the current character's bonuses, the eight-kill refill, two-charge capacity and adjusted drink cooldown. This presentation changes no potion or dodge mechanics.
+
 ## Equipment generation and transactions
 
 Cloth robes share the existing chest slot, with matching caster cowls, handwraps, leggings and slippers. Leather/cloth have distinct affix pools, and four ring/four amulet profiles have different implicits. See [equipment materials](item-materials.md).

@@ -157,6 +157,8 @@ export class Simulation {
   private combatViewport: CombatViewport | null = null;
   private spawnExclusion: SpawnExclusion | null = null;
   private killRecharge = 0;
+  /** Read-only HUD progress; the existing saved kill counter remains authoritative. */
+  get potionRecharge(): number { return Math.max(0, Math.min(1, this.killRecharge / PLAYER_ABILITIES.potion.killsPerCharge)); }
   private playerMovement = new PlayerMovement();
 
   constructor(world: WorldQuery, options: SimulationOptions = {}) {

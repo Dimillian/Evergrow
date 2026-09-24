@@ -606,7 +606,7 @@ export class Renderer {
     if (settings.phase !== 'inventory') drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
-      experience: this.experienceDisplay, groundEffects: sim.groundEffects,
+      experience: this.experienceDisplay, groundEffects: sim.groundEffects, potionRecharge: sim.potionRecharge,
       gamepad: this.gamepadActive, touch: this.touchActive, layout: footer,
     });
     drawRewardFlights(c, this.rewards, (x, y) => worldToScreen(this.view, x, y), this.width, this.height, footer ? {hud:footer,gold:{x:headerX+27*.8*unit,y:headerY+62*.8*unit}} : undefined);
