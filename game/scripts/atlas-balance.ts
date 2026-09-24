@@ -1,7 +1,7 @@
 /** Deterministic, save-free balance probes. Run from the repository root. */
 import { writeFileSync } from 'node:fs';
 import { ATLAS_BENCHMARK_LEVELS, ATLAS_BENCHMARK_BUILDS, atlasBenchmarkSheet } from '../src/atlas-benchmark.ts';
-import { SkillStudy, studyWeapons } from '../src/tools/skill-scene.ts';
+import { SkillStudy, studyWeapons } from '../src/skill-showcase.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { SKILL_TREE } from '../src/skill-tree.ts';
 import { SKILL_SPECIALIZATIONS } from '../src/skill-progression.ts';

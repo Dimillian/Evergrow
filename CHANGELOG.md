@@ -1,5 +1,61 @@
 # Evergrow changelog
 
+## v0.7.0 — 2026-09-20T07:53:00Z
+
+### New
+
+- Choose Normal, Veteran, Nightmare or Cataclysm difficulty from a forged crest on the minimap or the Adventure menu; change tiers safely in town.
+- Higher difficulties add up to 4× monster life, 1.9× damage, 75% more combat XP, double combat gold and improved Epic-or-better loot odds. Normal keeps the existing balance.
+- Filter the skill atlas by active skills, weapon family or your equipped gear to find suitable paths for your build.
+- Preview skills and Techniques directly in the atlas, including locked choices, with short combat demonstrations and Pause and Replay controls.
+- Refund individual skill points with right-click or reset your build from the atlas for 25 gold per point; disconnected branches show a full refund confirmation first.
+- A replayable desktop atlas guide introduces skills, ranks, Techniques, auras, build choices and navigation.
+- The redesigned Journeys journal groups Accepted, Nearby and Completed activities by area, with detailed objectives, rewards and Show on Map.
+- Accept as many activities as you want, accept nearby activities together, and pin a destination independently of your checklist.
+- Customize the quest tracker’s visibility, sorting and displayed quest count with a live preview in Journal HUD Settings.
+
+### Tweaks
+
+- Invested skill paths stand out in gold through search and filters; clearer skill values show damage, costs, durations and rank or Technique changes.
+- Skill-atlas filtering preserves your view, and clicking empty space clears selection without moving the map.
+- The minimap has lighter framing, clearer location and time labels, and a compact Home portal button.
+- Phone controls adapt better to portrait and landscape, with clearer life, mana and XP displays, retractable menu controls and more room to see combat.
+- Completed activities remain available in the journal for revisiting on the map.
+
+### Fixes
+
+- Maps, dungeon chambers and rifts distinguish defeated encounters with treasure waiting from fully claimed rewards.
+- Quest pinning and completion no longer silently select a different destination; HUD actions return movement control after use.
+- Improved mobile control alignment, inventory layouts and clearance around enemy nameplates.
+- Difficulty changes preserve wounds, defeated enemies and earned loot; existing encounters cannot gain better rewards by switching tiers afterward.
+
+## v0.6.7 — 2026-09-17T11:41:00Z
+
+### Tweaks
+
+- Refined the pause menu with a clearer location heading, a prominent Resume button and a compact Save action beside save status.
+- Centered the pause panel with the Evergrow title above it and improved spacing on smaller screens.
+
+## v0.6.6 — 2026-09-16T13:45:00Z
+
+### New
+
+- Combine elemental attacks for Melt, Overload, Superconduct, Singularity and Combustion reactions, with bursts, pulls, armor weakening and chained explosions.
+- Enemy burning, chill and other debuffs have clearer effects and hoverable status icons.
+- Entering a new region introduces its name and level range with a brief announcement.
+- Completed wilderness events leave visible aftermath at their sites.
+
+### Tweaks
+
+- Movement slides more smoothly around obstacles, with steadier controller movement and matching character poses.
+- Character selection makes cloud status and character details easier to read.
+
+### Fixes
+
+- Improved cloud conflict recovery and cleared stale character-hall warnings after recovery.
+- Wilderness boss objectives remain visible while their rewards are waiting to be collected.
+- Area announcements get out of the way of enemy nameplates during combat.
+
 ## v0.6.5 — 2026-09-15T07:04:00Z
 
 ### New

@@ -1,0 +1,15 @@
+.potion-tooltip-anchor { position: absolute; z-index: 2; pointer-events: auto; border-radius: 50%; cursor: help; }
+.potion-tooltip-anchor[hidden] { display: none; }
+.potion-tooltip-anchor:focus-visible { outline: 1px solid #e4b8cf; outline-offset: 3px; }
+.hud-controls:has(.potion-tooltip-anchor:hover), .hud-controls:has(.potion-tooltip-anchor:focus-visible) { z-index: 9; }
+.ui-tooltip.potion-tooltip { position: fixed; z-index: 180; box-sizing: border-box; width: 304px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 16px; pointer-events: none; color: #cbd3cf; font-family: "Evergrow Numerals", "Pixelify Sans", ui-monospace, monospace; font-size: 14px; line-height: 1.4; --tooltip-color: #d5a4bf; }
+.potion-tip-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #ecd5e1; font-size: 20px; }
+.potion-tip-heading kbd { border: 1px solid #8fa2a54d; padding: 1px 6px; font: 12px "Evergrow Numerals", system-ui, sans-serif; color: #dae0d2; }
+.potion-tip-charges { margin: 3px 0 12px; color: #aab9b9; }
+.potion-tip-recovery { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 0; border-block: 1px solid #8fa2a533; }
+.potion-tip-recovery span { color: #dcaebf; }
+.potion-tip-recovery span + span { color: #b6b6df; }
+.potion-tip-recovery b { display: block; font-size: 23px; line-height: 1.15; }
+.ui-tooltip.potion-tooltip p { margin: 12px 0 0; font-size: 14px; color: inherit; }
+.potion-tooltip strong { font-weight: 500; color: #e1e1d7; }
+.ui-tooltip.potion-tooltip .potion-tip-upgrade { color: #9daeb1; font-size: 13px; }

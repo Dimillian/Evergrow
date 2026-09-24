@@ -14,6 +14,7 @@ import { drawSkillIcon } from './skill-icon-canvas.ts';
 import { SKILL_DEFINITIONS, canUseSkill, skillWeapon } from './skill-content.ts';
 import { drawHUDWeapon } from './hud-weapon-icon.ts';
 import { drawHUDUtility } from './hud-utility-art.ts';
+import { drawUtilityCharges } from './hud-utility-charges.ts';
 import type { GroundEffect, Player } from './model.ts';
 import { PLAYER_ABILITIES } from './combat-content.ts';
 import { UI_THEME } from './ui-theme.ts';
@@ -28,7 +29,7 @@ import { HUD_ART, HUD_SKILL_SLOTS, getHUDLayout } from './hud-layout.ts';
 export { HUD_MENU_SHORTCUTS, getHUDLayout, isHUDPoint } from './hud-layout.ts';
 export type { HUDRect, HUDShortcut, HUDLayout } from './hud-layout.ts';
 
-export interface HUDOptions { inventory?: boolean; groundEffects?: readonly GroundEffect[]; layout?: {x:number;y:number;scale:number}; touch?: boolean; gamepad?: boolean; reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; }
+export interface HUDOptions { inventory?: boolean; groundEffects?: readonly GroundEffect[]; layout?: {x:number;y:number;scale:number}; touch?: boolean; gamepad?: boolean; reducedMotion?: boolean; healthTrail?: number; hitPulse?: number; experience?: ExperienceDisplay; potionRecharge?: number; }
 
 const UI = UI_THEME.palette;
 const TAU = Math.PI * 2;
@@ -124,23 +125,23 @@ function medallion(c: CanvasRenderingContext2D, x: number, y: number, size: numb
   c.beginPath(); c.arc(x + size / 2, y + size / 2, size / 2 - 2, 0, TAU);
   c.strokeStyle = '#8f9b8155'; c.lineWidth = .45; c.stroke();
 }
-function utilities(c: CanvasRenderingContext2D, p: Player, gamepad = false) {
+function utilities(c: CanvasRenderingContext2D, p: Player, gamepad = false, potionRecharge = 0) {
   const field = HUD_ART.utility, dodge = PLAYER_ABILITIES.dodge, potion = PLAYER_ABILITIES.potion;
   const slots = [
     { x: field.left, key: gamepad ? 'LB' : controls.label('heal'), icon: 'potion' as const, charges: p.flasks, capacity: potion.charges,
-      cooldown: p.healCooldown, duration: potion.cooldown, active: p.healFlash > 0, color: '#d5a4bf' },
+      cooldown: p.healCooldown, active: p.healFlash > 0, color: '#d5a4bf', recharge: potionRecharge },
     { x: field.right, key: gamepad ? 'B' : controls.label('dodge'), icon: 'dodge' as const, charges: p.dodgeCharges, capacity: dodge.charges,
-      cooldown: p.dodgeCharges > 0 ? 0 : Math.max(0, dodge.recharge - p.dodgeRecharge), duration: dodge.recharge,
-      active: p.dodgeTime > 0, color: '#8ac9b4' },
+      cooldown: p.dodgeCharges > 0 ? 0 : Math.max(0, dodge.recharge - p.dodgeRecharge) * p.derived.cooldownMultiplier,
+      active: p.dodgeTime > 0, color: '#8ac9b4', recharge: p.dodgeRecharge / dodge.recharge },
   ];
   for (const slot of slots) {
     const { x } = slot, y = field.y, w = field.width, cx = x + w / 2, cy = y + w / 2;
     c.save(); medallion(c, x, y, w, slot.active);
     c.globalAlpha = slot.charges > 0 && !p.dead ? 1 : .45;
-    drawHUDUtility(c, slot.icon, cx, cy, w - 3); c.globalAlpha = 1;
+    drawHUDUtility(c, slot.icon, cx, cy, w - 6); c.globalAlpha = 1;
+    drawUtilityCharges(c, cx, cy, w, slot.charges, slot.capacity, slot.color, slot.recharge);
     if (slot.cooldown > 0) {
-      c.strokeStyle = slot.color; c.lineWidth = 1.4; c.beginPath();
-      c.arc(cx, cy, w / 2 - 1, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - clamp(slot.cooldown / slot.duration))); c.stroke();
+      c.fillStyle = '#08111ad9'; c.fillRect(cx - 9, cy - 5, 18, 11);
       text(c, slot.cooldown.toFixed(1), cx, cy - 3, .9, UI.ivory, 'center');
     }
     const left = slot.icon === 'potion', bx = left ? x + w + 2 : x - 2;
@@ -148,10 +149,6 @@ function utilities(c: CanvasRenderingContext2D, p: Player, gamepad = false) {
     const keyWidth = Math.max(13, textWidth(slot.key, 1, 'interface') * keyScale + 4);
     c.fillStyle = '#b7b9a4'; c.fillRect(left ? bx : bx - keyWidth, y + 4, keyWidth, 12);
     text(c, slot.key, left ? bx + keyWidth / 2 : bx - keyWidth / 2, y + 6, keyScale, '#162129', 'center', 'interface');
-    for (let charge = 0; charge < slot.capacity; charge++) {
-      c.beginPath(); c.arc(cx - (slot.capacity - 1) * 2.5 + charge * 5, y + w + 3, 1.2, 0, TAU);
-      c.fillStyle = charge < slot.charges ? slot.color : '#1a242c'; c.fill();
-    }
     c.restore();
   }
 }
@@ -186,7 +183,7 @@ export function drawHUDContents(c: CanvasRenderingContext2D, p: Player, time: nu
     c.restore();
   }
   skills(c, p, t, options.gamepad, options.groundEffects, options.inventory);
-  if (!options.inventory) { utilities(c, p, options.gamepad); shortcuts(c, p); }
+  if (!options.inventory) { utilities(c, p, options.gamepad, options.potionRecharge); shortcuts(c, p); }
   readout(c, orb.left, Math.ceil(Math.max(0, p.hp)), p.maxHp, false);
   readout(c, orb.right, Math.floor(Math.max(0, p.mana)), manaCapacity(p), true);
   drawHUDExperience(c, p, t, options.experience, options.inventory ? HUD_ART.inventory.experienceY : HUD_ART.experience.y);
@@ -224,7 +221,7 @@ export function drawFloatingHUD(c: CanvasRenderingContext2D, p: Player, width: n
   c.save(); c.translate(layout.x, layout.y); c.scale(layout.scale, layout.scale);
   if(options.touch) {
     drawTouchResources(c, p, time, options);
-    drawHUDExperience(c, p, options.reducedMotion ? 0 : time, options.experience);
+    drawHUDExperience(c, p, options.reducedMotion ? 0 : time, options.experience, HUD_ART.experience.y, 1.18);
   }
   else { drawHUDFrame(c, options.reducedMotion ? 0 : time, options.inventory); drawHUDContents(c, p, time, options); }
   c.restore();

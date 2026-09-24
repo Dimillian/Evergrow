@@ -228,6 +228,14 @@ export class InventoryPanel {
     }
   }
 
+  openTouchTab(tab:'bag'|'stats'):void {
+    this.section=tab==='stats'?2:1;
+    this.window.dataset.touchTab=tab;
+    this.updateSectionHighlight();
+    for(const button of this.window.querySelectorAll<HTMLElement>('[data-touch-tab]'))
+      button.setAttribute('aria-pressed',String(button.dataset.touchTab===tab));
+  }
+
   refresh(player: Player): void {
     this.player = player;
     if (this.element.hidden) return;

@@ -32,6 +32,16 @@ Town stock and relevel services follow the player within the town region’s ord
 
 ## Guidance and map
 
+### Area announcements · local September 15, 2026
+
+Stable area entry now displays the transparent Gilded Horizon banner, centered horizontally at 12.5% of the gameplay view's height. It shows the district/biome name and ordinary mob level range (one level for dungeons/rifts). The old bottom-left area card is removed; item pickups and discoveries remain in that feed.
+
+The mob line is sage while the character is inside the range, silver above its maximum, amber 1–4 levels below its minimum, and coral 5+ below. Only the colored `Mobs Lv` text appears on the banner; difficulty wording remains available in the screen-reader announcement. This is level guidance rather than a survival guarantee; veteran/elite/boss offsets and existing encounter snapshots are unchanged.
+
+Enemy HP panels take priority: hover/combat focus or an automatic boss panel immediately dismisses the area banner before drawing. A dismissed banner does not return when focus ends, and banners triggered while the HP panel is visible are discarded. This shares the HP panel's target and layout checks on desktop and touch displays.
+
+The existing 1.6-second sustained-entry delay and six-second boundary cooldown remain. Portal and dungeon travel clear the old banner and announce the destination after stable arrival; loading a character does not announce its starting location. The frame fades in for 0.8 seconds, holds for 2.8, then fades out for 1.2. Menus hide/pause it; level-up and Journey announcements take priority. Only the current destination can wait, so leaving an area discards its pending banner. Death and renderer/session resets clear it. Drawing uses native display density and shorter ornament spacing on compact screens, with reduced-motion opacity fades. No gameplay inputs, rewards, balance or save formats change.
+
 The atlas, area notices and Thor mini map show **Lv min–max**. Activity map hovers and journal entries use a saved encounter level when available, otherwise a read-only preview for the current player. Nearby retains easier/harder activities; recommendations favor appropriate nearby activities. Bosses and dungeons are eligible at their intentional +3 challenge offset.
 
 At the ordinary regional ceiling, Recommended favors The road ahead toward a district with a higher ceiling. The player can still pin a local boss or activity. In overlevelled danger, guidance favors safer ground. Road leads evaluate all destinations in their bounded spatial query before ranking, so early unsuitable roads cannot hide a valid onward route. They remain geographic hints, not guaranteed pathfinding. Explicit pins stay fixed; level refreshes never award rewards or instantiate encounters.
@@ -45,3 +55,7 @@ The existing v3 appearance migration still preserves progress. Unsupported older
 ## Verification
 
 Verified locally after the second review: all 1,023 code tests pass, along with strict type checking and the cloud-enabled client/Worker production build. The Worker exports a callable fetch handler. Onward-route regressions cover the exact regional cap and dismissed leads; a separate headless sweep checked 77 position/level cases across seven seeds, including 28 routes from overlevelled areas, with no missed eligible frontier lead inside the bounded query. Headless checks cover regional bounds/rank offsets, immutable camp/wave/dungeon snapshots, failed durable commands, old/current save decoding, reward identity, vendor stock stability and onward guidance across several seeds. Type checking includes the headless dependency boundary. Combat feel and time-to-level remain player playtesting, rather than automated gameplay acceptance.
+
+## Player-selected difficulty
+
+Regional level ranges remain unchanged. The per-character difficulty tier applies separate monster life/damage and reward multipliers, including dungeons and rifts. Change it safely in town through the minimap crest or Escape → Adventure. Started encounters retain their lowest reward tier; wounded health and deaths survive changes. See [World difficulty](world-difficulty.md) for the exact values and persistence rules.

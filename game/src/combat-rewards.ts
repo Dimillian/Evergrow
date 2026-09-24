@@ -1,3 +1,4 @@
+import { worldDifficulty } from './world-difficulty.ts';
 import { manaCapacity } from './auras.ts';
 import { manaVialAmount } from './mana-content.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
@@ -26,7 +27,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   if (!player.dead) metric(player.chronicle,'manaRestored',Math.min(manaCapacity(player)-player.mana,player.derived.manaOnKill));
   if (!player.dead) metric(player.chronicle,'manaRecovery:kill',Math.min(manaCapacity(player)-player.mana,player.derived.manaOnKill));
   if (!player.dead) player.mana = Math.min(manaCapacity(player), player.mana + player.derived.manaOnKill);
-  const goldMultiplier = player.derived.goldFindMultiplier;
+  const goldMultiplier = player.derived.goldFindMultiplier * worldDifficulty(enemy.rewardDifficulty).gold;
   const reward = Math.max(1, Math.round(enemy.xpReward * xpLevelFactor(player.level, enemy.level) * player.derived.xpGainMultiplier));
   const levels = awardCharacterExperience(player, reward);
   context.emit({ type: 'experience', x: enemy.x, y: enemy.y, amount: reward });
@@ -35,7 +36,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
   for (const item of context.suppressDrops || isBossKind(enemy.kind) ? [] : rollEnemyLoot({ playerLevel: dropPlayerLevel, seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
-    biome: enemy.biome, kind: enemy.kind, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
+    biome: enemy.biome, kind: enemy.kind, difficulty:enemy.rewardDifficulty, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
     addGroundItem(context.groundItems, { id: context.nextId(), x: enemy.x, y: enemy.y, item });
   }
   recharge++;

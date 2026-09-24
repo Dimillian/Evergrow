@@ -4,12 +4,11 @@ import type { WorldPOI } from './world-pois.ts';
 export type GameNotice =
   | { kind: 'loot'; item: Item }
   | { kind: 'discovery'; poi: WorldPOI }
-  | { kind: 'area'; id: string; name: string; level: number; maxLevel?: number }
   | { kind: 'info'; message: string };
 export interface NoticeEntry { id: number; notice: GameNotice; age: number; duration: number; }
 export const NOTICE_EXIT_SECONDS = .22;
 const key = (notice: GameNotice): string => notice.kind === 'loot' ? `loot:${notice.item.id}`
-  : notice.kind === 'discovery' ? `poi:${notice.poi.id}` : notice.kind === 'area' ? `area:${notice.id}`
+  : notice.kind === 'discovery' ? `poi:${notice.poi.id}`
     : `info:${notice.message}`;
 const duration = (notice: GameNotice) => notice.kind === 'loot' ? 3.6 : 2.8;
 
@@ -44,23 +43,5 @@ export class NotificationQueue {
       const notice = this.pending.shift()!;
       this.visible.push({ id: this.nextId++, notice, age: 0, duration: duration(notice) });
     }
-  }
-}
-
-/** Stable biome entry, with hysteresis so a blended border cannot spam banners. */
-export class AreaNoticeTracker {
-  private current = '';
-  private candidate = '';
-  private time = 0;
-  private cooldown = 0;
-  reset(id: string): void { this.current = this.candidate = id; this.time = this.cooldown = 0; }
-  update(id: string, dt: number): boolean {
-    const elapsed = Number.isFinite(dt) ? Math.max(0, dt) : 0;
-    this.cooldown = Math.max(0, this.cooldown - elapsed);
-    if (id === this.current) { this.candidate = id; this.time = 0; return false; }
-    if (id !== this.candidate) { this.candidate = id; this.time = 0; }
-    this.time += elapsed;
-    if (this.time < 1.6 || this.cooldown > 0) return false;
-    this.current = id; this.time = 0; this.cooldown = 6; return true;
   }
 }

@@ -1,3 +1,5 @@
+import { worldDifficulty, lesserDifficulty, type WorldDifficulty } from './world-difficulty.ts';
+import { applyEnemyModifiers } from './enemy-modifiers.ts';
 import { cloneData } from './data-clone.ts';
 import { captureEncounterScale, encounterMemberLevel, isBossKind, type EncounterScale, type EncounterScales } from './encounter-scaling.ts';
 import { storedActor, type StoredActor } from './dungeon-state.ts';
@@ -12,7 +14,7 @@ export const CAMP_POPULATION_RULES = Object.freeze({ actorCacheCapacity: 32, upd
   activationDistance: 1000, maximumActivationDistance: 2000, sleepMargin: 260 });
 export type CampState = 'dormant' | 'active' | 'cleared';
 interface CampRecord { members: readonly Enemy[] }
-export interface CampSpawnSource { readonly campId: string; readonly memberId: string; readonly lootSeed: number; readonly level?: number }
+export interface CampSpawnSource { readonly campId: string; readonly memberId: string; readonly lootSeed: number; readonly level?: number; readonly difficulty?: WorldDifficulty }
 export type SpawnCampMember = (member: CampMember, x: number, y: number, source: CampSpawnSource) => Enemy | null;
 
 /** Bounded actor cache, with exact durable deaths and wounds outside the cache. */
@@ -72,7 +74,7 @@ export class CampPopulation {
     return !record ? this.defeated.has(id) ? 'active' : 'dormant' : record.members.every(enemy => enemy.state === 'dead') ? 'cleared' : 'active';
   }
 
-  update(camps: readonly EnemyCamp[], player: Pick<Player, 'x' | 'y'> & Partial<Pick<Player, 'level'>>, enemies: Enemy[], world: WorldQuery,
+  update(camps: readonly EnemyCamp[], player: Pick<Player, 'x' | 'y'> & Partial<Pick<Player, 'level' | 'character'>>, enemies: Enemy[], world: WorldQuery,
     spawn: SpawnCampMember, activationDistance: number, exclusion: SpawnExclusion | null = null): void {
     if (![player.x, player.y, activationDistance].every(Number.isFinite)) return;
     activationDistance = Math.min(CAMP_POPULATION_RULES.maximumActivationDistance,
@@ -116,14 +118,14 @@ export class CampPopulation {
       const old = this.defeated.has(camp.id) || livingMembers.some(m => this.wounds.has(m.id));
       const scale = this.scales[camp.id] ?? (old
         ? { base: zone.originalLevel, min: zone.originalLevel, max: zone.originalLevel, fixed: true as const }
-        : captureEncounterScale(zone, player.level ?? 1));
+        : captureEncounterScale(zone, player.level ?? 1, player.character?.difficulty));
       const created: Enemy[] = [];
       for (const member of livingMembers) {
         const enemy = spawn(member, camp.x + member.dx, camp.y + member.dy,
-          { campId: camp.id, memberId: member.id, lootSeed: campMemberSeed(member.id), level: encounterMemberLevel(scale, member.rank, campMemberSeed(member.id), isBossKind(member.kind)) });
+          { campId: camp.id, memberId: member.id, lootSeed: campMemberSeed(member.id), difficulty:scale.difficulty??'normal', level: encounterMemberLevel(scale, member.rank, campMemberSeed(member.id), isBossKind(member.kind)) });
         if (enemy) {
           const wound=this.wounds.get(member.id);
-          if(wound)Object.assign(enemy,scaledEnemyStats(wound.kind,wound.level,wound.rank),{hp:wound.hp,level:wound.level,biome:wound.biome,lootSeed:wound.seed});
+          if(wound)Object.assign(enemy,applyEnemyModifiers(scaledEnemyStats(wound.kind,wound.level,wound.rank),{...enemy,lootSeed:wound.seed,rewardDifficulty:lesserDifficulty(wound.rewardDifficulty,enemy.difficulty)}),{hp:wound.hp*worldDifficulty(enemy.difficulty).health,rewardDifficulty:lesserDifficulty(wound.rewardDifficulty,enemy.difficulty),level:wound.level,biome:wound.biome,lootSeed:wound.seed});
           created.push(enemy);
         }
       }

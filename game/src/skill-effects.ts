@@ -1,4 +1,4 @@
-import { drawFireImpact, drawFrostBloom } from './elemental-spell-art.ts';
+import { drawFireImpact, drawFrostBloom, drawSingularityImpact, drawCombustionImpact } from './elemental-spell-art.ts';
 import { drawLightning, lightningLight } from './chain-lightning-art.ts';
 import type { CombatEvent, Enemy, ProjectileStyle } from './model.ts';
 import type { PointLight } from './lighting.ts';
@@ -9,6 +9,7 @@ import { PROJECTILE_COLORS } from './projectile-art.ts';
 interface Area {
   x: number; y: number; radius: number; life: number; max: number; color: string;
   style: ProjectileStyle; kind: 'blast' | 'block'; seed: number; meteor: boolean; earth: boolean; frostSpell: boolean; fireSpell: boolean; ultimate: boolean;
+  singularity?: boolean; combustion?: boolean; reaction?: string;
 }
 interface Link { travel: number; seed: number; targetId?: number; points: Point[]; life: number; max: number; color: string; style: ProjectileStyle; }
 const TAU = Math.PI * 2;
@@ -42,9 +43,11 @@ export class SkillEffects {
     }
     if (event.type === 'blast' || event.type === 'block') {
       const meteor = event.type === 'blast' && event.groundKind === 'meteor';
-      const max = meteor ? 1.15 : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
+      const singularity = event.type === 'blast' && event.reaction === 'singularity';
+      const combustion = event.type === 'blast' && event.reaction === 'combustion';
+      const max = meteor ? 1.15 : singularity ? 0.75 : combustion ? 0.65 : event.type === 'block' ? .32 : style === 'frost' ? .7 : .56;
       this.areas.push({ x: event.x, y: event.y, radius: event.type === 'block' ? 22 : bounds(event.radius, 8, 512, 55),
-        life: max, max, style, color, kind: event.type, meteor, earth: event.skill === 'earthshatter', frostSpell: ['iceNova','absoluteZero','frostLance'].includes(event.skill ?? ''), fireSpell: event.skill === 'fireball', ultimate: event.skill === 'absoluteZero', seed: this.sequence++ });
+        life: max, max, style, color, kind: event.type, meteor, earth: event.skill === 'earthshatter', frostSpell: ['iceNova','absoluteZero','frostLance'].includes(event.skill ?? ''), fireSpell: event.skill === 'fireball', ultimate: event.skill === 'absoluteZero', seed: this.sequence++, singularity, combustion, reaction: event.reaction });
       if (this.areas.length > 20) this.areas.shift();
     }
   }
@@ -69,7 +72,10 @@ export class SkillEffects {
 
   getLights(): PointLight[] {
     return [...this.areas.slice(-3).map(area => ({
-      x: area.x, y: area.y - 12, radius: Math.max(65, area.radius * 2.1), color: area.color, power: area.life / area.max * .95,
+      x: area.x, y: area.y - (area.singularity ? 4 : area.combustion ? 6 : 12),
+      radius: Math.max(65, area.radius * (area.singularity ? 2.3 : area.combustion ? 2.0 : 2.1)),
+      color: area.singularity ? '#a855f7' : area.combustion ? '#ff0055' : area.color,
+      power: area.life / area.max * .95,
     })), ...this.links.filter(link => link.style === 'lightning').slice(-2).map(lightningLight)].slice(-3);
   }
 
@@ -133,6 +139,14 @@ export class SkillEffects {
       c.beginPath(); c.arc(0, 0, area.radius * (.8 + progress * .4), -Math.PI * .85, -Math.PI * .15); c.stroke();
       polygon(c, [[0, -10], [8, -6], [6, 4], [0, 10], [-6, 4], [-8, -6]], '#568a9d');
       line(c, [[0, -6], [0, 5]], '#e4faff', 1.3);
+      c.restore(); return;
+    }
+    if (area.singularity) {
+      drawSingularityImpact(c, area.radius, life, area.seed, reducedMotion);
+      c.restore(); return;
+    }
+    if (area.combustion) {
+      drawCombustionImpact(c, area.radius, life, area.seed, reducedMotion);
       c.restore(); return;
     }
     if (area.earth) {

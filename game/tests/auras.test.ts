@@ -12,7 +12,7 @@ import { damageEnemy } from '../src/combat-damage.ts';
 import { generateItem } from '../src/items.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
 import { CHARACTER_SAVE_VERSION,decodeCharacterSave } from '../src/character-save.ts';
-import { SkillStudy } from '../src/tools/skill-scene.ts';
+import { SkillStudy } from '../src/skill-showcase.ts';
 import type { AuraId } from '../src/aura-content.ts';
 const world={blocked:()=>false,move:(x:number,y:number,dx:number,dy:number)=>({x:x+dx,y:y+dy})};
 const input={moveX:0,moveY:0,aimX:300,aimY:0,attack:false,dodge:false,heal:false,skillSlot:null};

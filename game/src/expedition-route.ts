@@ -1,3 +1,4 @@
+import { difficultyLootWeights, type WorldDifficulty } from './world-difficulty.ts';
 import { riftRewardMask } from './rift-content.ts';
 import { withUniqueChance } from './unique-content.ts';
 import { EXPEDITION_MODIFIER_IDS } from './expedition-modifiers.ts';
@@ -30,14 +31,16 @@ export function expeditionChoices(route:ExpeditionRoute,point={x:0,y:0}):Dungeon
     return {id:`dungeon:expedition:${route.attempt}:${route.cleared}:${choice}`,name:dungeonTheme(seed,theme).name,seed,theme,level,biome,...point,scaling:{base:level,min:Math.max(1,level-1),max:level+1},expedition:{attempt:route.attempt,stage:route.cleared,choice,modifier}};
   });
 }
-export function expeditionRewardItems(entrance:DungeonEntrance,playerLevel=entrance.level):Item[] {
+export function expeditionRewardItems(entrance:DungeonEntrance,playerLevel=entrance.level,difficulty?:WorldDifficulty):Item[] {
   const grand=entrance.expedition?.stage===9, random=dungeonRandom(entrance.seed^0x47c593a1);
   const weights=grand?EXPEDITION_RULES.grandRarity:EXPEDITION_RULES.stageRarity;
   return Array.from({length:grand?EXPEDITION_RULES.grandRewards:EXPEDITION_RULES.stageRewards},(_,i)=>{
-    return rollEnemyLoot({playerLevel,tierOverride:selectLootWeight(weights,random()) as ItemTier,seed:(entrance.seed+Math.imul(i+1,0x6d2b79f5))>>>0,level:entrance.level+3,rank:'normal',biome:entrance.biome,kind:'stalker',firstKill:true,encounter:'bossChest'})[0];
+    return rollEnemyLoot({playerLevel,tierOverride:selectLootWeight(difficultyLootWeights(weights,difficulty),random()) as ItemTier,seed:(entrance.seed+Math.imul(i+1,0x6d2b79f5))>>>0,level:entrance.level+3,rank:'normal',biome:entrance.biome,kind:'stalker',firstKill:true,encounter:'bossChest'})[0];
   });
 }
 export function dungeonChestMask(run:DungeonRun,index:number):number {return run.entrance.rift ? index===2 ? riftRewardMask(run.entrance.rift) : 0 : index===2 ? run.entrance.expedition?.stage===9?127:15 : 9;}
+/** Full durable delivery, including gold; an unlocked chest is not a claim. */
+export function dungeonChestClaimed(run:DungeonRun,index:number):boolean {const mask=dungeonChestMask(run,index);return mask>0&&run.chestMasks[index]===mask;}
 export function completeExpeditionStage(state:Expeditions,run:DungeonRun):void {
   const route=state.route,tag=run.entrance.expedition;
   if(!route||!tag||route.status!=='active'||route.attempt!==tag.attempt||route.cleared!==tag.stage||route.choice!==tag.choice||run.chestMasks[2]!==dungeonChestMask(run,2))return;

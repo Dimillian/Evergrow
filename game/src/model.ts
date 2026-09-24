@@ -210,6 +210,8 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  difficulty?: import('./world-difficulty.ts').WorldDifficulty;
+  rewardDifficulty?: import('./world-difficulty.ts').WorldDifficulty;
   /** Transient support link, never serialized; source death disables it immediately. */
   riftWardSource?: Enemy;
   riftSpecialCooldown?:number;
@@ -275,9 +277,12 @@ export interface Enemy {
   radius: number;
   stagger: number;
   /** Applied duration retained for status progress; never drives combat. */
-  statusDurations?: Partial<Record<'burn' | 'slow' | 'freeze' | 'stun' | 'stagger', number>>;
+  statusDurations?: Partial<Record<'burn' | 'slow' | 'freeze' | 'stun' | 'stagger' | 'fracture' | 'chill', number>>;
+  reactionCooldown?: number;
+  fractureTime?: number;
   freezeTime?: number;
   stunTime?: number;
+  chillTime?: number;
   attackHit: boolean;
   interrupted: boolean;
   slowTime: number;
@@ -344,6 +349,7 @@ export interface Pickup {
 interface EventAppearance {
   readonly x: number; readonly y: number;
   readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
+  readonly reaction?: 'melt' | 'overload' | 'superconduct' | 'singularity' | 'combustion' | 'cascade';
 }
 export type CombatEvent = EventAppearance & (
   | { readonly type: 'insufficient-mana' }

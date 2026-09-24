@@ -12,6 +12,7 @@ import { generateItem } from './items.ts';
 import { Lifetime } from './lifetime.ts';
 import { LootLogPanel } from './loot-log-panel.ts';
 import { recordLoot } from './loot-log.ts';
+import { getZoneAt } from './zone-progression.ts';
 if (!import.meta.env.DEV) throw new Error('Local review only.');
 installUITheme(); await loadGameFont();
 // Frozen presentation using real renderers: no simulation input, ticks or saved state.
@@ -40,7 +41,10 @@ if (mode === 'loot-log') {
   shell.addEventListener('keydown', event => { if (event.key === 'Escape' && !event.defaultPrevented) { log.close(); } });
 }
 if (mode === 'discovery') notices.push({ kind: 'discovery', poi: { id: 'review-town', kind: 'town', name: 'Briarwatch', x: 0, y: 0, description: '' } });
-else if (mode === 'area') notices.push({ kind: 'area', id: 'swamp', name: 'The Mire', level: 4 });
+else if (mode === 'area') {
+  renderer.areaBanner.show(getZoneAt(sim.player.x,sim.player.y,world.seed));
+  renderer.areaBanner.age=1.8;
+}
 if (mode === 'loot-log') for (const entry of sim.lootLog.slice(-2)) notices.push({ kind:'loot', item:entry.item });
 else {
   notices.push({ kind: 'loot', item: generateItem(94, 5, 'weapon', 'longsword', 'rare') });

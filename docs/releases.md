@@ -4,7 +4,7 @@
 
 ## Prototype version policy
 
-Player-facing versions stay within the latest explicitly approved prototype milestone. The current ceiling is **0.6.x**; do not advance to 0.7 or 1.0 without approval. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance beyond the approved milestone automatically.
+Player-facing versions stay within the latest explicitly approved prototype milestone. The current ceiling is **0.7.x**; do not advance to 0.8 or 1.0 without approval. The user approved **0.2.0** for the settlement and gambler milestone and **0.3.0** for the spatial inventory, charms and resistance milestone on 2026-09-09. Routine publications after 0.3.0 increment the patch number (**0.3.1**, **0.3.2**, and so on). Patch numbers have no single-digit limit. Minor versions (0.2, 0.3, 0.4) mark deliberate product milestones, not each feature pass. Do not advance beyond the approved milestone automatically.
 
 On 2026-09-09 the display history was renumbered, preserving every date, note and development-recap marker. The renumbered history ships with 0.2.0; it does not redeploy historical builds. The audit records below retain their original published labels, source SHAs and Sites IDs. Save schema v4, world generation 10, dungeon layout versions and Sites snapshot numbers are independent technical identifiers; never lower them to match a game release label.
 
@@ -33,7 +33,41 @@ The user approved the next major prototype milestone, **0.5.0**, on 2026-09-13 f
 
 The user approved the next major prototype milestone, **0.6.0**, on 2026-09-14 for Crimson Rifts, keys, ranked monsters and the accompanying interface and performance updates. Routine updates after this milestone use 0.6.x.
 
+The user approved the next major prototype milestone, **0.7.0**, on 2026-09-20 for world difficulty, the skill-atlas planning and refund improvements, the Area journal and mobile/interface updates. Routine updates after this milestone use 0.7.x.
+
 ## Last verified publication
+
+- Game v0.7.0 / Sites version 62, publicly deployed on 2026-09-20 at 07:56:55 UTC.
+- Published source: `5628012e1b41c5f2a845866312762452cc735802`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_7818cb4e8fac819190c1336fb3125ec5`.
+- Deployment: `appgdep_6aaf91b13a6c81919fedac45aa749a62`; Sites returned `succeeded`.
+- Includes PRs #64, #65, #67 and #71 plus world difficulty: Area journal and quest HUD settings, minimap navigation, phone layouts, reward-completion indicators, atlas filters/previews/refunds/guide, and four saved difficulty tiers with procedural badges and a minimap selector.
+- All 1,723 code tests passed, alongside application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run.
+- No character reset or required player action. Development tools remain excluded; the local server remains available.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.6.7 / Sites version 61, publicly deployed on 2026-09-17 at 11:44:00 UTC.
+- Published source: `77263046a9cf7be8bf1a561644fb4fe9f79dd22e`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_a389400d657881919af6231eb9ae7ece`.
+- Deployment: `appgdep_6aabd27177b48191aac6107d57ce9621`; Sites returned `succeeded`.
+- Includes PR #63: refined pause-menu hierarchy, prominent Resume action, compact save controls and responsive panel/wordmark placement.
+- All 16 release-note and character-hall regression checks passed, alongside application/core type checking, local and cloud-enabled builds, archive validation and clean-source release validation. No automated browser gameplay was run.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
+- Game v0.6.6 / Sites version 60, publicly deployed on 2026-09-16 at 13:50:13 UTC.
+- Published source: `12fdd74ba67dcb6be02a7ee03f8ed626b82511db`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_c8d0940808f08191876be527a1e53eba`.
+- Deployment: `appgdep_6aaa9e81af688191bcd8ec1c15c8b176`; Sites returned `succeeded`.
+- Includes PRs #56–62: cloud character-hall recovery/layout fixes, smoother obstacle movement, region announcements, pending boss reward objectives, elemental reactions and debuff presentation, completed-event aftermath, and stable local event previews.
+- Full suite: 1,642 of 1,643 tests initially passed. Added the new movement module to the headless compiler boundary, then all 22 architecture/movement checks passed. Application/core type checking, local and cloud-enabled builds, archive validation and clean-source release validation passed. No automated browser gameplay was run.
+- Local development tools remain excluded from the published archive; the local server remains available.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
 
 - Game v0.6.5 / Sites version 59, publicly deployed on 2026-09-15 at 07:06:15 UTC.
 - Published source: `ecb9a04f683881f12cce113ca414eec816dda4b4`.

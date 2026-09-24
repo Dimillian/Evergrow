@@ -1,3 +1,4 @@
+import { worldDifficulty } from './world-difficulty.ts';
 import { metric, syncRiftChronicle } from './chronicle.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RIFT_RULES, freshRiftLedger, riftRandom, riftBonus } from './rift-content.ts';
@@ -127,6 +128,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
                 return { ok: false, message: 'Finish your active expedition first.' };
             const scaling = entrance.rift ? undefined : entrance.expedition ? entrance.scaling! : encounterScaleAt(entrance.x, entrance.y, surface.seed, p.level);
             next = createDungeonRun({ ...entrance, scaling, level: scaling?.base??entrance.level });
+            next.difficulty=p.character.difficulty??'normal';
             state.runs.push(next);
         }
         interruptTrial(checkpoint.events!,contents.actors);
@@ -202,7 +204,8 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const floor = sim.dungeonFloor!, chest = dungeonRunChest(floor,run,index);
     const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
-    const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);
+    const difficulty = (run.chestDifficulties ??= {})[index as 0|1|2] ??= run.difficulty ?? 'normal';
+    const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level,difficulty) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level,difficulty) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, difficulty, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);
     const gold = Math.round((run.entrance.rift ? RIFT_RULES.goldMultiplier*(1+riftBonus(run.entrance.rift,'gold')/100) : 1)*(index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
     const goldBit=run.entrance.rift ? 1 << items.length : index===2 && run.entrance.expedition?.stage===9 ? 64 : 8;
     const firstClaim=run.chestMasks[index]===0;
@@ -214,7 +217,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
             mask |= 1 << i;
         }
     if (!(mask & goldBit) && (checkpoint.groundGold ??= []).length < GOLD_RULES.maxPiles) {
-        checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: Math.round(gold * sim.player.derived.goldFindMultiplier) });
+        checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: Math.round(gold * sim.player.derived.goldFindMultiplier * worldDifficulty(difficulty).gold) });
         mask |= goldBit;
     }
     if (mask === run.chestMasks[index])

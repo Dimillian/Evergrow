@@ -35,17 +35,30 @@ export function zoomMapAt(view: MapView, x: number, y: number, zoom: number, lim
 }
 export function getMinimapRect(width: number, _height: number): MapRect {
   const compact = width < 660;
-  return { x: width - (compact ? 150 : 172) - 18, y: 18,
-    width: compact ? 150 : 172, height: compact ? 143 : 155 };
+  // Compact width preserves the centered enemy plate's clearance on handhelds.
+  return { x: width - (compact ? 150 : 196) - 18, y: 18,
+    width: compact ? 150 : 196, height: compact ? 154 : 184 };
 }
 
-export function getPortalControlRect(width: number, height: number): MapRect {
-  const map = getMinimapRect(width, height);
-  return { x: map.x, y: map.y + map.height, width: map.width, height: 25 };
+/** Surface and dungeon charts share one slim location header and metadata footer. */
+export function getMinimapChartRect(map: MapRect): MapRect {
+  return { x: map.x + 1, y: map.y + 25, width: map.width - 2, height: map.height - 45 };
 }
 
-/** The log continues the same column immediately below its portal action. */
+/** Home action overlays the chart, leaving the metadata footer unobstructed. */
+export function getMinimapHomeRect(width: number, height: number): MapRect {
+  const chart = getMinimapChartRect(getMinimapRect(width, height));
+  return { x: chart.x + 5, y: chart.y + chart.height - 27, width: 22, height: 22 };
+}
+
+/** Independent right-aligned log; the space between it and the map belongs to the world. */
 export function getJourneyLogAnchor(width: number, height: number): Pick<MapRect, 'x' | 'y' | 'width'> {
-  const portal = getPortalControlRect(width, height);
-  return { x: portal.x, y: portal.y + portal.height, width: portal.width };
+  const map = getMinimapRect(width, height);
+  return { x: map.x, y: map.y + map.height + 26, width: map.width };
+}
+
+/** Difficulty crest sits opposite Home, inside the chart and above its time footer. */
+export function getMinimapDifficultyRect(width:number,height:number):MapRect {
+  const chart=getMinimapChartRect(getMinimapRect(width,height));
+  return {x:chart.x+chart.width-27,y:chart.y+chart.height-27,width:22,height:22};
 }

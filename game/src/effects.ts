@@ -91,9 +91,17 @@ export class CombatEffects {
           radius: event.style === 'radiant' ? 58 : event.type === 'kill' ? 62 : heavy ? 145 : contact ? 118 : event.type === 'loot' || event.type === 'pickup' ? 35 : 90, color,
           radiant: event.type === 'cast' && event.style === 'radiant', ring: restoring || event.type === 'level' || event.skill === 'iceNova' });
       }
-      if (event.type === 'hit' && event.value) this.popups.push({ x: event.x + (Math.random() - .5) * 10,
-        y: event.y - (enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
-        life: .85, max: .85, value: String(Math.round(event.value)), color: heavy ? '#ffd177' : '#fff0c8', size: heavy ? 2.5 : 2 });
+      if (event.type === 'hit' && event.value) {
+        const reactionColor = event.reaction === 'melt' ? '#ffd177' : event.reaction === 'overload' ? '#ff77aa' : event.reaction === 'superconduct' ? '#a0d0ff' : event.reaction === 'singularity' ? '#c578ff' : event.reaction === 'combustion' ? '#ff4d79' : event.reaction === 'cascade' ? '#67e8f9' : (heavy ? '#ffd177' : '#fff0c8');
+        this.popups.push({ x: event.x + (Math.random() - .5) * 10,
+          y: event.y - (enemyKind === 'brute' ? 54 : 44), vx: (Math.random() - .5) * 22, vy: -47,
+          life: .85, max: .85, value: String(Math.round(event.value)), color: reactionColor, size: heavy ? 2.6 : 2 });
+        if (event.reaction) {
+          const tag = event.reaction.toUpperCase();
+          this.popups.push({ x: event.x, y: event.y - (enemyKind === 'brute' ? 78 : 68), vx: 0, vy: -47,
+            life: .75, max: .75, value: tag, color: reactionColor, size: 1.6 });
+        }
+      }
       if (event.type === 'hurt' || event.type === 'heal') this.popups.push({ x: event.x, y: event.y - 61,
         vx: Math.cos(eventAngle) * 14, vy: -55, life: .95, max: .95,
         value: (event.type === 'hurt' ? '-' : '+') + Math.round(event.value),

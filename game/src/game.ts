@@ -1,11 +1,15 @@
+import { changeWorldDifficulty, difficultyChangeProblem } from './world-difficulty-command.ts';
+import { activityStatus } from './activity-status.ts';
+import { executeSkillRespec } from './skill-respec-command.ts';
 import { MapIconVisibility } from './map-legend-content.ts';
-import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
+import { dungeonInteractionChests, dungeonRunExit } from './dungeon-locations.ts';
 import { RiftPanel } from './rift-panel.ts';
 import { RiftWorld } from './rift-world.ts';
 import { drawRiftHUD } from './rift-hud.ts';
 import { controls } from './control-preferences.ts';
 import { isGameplayAction, type ControlAction } from './control-bindings.ts';
 import { activeBuffs } from './active-buffs.ts';
+import { potionPresentation } from './potion-presentation.ts';
 import { ExpeditionPanel } from './expedition-panel.ts';
 import { executeDropItem, type DropItemSource } from './drop-item-command.ts';
 import { hoveredGroundLoot, showGroundLootNames, type GroundLootNameplates } from './ground-loot-hover.ts';
@@ -45,11 +49,11 @@ import { currentDungeon } from './dungeon-state.ts';
 import { claimDungeonChest, dungeonChestProblem, expeditionTableProblem, type DungeonAction } from './dungeon-command.ts';
 import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
 import { EventPanel } from './poi-panel.ts';
-import { EVENT_RULES, focusEvent, eventLabel, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
+import { EVENT_RULES, focusEvent, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
 import { executeEvent, eventProblem, claimCompletedEvent, pendingEventReward } from './poi-command.ts';
 import { activatePortalAnchor } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
-import { portalActionMode, portalDestinations, type PortalActionView } from './portal-destination.ts';
+import { portalActionMode, portalDestinations } from './portal-destination.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
@@ -64,7 +68,7 @@ import { PanelCoordinator } from './panel-coordinator.ts';
 import { bindGameKeyboard } from './game-keyboard.ts';
 import { createCharacterSheet, type StarterLoadoutId } from './items.ts';
 import { refreshCharacter } from './character.ts';
-import { AreaNoticeTracker } from './notification-queue.ts';
+import { AreaNoticeTracker, areaLevelLabel, areaThreat, type AreaBannerNotice } from './area-banner.ts';
 import { activityLevel } from './activity-level.ts';
 import { getZoneAt } from './zone-progression.ts';
 import { SaveHub, type SaveMode } from './save-hub.ts';
@@ -90,6 +94,7 @@ import { GameShell } from './game-shell.ts';
 import { isGameUIPoint, isUIRectPoint, projectUIRect } from './ui-hit-test.ts';
 import type { GamePhase } from './game-phase.ts';
 import type { Input } from './model.ts';
+import { presentationProfile, presentationViewport, type PresentationProfile } from './presentation-viewport.ts';
 
 /** Coordinates browser lifecycle, simulation and presentation; system rules live in their owners. */
 export class Game {
@@ -173,8 +178,13 @@ export class Game {
   private actionPending: Promise<unknown> = Promise.resolve();
   private autosave: Promise<boolean> | null = null;
   private saveAgain = false;
+  private readonly presentation: PresentationProfile;
 
   constructor(root: HTMLElement) {
+    this.presentation = presentationProfile({
+      android: !!window.EvergrowAndroid,
+      coarsePointer: matchMedia('(pointer: coarse)').matches,
+    });
     this.lifetime.defer(() => this.abort.abort());
     this.lifetime.defer(() => cancelAnimationFrame(this.animation));
     this.lifetime.defer(() => { if(this.world !== this.overworld) this.world.dispose(); this.overworld.dispose(); });
@@ -187,6 +197,7 @@ export class Game {
       this.session = new CharacterSession(this.saveClient, this.world.generationVersion, seed=>new World(seed));
       this.shell = this.lifetime.own(new GameShell(root, {
         shortcutMenuChanged: () => this.clearInput(),
+        homePortal: () => { if (this.shouldShowHomePortal()) this.requestPortal(); },
         groundLootNames: () => this.groundLootNames,
         setGroundLootNames: mode => { this.groundLootNames = mode; this.savePreferences(); },
         volume: channel => this.audio.getVolumes()[channel], setVolume: (channel, value) => this.setAudioVolume(channel, value), panelSound: open => this.audio.panel(open),
@@ -194,8 +205,11 @@ export class Game {
         lastSavedAt: () => this.session?.active?.record.updatedAt,
         saveLocation: () => this.saveClient.mode === 'cloud' ? 'Online' : 'Local',
         play: () => this.phase === 'paused' ? this.resume() : this.start(),
-        portal: () => { this.canvas.focus(); this.requestPortal(); },
         save: () => this.durable(async () => { const saved = await this.saveCharacter(true); if (saved) await this.saveClient.flush(); return saved; }, false),
+        openDifficulty: () => { if(this.phase!=='playing'||this.savingAction)return; this.pause(); this.shell.showDifficultyMenu(); },
+        difficulty: () => this.sim.player.character.difficulty ?? 'normal',
+        difficultyProblem: () => difficultyChangeProblem(this.sim),
+        setDifficulty: id => this.durable(() => changeWorldDifficulty(this.sim,id,checkpoint=>this.persistTravel(checkpoint)), {ok:false,message:'A save is already in progress.'}),
         openChronicle: () => { if(!this.savingAction)this.panels.open('chronicle'); },
         openLootLog: () => { if (!this.savingAction) this.panels.open('lootLog'); },
         openAppearance: () => { if (!this.savingAction && this.panels.open('character')) this.editAppearance(true); },
@@ -218,8 +232,7 @@ export class Game {
       this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap(), undefined, this.mapIcons);
       this.lifetime.defer(() => this.worldMap.dispose());
       this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
-    this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
-    this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){if(this.sim.expeditions.cleared?.includes(poi.id))return 'Cleared';const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
+    this.worldMap.setActivityStateReader(poi => activityStatus(poi, this.journeys.facts()));
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
@@ -318,7 +331,8 @@ export class Game {
         menu: action => {
           if(this.savingAction || this.phase !== 'playing') return;
           if(action === 'pause') this.pause();
-          else if(action === 'character') this.openCharacterPanel('character');
+          else if(action === 'character') { this.openCharacterPanel('character'); this.inventoryPanel.openTouchTab('stats'); }
+          else if(action === 'inventory') { this.openCharacterPanel('character'); this.inventoryPanel.openTouchTab('bag'); }
           else if(action === 'skills') this.openCharacterPanel('skills');
           else if(action === 'journeys') this.journeys.open();
           else if(action === 'map') this.openMap();
@@ -578,26 +592,31 @@ export class Game {
   private resize() {
     this.touch?.clear(); this.clearWorldTouch?.();
     document.documentElement.style.setProperty('--touch-vh', `${window.visualViewport?.height ?? window.innerHeight}px`);
-    const width = window.innerWidth, height = this.touch?.active ? Math.round(window.visualViewport?.height ?? window.innerHeight) : window.innerHeight;
-    const ratio = Math.min(1.6, window.devicePixelRatio || 1);
-    this.canvas.width = Math.round(width * ratio);
-    this.canvas.height = Math.round(height * ratio);
+    const viewport = presentationViewport({
+      width: window.innerWidth,
+      height: window.innerHeight,
+      visualHeight: window.visualViewport?.height ?? window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio || 1,
+      touchActive: !!this.touch?.active,
+      profile: this.presentation,
+    });
+    this.canvas.width = viewport.worldBufferWidth;
+    this.canvas.height = viewport.worldBufferHeight;
     // UI is rasterized at the display's native density, independently of the world buffer.
-    const uiRatio = window.devicePixelRatio || 1;
-    this.uiCanvas.width = Math.round(width * uiRatio);
-    this.uiCanvas.height = Math.round(height * uiRatio);
-    const logicalHeight = Math.min(680, Math.max(450, Math.round(height / 1.35)));
-    this.renderer.resize(Math.max(this.touch?.active ? 1 : 540, Math.round(logicalHeight * width / height)), logicalHeight);
-    this.renderer.cursorPixelScale = { x: this.renderer.width / width, y: this.renderer.height / height };
+    this.uiCanvas.width = viewport.uiBufferWidth;
+    this.uiCanvas.height = viewport.uiBufferHeight;
+    this.renderer.resize(viewport.logicalWidth, viewport.logicalHeight);
+    this.renderer.cursorPixelScale = { x: this.renderer.width / viewport.width, y: this.renderer.height / viewport.height };
     this.touch?.refreshLayout();
     this.renderer.touchViewport = this.touch?.viewport ?? null;
-    this.renderer.touchTopInset = (this.touch?.safeTop ?? 0) * this.renderer.height / height;
+    this.renderer.touchTopInset = (this.touch?.safeTop ?? 0) * this.renderer.height / viewport.height;
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.sim.setCombatViewport(this.renderer.combatViewport);
     this.mouse.x = this.renderer.width * 0.6;
     this.mouse.y = this.renderer.height * 0.43;
     this.shell.resizeControls(this.renderer.width, this.renderer.height);
     this.worldMap.resize();
+    this.journeys.panel.resize(this.renderer.width, this.renderer.height);
   }
 
   clearInput(preserveMovement = false) {
@@ -721,8 +740,7 @@ export class Game {
     if (this.disposed) return;
     this.worldMap = new WorldMap(this.overworld, this.exploration, this.shell.mapMount, () => this.closeMap(), undefined, this.mapIcons);
     this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
-    this.worldMap.setCampStateReader(id => this.sim.getCampState(id));
-    this.worldMap.setEventStateReader(poi => { if(poi.kind==='dungeon'){if(this.sim.expeditions.cleared?.includes(poi.id))return 'Cleared';const run=this.sim.expeditions.runs.find(r=>r.entrance.id===poi.id);return run?(run.states.warden.hp<=0?'Cleared':'Expedition active'):null;} const record = this.sim.eventState.sites[poi.id]; return isEventKind(poi.kind) ? eventLabel(record ?? { id: poi.id, kind: poi.kind }, this.sim.eventState, this.sim.getCampState(poi.id) === 'cleared') : null; });
+    this.worldMap.setActivityStateReader(poi => activityStatus(poi, this.journeys.facts()));
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
     this.projectBeacons(); this.enterWorld();
@@ -753,7 +771,7 @@ export class Game {
 
   private enterWorld() {
     this.shell.notifications.clear();
-    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed).id);
+    this.areaNotices.reset(this.currentArea().id);
     this.sim.player.name = this.session.active?.record.name;
     this.renderer.reset();
     this.renderer.snapTo(this.sim.player);
@@ -906,13 +924,13 @@ export class Game {
               x: number;
               y: number;
           }) => Math.hypot(p.x - q.x, p.y - q.y) < 75 && (!pointer || Math.hypot(pointer.x - q.x, pointer.y - (q.y - 20)) < 55);
-          const event=f.events?.find(hit);
+          const event=f.events?.find(e=>!run.events?.[e.id]?.finished&&hit(e));
           if(event){
               this.sim.clearInput();this.sim.portal.cancel();
               void this.durable(async()=>{const result=await startDungeonEvent(this.sim,event.id,c=>this.persistTravel(c));this.notify(result.message);},undefined);
               return true;
           }
-          const chest = f.chests.findIndex((_,i)=>(!run.rift||i===2&&run.rift.phase==='complete')&&hit(dungeonRunChest(f,run,i)));
+          const chest = dungeonInteractionChests(f,run).find(hit)?.index ?? -1;
           if (chest >= 0) {
               const problem = dungeonChestProblem(this.sim, chest);
               if (problem)
@@ -1034,6 +1052,10 @@ export class Game {
     return { ok, message: this.saveError };
   }
 
+  private shouldShowHomePortal(): boolean {
+    return this.phase === 'playing' && !this.world.isSanctuary(this.sim.player.x, this.sim.player.y);
+  }
+
   private requestPortal() {
     if (this.savingAction || !this.panels.simulationActive || !this.session.active) return;
     const p = this.sim.player, link = this.sim.travel.returnTo;
@@ -1057,14 +1079,15 @@ export class Game {
     return withinPortalReach(this.sim.player, anchor, this.world) ? anchor : undefined;
   }
 
-  private portalActionView(): PortalActionView {
+  private updatePortalPresentation(): void {
     const destinations = portalDestinations({ seed: this.overworld.seed,
       home: this.overworld.getPortalAnchor(this.sim.travel.homeTown), travel: this.sim.travel, expeditions: this.sim.expeditions });
     this.renderer.portalDestinations = destinations;
+    if (!this.touch.active) return;
     const progress = this.sim.portal.active ? this.sim.portal.progress : null;
     const inSanctuary=this.world.isSanctuary(this.sim.player.x,this.sim.player.y),returnInReach=!!this.returnPortalInReach();
     const mode=portalActionMode(progress!==null,inSanctuary,!!destinations.returnTo,returnInReach);
-    return {mode,progress,destination:mode==='locate'||mode==='return'?destinations.returnTo!:destinations.home};
+    this.touch.setPortal({mode,progress,destination:mode==='locate'||mode==='return'?destinations.returnTo!:destinations.home});
   }
 
   private setLocationWorld(checkpoint: CharacterCheckpoint) {
@@ -1086,9 +1109,16 @@ export class Game {
     this.renderer.reset(); this.renderer.snapTo(this.sim.player);
     this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
     this.sim.setCombatViewport(this.renderer.combatViewport);
-    this.areaNotices.reset(getZoneAt(this.sim.player.x, this.sim.player.y, this.overworld.seed).id);
+    // Travel clears the old presentation; announce the destination after stable arrival.
+    this.areaNotices.reset('');
     this.worldMap.update(this.sim.player, 0);
     this.shell.portalTransition(); this.canvas.focus();
+  }
+
+  private currentArea(): AreaBannerNotice {
+    const run = currentDungeon(this.sim.expeditions);
+    return run ? { id: run.entrance.id, name: run.entrance.name, level: run.entrance.level }
+      : getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
   }
 
   private async trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> {
@@ -1132,6 +1162,21 @@ export class Game {
 
   private characterAction(command: CharacterCommand) {
     if (this.savingAction) return;
+    if (command.type === 'respecSkills' || command.type === 'refundNode') {
+      void this.durable(async () => {
+        if (this.phase !== 'skills' || !this.session.active) return;
+        const result = await executeSkillRespec(this.sim.player, command, async (character, hp, mana, skillCooldowns) => {
+          const ok = await this.session.save({ ...this.sim.captureCheckpoint(), character, hp, mana, skillCooldowns }, Date.now());
+          if (!ok) this.shell.setSaveStatus(this.session.error, true);
+          return { ok, message: this.session.error };
+        });
+        if (result.ok) { this.saveError = ''; this.shell.setSaveStatus(); }
+        if (result.ok && command.type === 'refundNode') this.skillPanel.pointRefunded(command.id);
+        this.skillPanel.refresh(this.sim.player);
+        this.notify(result.message ?? 'Could not save the respec.');
+      }, undefined);
+      return;
+    }
     const result = executeCharacterCommand(this.sim.player, command);
     if (!result.ok) { this.notify(result.message ?? 'Action unavailable.'); return; }
     if (result.message) this.notify(result.message);
@@ -1217,7 +1262,6 @@ export class Game {
     this.touch.update(this.sim.player,this.phase,this.savingAction,now,this.sim.groundEffects);
     this.shell.notifications.setTouchLayout(this.touch.phoneLandscape, this.touch.safeTop);
     this.renderer.gamepadActive = this.usingGamepad;
-    this.shell.setGamepadActive(this.usingGamepad);
     if (this.panels.simulationActive && !this.savingAction && !this.shell.shortcutMenu.isOpen) {
       // The simulation owns the fixed 120 Hz clock and render interpolation.
       this.sim.setSpawnExclusion(this.renderer.spawnExclusionBounds(this.sim.player));
@@ -1251,8 +1295,12 @@ export class Game {
       }
       if (this.sim.portal.ready) this.travelThrough(this.overworld.getPortalAnchor(this.sim.travel.homeTown), false);
       const run=currentDungeon(this.sim.expeditions);
-      const zone = run?{id:run.entrance.id,name:run.entrance.name,level:run.entrance.level}:getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
-      if (this.areaNotices.update(zone.id, dt)) this.shell.notifications.push({ kind: 'area', id: zone.id, name: zone.name, level: zone.level, maxLevel: 'maxLevel' in zone ? zone.maxLevel : undefined });
+      const zone = this.currentArea();
+      this.renderer.areaBanner.retain(zone.id);
+      if (this.areaNotices.update(zone.id, dt)) {
+        this.renderer.areaBanner.show(zone);
+        this.shell.notifications.announce(`${zone.name}. ${areaLevelLabel(zone)}. ${areaThreat(zone,this.sim.player.level).label}.`);
+      }
       if(run?.rift&&(this.sim.player.dead||run.rift.phase==='failed')){
         if(!this.savingAction)void this.switchDungeon({kind:'death'});
       } else if (this.sim.player.dead) {
@@ -1261,17 +1309,20 @@ export class Game {
       if (now >= this.nextAutosave) { this.saveCharacter(); this.nextAutosave = now + 20_000; }
     }
     this.shell.setBuffs(activeBuffs(this.sim.player, this.sim.groundEffects));
+    this.shell.potionTooltip.update(potionPresentation(this.sim.player), controls.label('heal'), this.phase === 'playing' && !this.touch.active);
     this.shell.shortcutMenu.setPoints(this.sim.player.character.statPoints, this.sim.player.character.skillPoints);
-    const portalView = this.portalActionView();
-    this.shell.setPortalState(portalView);
-    if(this.touch.active) this.touch.setPortal(portalView);
+    this.updatePortalPresentation();
     this.renderer.pointerX = this.mouse.x;
     this.renderer.pointerY = this.mouse.y;
     this.renderer.inspectedEnemyId = this.shell.targetBuffs.held ? this.renderer.targetEffects?.id ?? null : null;
     this.renderer.pointerActive = this.mouse.present && (this.usingGamepad || this.touch.active || !this.pointerOverEffects);
     // Presentation existence does not reveal whether the Thor dashboard covers it.
     this.renderer.navigationVisible = !(this.touch.active && (window.innerWidth < 620 || this.touch.phoneLandscape));
-    this.shell.setNavigationVisible(this.renderer.navigationVisible);
+    // Touch owns Map and Portal through its persistent menu; do not leave the
+    // desktop minimap hit target behind after moving the touch projection.
+    this.shell.setNavigationVisible(this.renderer.navigationVisible && !this.touch.active);
+    this.shell.setHomePortalVisible(this.shouldShowHomePortal());
+    this.shell.setDifficultyBadge(this.sim.player.character.difficulty??'normal');
     this.journeys.update();
     const settings = {
       liveMap: this.panels.mapHeld,
@@ -1329,7 +1380,10 @@ export class Game {
     const dungeonRun=currentDungeon(this.sim.expeditions);
     if(dungeonRun?.rift && this.phase!=='ready')drawRiftHUD(ui,dungeonRun,this.renderer.width);
     if (this.phase !== 'ready' && !dungeonRun) this.worldMap.update(mapPlayer, dt);
-    if (this.phase === 'map' && dungeonRun) this.dungeonMap.update(mapPlayer,this.sim.enemies);
+    if (this.phase === 'map' && dungeonRun) {
+      if(this.worldMap.isOpen)this.worldMap.update({x:this.sim.expeditions.surfaceX,y:this.sim.expeditions.surfaceY,angle:0},dt);
+      else this.dungeonMap.update(mapPlayer,this.sim.enemies);
+    }
     if (this.panels.mapHeld) {
       const rect = this.canvas.getBoundingClientRect();
       const pointer = this.mouse.present && !this.usingGamepad && !this.touch.active && !this.pointerInHUD()
@@ -1338,12 +1392,23 @@ export class Game {
       if (dungeonRun) this.dungeonMap.setExplorationPointer(pointer);
       else this.worldMap.setExplorationPointer(pointer);
     }
-    if (this.phase !== 'ready' && dungeonRun && this.renderer.navigationVisible) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies,this.mapIcons);
-    if (this.phase !== 'ready' && !dungeonRun && this.renderer.navigationVisible) this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
-      this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
-        x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
-        y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
-      })));
+    if (this.phase !== 'ready' && (this.renderer.navigationVisible || this.touch.active)) {
+      ui.save();
+      if (this.touch.active) {
+        const mapScale = this.renderer.navigationVisible ? 1 : .75;
+        const physicalHeight = Math.max(1, visualViewport?.height ?? innerHeight);
+        const mapTop = this.touch.minimapTop * this.renderer.height / physicalHeight;
+        ui.globalAlpha = .58;
+        ui.translate(this.renderer.width, mapTop); ui.scale(mapScale, mapScale); ui.translate(-this.renderer.width, -18);
+      }
+      if (dungeonRun) drawCryptMinimap(ui,this.sim.dungeonFloor!,dungeonRun,mapPlayer,this.renderer.width,this.renderer.height,this.journeys.marker,this.sim.time,this.sim.enemies,this.mapIcons);
+      else this.worldMap.drawMinimap(ui, mapPlayer, this.renderer.width, this.renderer.height, this.sim.time,
+        this.sim.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({
+          x: enemy.prevX + (enemy.x - enemy.prevX) * alpha,
+          y: enemy.prevY + (enemy.y - enemy.prevY) * alpha, kind: enemy.kind, rank:enemy.rank,
+        })));
+      ui.restore();
+    }
     this.thor.update(now);
     this.performance.end('ui', uiStart);
     const monitorStart = this.performance.start();
@@ -1395,6 +1460,7 @@ export class Game {
     }
     if (pad.pressed.has(PAD.pause) || (!this.panels.simulationActive && pad.pressed.has(PAD.dodge))) {
       if (this.phase === 'character' && this.inventoryPanel.dismissPopup()) return;
+      if (this.phase === 'skills' && this.skillPanel.dismissPopup()) return;
       if (this.panels.activePanel) this.resume();
       else if (this.phase === 'playing' && !this.savingAction) { if (this.sim.portal.active) this.sim.portal.cancel(); else this.pause(); }
       else if (this.phase === 'paused' && !this.shell.backInMenu()) this.resume();
