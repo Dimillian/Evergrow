@@ -210,6 +210,8 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  difficulty?: import('./world-difficulty.ts').WorldDifficulty;
+  rewardDifficulty?: import('./world-difficulty.ts').WorldDifficulty;
   /** Transient support link, never serialized; source death disables it immediately. */
   riftWardSource?: Enemy;
   riftSpecialCooldown?:number;

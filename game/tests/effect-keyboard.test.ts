@@ -8,6 +8,7 @@ const css = registerHooks({ load(url, context, next) {
 } });
 const { UITooltipStack } = await import('../src/ui-tooltip-stack.ts');
 const { BuffBar } = await import('../src/buff-bar.ts');
+const { PotionTooltip } = await import('../src/potion-tooltip.ts');
 css.deregister();
 
 class Surface extends EventTarget {
@@ -17,7 +18,7 @@ class Surface extends EventTarget {
   matches() { return false; }
   contains(node: unknown) { return node === this; }
 }
-test('focused buff icons and explanation links own gameplay keys but preserve native activation and Escape', () => {
+test('focused buff icons, potion details and explanation links own gameplay keys but preserve native navigation and Escape', () => {
   const doc = new Surface(), win = new Surface();
   Object.assign(doc, { createElement: () => new Surface() });
   const originals = new Map(['document', 'window'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
@@ -26,11 +27,12 @@ test('focused buff icons and explanation links own gameplay keys but preserve na
   const mount = new Surface();
   const stack = new UITooltipStack(mount as unknown as HTMLElement, () => undefined);
   const bar = new BuffBar(mount as unknown as HTMLElement);
+  const potion = new PotionTooltip(mount as unknown as HTMLElement);
   try {
-    for (const target of [mount, bar.element]) {
-      for (const key of [' ', 'Enter', 'Tab', 'f', '1', 'Escape']) {
+    for (const target of [mount, bar.element, potion.anchor]) {
+      for (const [key, shiftKey] of [[' ', false], ['Enter', false], ['Tab', false], ['Tab', true], ['ArrowUp', false], ['q', false], ['f', false], ['1', false], ['Escape', false]] as const) {
         const event = new Event('keydown', { bubbles: true, cancelable: true });
-        Object.defineProperties(event, { key: { value: key }, target: { value: { closest: () => ({}) } } });
+        Object.defineProperties(event, { key: { value: key }, shiftKey: { value: shiftKey }, target: { value: { closest: () => ({}) } } });
         let stopped = false;
         target.addEventListener('keydown', e => { stopped = e.cancelBubble; }, { once: true });
         target.dispatchEvent(event);
@@ -39,7 +41,7 @@ test('focused buff icons and explanation links own gameplay keys but preserve na
       }
     }
   } finally {
-    stack.dispose(); bar.dispose();
+    stack.dispose(); bar.dispose(); potion.dispose();
     for (const [key, original] of originals) {
       if (original) Object.defineProperty(globalThis, key, original);
       else Reflect.deleteProperty(globalThis, key);

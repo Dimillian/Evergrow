@@ -1,3 +1,4 @@
+import { validWorldDifficulty } from './world-difficulty.ts';
 import { validRiftTag, validRiftLedger, riftEnemyStats, RIFT_RULES } from './rift-content.ts';
 import { EXPEDITION_MODIFIER_IDS } from './expedition-modifiers.ts';
 import { validExpeditionRoute, expeditionChoices, dungeonChestMask } from './expedition-route.ts';
@@ -15,7 +16,7 @@ import { BIOMES } from './biomes.ts';
 import type { Expeditions, StoredActor, LocationContents } from './dungeon-state.ts';
 const point = (v: Record<string, unknown>) => number(v.x, -4e7, 4e7) && number(v.y, -4e7, 4e7);
 export function validActors(v: unknown): v is StoredActor[] {
-    if(!Array.isArray(v) || !v.every(a => object(a) && typeof a.kind === 'string' && Object.hasOwn(ENEMY_DEFINITIONS, a.kind) && ['normal', 'veteran', 'elite'].includes(a.rank as string) && integer(a.level, 1, 1e6) && typeof a.biome === 'string' && Object.hasOwn(BIOMES, a.biome) && integer(a.seed, 0, 4294967295) && (a.lootIdentity === undefined || text(a.lootIdentity, 80)) && point(a) && number(a.homeX, -4e7, 4e7) && number(a.homeY, -4e7, 4e7) && (a.rift===undefined||validRiftTag(a.rift)) && number(a.hp, 0, riftEnemyStats(scaledEnemyStats(a.kind as StoredActor['kind'], a.level as number, a.rank as StoredActor['rank']),a.rift as StoredActor['rift']).maxHp) && (a.campId === undefined || text(a.campId, 180) && text(a.memberId, 180)) && (a.bossPhases === undefined || integer(a.bossPhases, 0, 3))))return false;
+    if(!Array.isArray(v) || !v.every(a => object(a) && (a.rewardDifficulty===undefined||validWorldDifficulty(a.rewardDifficulty)) && typeof a.kind === 'string' && Object.hasOwn(ENEMY_DEFINITIONS, a.kind) && ['normal', 'veteran', 'elite'].includes(a.rank as string) && integer(a.level, 1, 1e6) && typeof a.biome === 'string' && Object.hasOwn(BIOMES, a.biome) && integer(a.seed, 0, 4294967295) && (a.lootIdentity === undefined || text(a.lootIdentity, 80)) && point(a) && number(a.homeX, -4e7, 4e7) && number(a.homeY, -4e7, 4e7) && (a.rift===undefined||validRiftTag(a.rift)) && number(a.hp, 0, riftEnemyStats(scaledEnemyStats(a.kind as StoredActor['kind'], a.level as number, a.rank as StoredActor['rank']),a.rift as StoredActor['rift']).maxHp) && (a.campId === undefined || text(a.campId, 180) && text(a.memberId, 180)) && (a.bossPhases === undefined || integer(a.bossPhases, 0, 3))))return false;
     const identities=v.flatMap(a=>a.lootIdentity===undefined?[]:[a.lootIdentity]);
     return new Set(identities).size===identities.length;
 }
@@ -30,7 +31,7 @@ export function validExpeditions(v: unknown): v is Expeditions {
     if(v.route!==undefined && !validExpeditionRoute(v.route))return false;
     const ids = new Set<string>(v.cleared as string[] | undefined);
     for (const run of v.runs) {
-        if (!object(run) || run.layoutVersion !== DUNGEON_RULES.version || !object(run.entrance))
+        if (!object(run) || (run.difficulty!==undefined&&!validWorldDifficulty(run.difficulty)) || run.layoutVersion !== DUNGEON_RULES.version || !object(run.entrance))
             return false;
         const e = run.entrance;
         if ((e.scaling !== undefined && (!validEncounterScale(e.scaling) || e.level !== e.scaling.base)) || !text(e.id, 180) || !e.id.startsWith('dungeon:') || ids.has(e.id) || !text(e.name, 80) || !point(e) || !integer(e.seed, 0, 4294967295) || !integer(e.level, 1, 1e6) || typeof e.biome !== 'string' || !Object.hasOwn(BIOMES, e.biome) || !object(run.states) || !validContents(run.contents) || !point(run))
@@ -68,6 +69,7 @@ export function validExpeditions(v: unknown): v is Expeditions {
             if(r.phase==='complete' && ((run.states.warden as {hp:number}).hp>0 || r.elapsed>=RIFT_RULES.duration))return false;
             if(r.claimed !== ((run.chestMasks as number[])?.[2]===dungeonChestMask(run as unknown as import('./dungeon-state.ts').DungeonRun,2)))return false;
         }
+        if(run.chestDifficulties!==undefined&&(!object(run.chestDifficulties)||!Object.entries(run.chestDifficulties).every(([key,value])=>['0','1','2'].includes(key)&&validWorldDifficulty(value))))return false;
         if (dungeonBlocked(floor, run.x as number, run.y as number, 0) || !Array.isArray(run.explored) || run.explored.length > floor.rooms.length || !run.explored.every(id => integer(id, 0, floor.rooms.length-1)) || new Set(run.explored).size !== run.explored.length || !Array.isArray(run.chestMasks) || run.chestMasks.length !== 3 || !run.chestMasks.every((n, i) => integer(n, 0, dungeonChestMask(run as unknown as import('./dungeon-state.ts').DungeonRun,i)) && (i === 2 || ((n as number) & 6) === 0)))
             return false;
     }

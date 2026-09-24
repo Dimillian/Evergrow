@@ -1,3 +1,4 @@
+import { dungeonChestClaimed } from './expedition-route.ts';
 import { polygon, line } from './art-primitives.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import type { DungeonRun } from './dungeon-state.ts';
@@ -59,7 +60,7 @@ export function drawDungeonProps(c: CanvasRenderingContext2D, f: DungeonFloor, r
     for(const event of f.events??[]){
         const state=run.events?.[event.id];
         c.save();c.translate(event.x,event.y);
-        c.strokeStyle=state?.finished?'#7caa89':theme.accent;c.lineWidth=2;
+        c.strokeStyle=dungeonChestClaimed(run,event.chest)?'#7caa89':theme.accent;c.lineWidth=2;
         const r=event.kind==='ward'?155:70;
         c.globalAlpha=state?.started ? .55:.3;
         c.beginPath();c.ellipse(0,0,r,r*.68,0,0,7);c.stroke();
@@ -74,7 +75,8 @@ export function drawDungeonProps(c: CanvasRenderingContext2D, f: DungeonFloor, r
 
 export function dungeonEventLabel(run: DungeonRun, event: NonNullable<DungeonFloor['events']>[number]): string {
     const state=run.events?.[event.id],recipe=DUNGEON_EVENTS[event.kind];
-    if(state?.finished)return 'Complete';
+    if(dungeonChestClaimed(run,event.chest))return 'Claimed';
+    if(state?.finished)return 'Reward waiting';
     if(!state?.started)return `${recipe.action} [E]`;
     return `${recipe.name} · ${state.wave+1}/${recipe.rules.count}${recipe.rules.hold ? ` · Hold ${Math.ceil(Math.max(0,recipe.rules.hold-state.held))}s` : ''}`;
 }

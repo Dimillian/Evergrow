@@ -1,3 +1,4 @@
+import { dungeonEventLabel } from '../src/dungeon-prop-art.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Simulation, FIXED_STEP } from '../src/simulation.ts';
@@ -47,12 +48,16 @@ test('dungeon encounters start durably, admit hidden waves, persist and pay once
         assert.ok(validExpeditions(sim.captureCheckpoint().expeditions),`${event.kind}: save validates`);
       }
       assert.equal(state.finished,true);
+      assert.equal(dungeonEventLabel(current,event),'Reward waiting');
+      assert.equal((await startDungeonEvent(sim,event.id,persist)).message,'Claim the chamber chest.');
       // Completion can deliver treasure from the altar without a second interaction.
       sim.player.x=event.x;sim.player.y=event.y;
       assert.equal((await claimDungeonChest(sim,event.chest,()=>({ok:false,message:'Disk full'}))).ok,false);
       assert.equal(sim.groundItems.length,0);
+      assert.equal(dungeonEventLabel(sim.expeditions.runs[0],event),'Reward waiting');
       assert.equal((await claimDungeonChest(sim,event.chest,persist)).ok,true);
       const count=sim.groundItems.length;assert.ok(count>0);
+      assert.equal(dungeonEventLabel(sim.expeditions.runs[0],event),'Claimed');
       assert.equal((await claimDungeonChest(sim,event.chest,persist)).ok,false);assert.equal(sim.groundItems.length,count);
     }
   }

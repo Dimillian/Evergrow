@@ -59,13 +59,13 @@ export function advanceAuras(p:Player,enemies:readonly Enemy[],dt:number,moving:
  let struck=false;
  for(const e of enemies){
   if(e.state==='dead')continue;const range=Math.hypot(e.x-p.x,e.y-p.y);
-  if(range>90+e.radius||!visible(p.x,p.y,e.x,e.y))continue;
+  if(range>AURA_RULES.thornRadius+e.radius||!visible(p.x,p.y,e.x,e.y))continue;
   // Keep proximity coverage continuous; applySlow halves boss durations too.
   // Boss resistance is expressed by half potency here, not gaps between pulses.
   const boss=isBossKind(e.kind);
   if(slow)applySlow(e,{duration:(AURA_RULES.pulseInterval+.05)*(boss?2:1),factor:1-slow/100*(boss?.5:1)});
-  if(damage&&range<=70+e.radius){hit(e,damage,element);struck=true;}
+  if(damage&&range<=AURA_RULES.spikeRadius+e.radius){hit(e,damage,element);struck=true;}
  }
- if(struck)pulse(element,70);
+ if(struck)pulse(element,AURA_RULES.spikeRadius);
  s.element=(s.element+1)%3;
 }

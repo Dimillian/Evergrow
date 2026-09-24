@@ -11,7 +11,7 @@ import { refreshCharacter } from '../src/character.ts';
 import { resolveSkill, SKILL_SPECIALIZATIONS } from '../src/skill-progression.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { scaledEnemyStats } from '../src/zone-progression.ts';
-import { SkillStudy, studyWeapons } from '../src/tools/skill-scene.ts';
+import { SkillStudy, studyWeapons } from '../src/skill-showcase.ts';
 import { itemPowerScale, monsterHealthScale } from '../src/progression-content.ts';
 import { generateItem, deriveItem, itemAffixPool, EQUIPMENT_SLOTS } from '../src/items.ts';
 import type { SkillId, ItemKind, StatKey } from '../src/character-types.ts';

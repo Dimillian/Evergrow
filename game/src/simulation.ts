@@ -1,4 +1,5 @@
 import { createEnemy } from './enemy-factory.ts';
+import { worldDifficulty, lesserDifficulty } from './world-difficulty.ts';
 import { advanceChains, type ChainFlight } from './chain-lightning.ts';
 import { RiftTactics } from './rift-tactics.ts';
 import { EnemyNeighbors } from './enemy-neighbors.ts';
@@ -156,6 +157,8 @@ export class Simulation {
   private combatViewport: CombatViewport | null = null;
   private spawnExclusion: SpawnExclusion | null = null;
   private killRecharge = 0;
+  /** Read-only HUD progress; the existing saved kill counter remains authoritative. */
+  get potionRecharge(): number { return Math.max(0, Math.min(1, this.killRecharge / PLAYER_ABILITIES.potion.killsPerCharge)); }
   private playerMovement = new PlayerMovement();
 
   constructor(world: WorldQuery, options: SimulationOptions = {}) {
@@ -244,7 +247,7 @@ export class Simulation {
     this.camps.restoreScales(saved.encounterScales);
     for (const actor of saved.actors ?? []) {
       const enemy=this.spawnEnemy(actor.kind,actor.x,actor.y,actor.rank, actor.campId ? {campId:actor.campId,memberId:actor.memberId!,lootSeed:actor.seed} : undefined);
-      if(enemy)Object.assign(enemy,applyEnemyModifiers(scaledEnemyStats(actor.kind,actor.level,actor.rank),{kind:actor.kind,rank:actor.rank,lootSeed:actor.seed,rift:actor.rift}),{rift:actor.rift,level:actor.level,biome:actor.biome,lootSeed:actor.seed,lootIdentity:actor.lootIdentity,hp:actor.hp,homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
+      if(enemy)Object.assign(enemy,applyEnemyModifiers(scaledEnemyStats(actor.kind,actor.level,actor.rank),{kind:actor.kind,rank:actor.rank,lootSeed:actor.seed,rift:actor.rift,difficulty:p.character.difficulty,rewardDifficulty:lesserDifficulty(actor.rewardDifficulty,p.character.difficulty)}),{rift:actor.rift,level:actor.level,biome:actor.biome,lootSeed:actor.seed,lootIdentity:actor.lootIdentity,hp:actor.hp*worldDifficulty(p.character.difficulty).health,difficulty:p.character.difficulty,rewardDifficulty:lesserDifficulty(actor.rewardDifficulty,p.character.difficulty),homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
     }
     this.camps.adopt(this.enemies); this.camps.restoreWounds(saved.campWounds??[]); this.pickups=saved.pickups??[];
     this.reserveIdentity(Math.max(1,...this.pickups.map(i=>i.id+1)));
@@ -358,8 +361,11 @@ export class Simulation {
     const lootSeed = source?.lootSeed ?? enemyLootSeed(this.options.seed!, ++this.spawnOrdinal, x, y);
     const level = source?.level ?? this.world.dungeonLevel ?? encounterMemberLevel(scaling ?? encounterScaleAt(x, y, this.world.seed ?? this.options.seed!, this.player.level), rank, lootSeed, isBossKind(kind));
     const rift=currentDungeon(this.expeditions)?.entrance.rift;
+    const difficulty=worldDifficulty(this.player.character.difficulty).id;
+    const run=currentDungeon(this.expeditions);
+    const rewardDifficulty=lesserDifficulty(source?.difficulty ?? (run ? run.difficulty ?? 'normal' : difficulty),difficulty);
     const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
-    const enemy = createEnemy({ id:this.nextId++, kind, level, rank, biome, lootSeed, x, y, rift,
+    const enemy = createEnemy({ id:this.nextId++, kind, level, rank, biome, lootSeed, x, y, rift, difficulty, rewardDifficulty,
       dungeonTheme:this.world.dungeonTheme,
       ...(source ? {campId:source.campId, campMemberId:source.memberId} : {}),
       idleDuration:ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange });

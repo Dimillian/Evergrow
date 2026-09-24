@@ -14,7 +14,7 @@ Implemented locally, 2026-09-06. This pass removes lifetime activity-count gates
 | Dungeon expeditions | Every unfinished or reward-bearing floor, and any floor owning a return portal | Only a floor with every member dead, all three chest masks complete, no loose equipment/gold/pickups or living stored actor, and no active/return ownership becomes one cleared-entrance ID. |
 | Retired crypt entrance | Exact ID, shown as cleared on the map | Reentry reports that the crypt is cleared. It cannot create a fresh roster or chest. |
 | Interactive sites | Active trials, partial delivery masks, beacon projections, 32 recent non-beacon claims | Older fully claimed non-beacon sites become exact IDs. Opening state, availability, Journey completion and repeat-claim rejection consume those receipts. Beacons retain their location/target for chart recovery. |
-| Journeys | Exact completion IDs independent of the visible log | The UI keeps three accepted activities, 12 offers, 64 history entries and 128 dismissals. Trimming that UI never permits a second XP payment. |
+| Journeys | Full accepted, known and completed records plus exact reward receipts | No count-based catalogue/history eviction or acceptance cap. Dismiss returns work to Nearby. The HUD alone shows at most three rows; the shared serialized character limit still applies. |
 
 The old eight-expedition, 1,024-camp, 256-interaction and 2,048-Journey lifetime gates are removed. The one-live-Warden expedition rule and one guardian trial at a time remain gameplay constraints. The September 7 world pass removes actor-count/rank caps. Visibility, inactive caches and ground-drop bounds remain; see [interactive POIs](interactive-pois.md).
 

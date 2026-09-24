@@ -16,6 +16,7 @@ import { Exploration } from './exploration.ts';
 import { generateItem } from './items.ts';
 import { awardCharacterExperience } from './character.ts';
 import { Lifetime } from './lifetime.ts';
+import { presentationProfile, presentationViewport } from './presentation-viewport.ts';
 
 // Real scene/UI components, frozen actor state. No Game, simulation ticks, or save access.
 if (!import.meta.env.DEV) throw new Error('Touch study is local development only.');
@@ -51,18 +52,19 @@ const touch = life.own(new TouchHUD(shell,{activate:noop,clearAttack:noop,cancel
     shell.classList.toggle('playing',panel==='world');
   }}, {forceTouch:true}));
 touch.setActive(true);
+const presentation = presentationProfile({android:!!window.EvergrowAndroid,coarsePointer:true});
 if(panel==='inventory') inventory.open(player);
 else if(panel==='skills') skills.open(player);
 else if(panel==='map') map.open(player);
 shell.classList.toggle('playing',panel==='world');
 let frame=0, count=0;
 function draw() {
-  const w=innerWidth,h=Math.round(visualViewport?.height ?? innerHeight),dpr=devicePixelRatio||1,ratio=Math.min(1.6,dpr);
+  const w=innerWidth,h=Math.round(visualViewport?.height ?? innerHeight),dpr=devicePixelRatio||1;
+  const viewport=presentationViewport({width:w,height:innerHeight,visualHeight:h,devicePixelRatio:dpr,touchActive:true,profile:presentation});
   document.documentElement.style.setProperty('--touch-vh', `${h}px`);
-  if(canvas.width!==Math.round(w*ratio)||canvas.height!==Math.round(h*ratio)) {
-    canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);ui.width=Math.round(w*dpr);ui.height=Math.round(h*dpr);
-    const logicalHeight=Math.min(680,Math.max(450,Math.round(h/1.35)));
-    renderer.resize(Math.round(logicalHeight*w/h),logicalHeight);
+  if(canvas.width!==viewport.worldBufferWidth||canvas.height!==viewport.worldBufferHeight) {
+    canvas.width=viewport.worldBufferWidth;canvas.height=viewport.worldBufferHeight;ui.width=viewport.uiBufferWidth;ui.height=viewport.uiBufferHeight;
+    renderer.resize(viewport.logicalWidth,viewport.logicalHeight);
     touch.refreshLayout(); renderer.touchViewport = touch.viewport;
     renderer.touchTopInset = touch.safeTop * renderer.height / h;
   }
@@ -78,7 +80,10 @@ function draw() {
   if(panel==='world')drawEnemyPlate(c,{kind:'stalker',rank:'normal',level:4,hp:36,maxHp:48},renderer.width/plateScale,renderer.height/plateScale,
     {touch:true,topInset:renderer.touchTopInset/plateScale,reducedMotion:true});
   c.restore();
-  if(w>=620&&!touch.phoneLandscape)map.drawMinimap(c,player,renderer.width,renderer.height,0);
+  c.save(); c.globalAlpha=.58;
+  const mapScale=w<620||touch.phoneLandscape ? .75 : 1, mapTop=touch.minimapTop*renderer.height/h;
+  c.translate(renderer.width,mapTop);c.scale(mapScale,mapScale);c.translate(-renderer.width,-18);
+  map.drawMinimap(c,player,renderer.width,renderer.height,0); c.restore();
   touch.update(player,panel==='world'?'playing':'character',false,performance.now());
   if(++count>=3)root.dataset.ready='true';
   frame=requestAnimationFrame(draw);

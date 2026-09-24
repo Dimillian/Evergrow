@@ -1,3 +1,4 @@
+import { difficultyEnemyStats } from './world-difficulty.ts';
 import type { Enemy } from './model.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { riftBonus, riftEnemyStats } from './rift-content.ts';
@@ -7,7 +8,7 @@ const TRAITS=Object.freeze([
   Object.freeze({id:'savage',color:'#f8799a',label:'Savage',name:'Savage',description:'+10% damage',speed:1,recovery:1,damage:1.1,control:1}),
   Object.freeze({id:'resolute',color:'#caa4fc',label:'Resolute',name:'Resolute',description:'25% shorter control effects',speed:1,recovery:1,damage:1,control:.75}),
 ]);
-type Source=Pick<Enemy,'kind'|'rank'> & Partial<Pick<Enemy,'lootSeed'|'rift'>>;
+type Source=Pick<Enemy,'kind'|'rank'> & Partial<Pick<Enemy,'lootSeed'|'rift'|'difficulty'|'rewardDifficulty'>>;
 const EMPTY:readonly typeof TRAITS[number][]=Object.freeze([]);
 const SETS=Array.from({length:8},(_,i)=>Object.freeze(i<4?[TRAITS[i]]:[TRAITS[i-4],TRAITS[(i-4+1)%4]]));
 export function enemyModifiers(e:Source):readonly typeof TRAITS[number][]{
@@ -20,6 +21,6 @@ export function enemyVisualScale(e:Source):number{return isBossKind(e.kind)?1:e.
 
 /** Spawn and save restoration must apply the same snapshotted combat modifiers. */
 export function applyEnemyModifiers<T extends {maxHp:number;damage:number}>(stats:T, source:Source):T {
-  const result=riftEnemyStats(stats,source.rift);
+  const result=difficultyEnemyStats(riftEnemyStats(stats,source.rift),source.difficulty,source.rewardDifficulty??source.difficulty);
   return {...result,damage:Math.round(result.damage*enemyModifiers(source).reduce((value,trait)=>value*trait.damage,1))};
 }

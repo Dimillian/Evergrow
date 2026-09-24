@@ -1,18 +1,18 @@
-import { isAura } from '../aura-content.ts';
-import { manaCapacity } from '../auras.ts';
-import { deriveAttackStats } from '../equipment.ts';
-import { UNIQUES, uniqueSlot } from '../unique-content.ts';
-import { chronicleValues } from '../chronicle.ts';
-import { cloneData } from '../data-clone.ts';
-import type { CharacterSheet } from '../character-types.ts';
-import { Simulation } from '../simulation.ts';
-import { generateItem, generateUnique } from '../items.ts';
-import { refreshCharacter } from '../character.ts';
-import { SKILL_DEFINITIONS, canUseSkill } from '../skill-content.ts';
-import { SKILL_RANK_RULES, SKILL_SPECIALIZATIONS, specializationNode, resolveSkill } from '../skill-progression.ts';
-import { WEAPON_PROFILES, SHIELD_PROFILES } from '../weapon-content.ts';
-import type { SkillId } from '../character-types.ts';
-import type { CombatEvent, Input, WorldQuery, EnemyKind } from '../model.ts';
+import { isAura } from './aura-content.ts';
+import { manaCapacity } from './auras.ts';
+import { deriveAttackStats } from './equipment.ts';
+import { UNIQUES, uniqueSlot } from './unique-content.ts';
+import { chronicleValues } from './chronicle.ts';
+import { cloneData } from './data-clone.ts';
+import type { CharacterSheet } from './character-types.ts';
+import { Simulation } from './simulation.ts';
+import { generateItem, generateUnique } from './items.ts';
+import { refreshCharacter } from './character.ts';
+import { SKILL_DEFINITIONS, canUseSkill } from './skill-content.ts';
+import { SKILL_RANK_RULES, SKILL_SPECIALIZATIONS, specializationNode, resolveSkill } from './skill-progression.ts';
+import { WEAPON_PROFILES, SHIELD_PROFILES } from './weapon-content.ts';
+import type { SkillId } from './character-types.ts';
+import type { CombatEvent, Input, WorldQuery, EnemyKind } from './model.ts';
 export type SkillStudyScenario = 'showcase' | 'followup' | 'defense' | 'sustain';
 export interface SkillStudyOptions {unique?:string;scenario?:SkillStudyScenario;level?:number;baseline?:boolean;rear?:boolean;skill:SkillId;rank:number;specialization:string;weapon:string;facing:number;targets:'fan'|'line'|'ring'|'single'|'none';enemy:EnemyKind;x:number;y:number;}
 export function studyWeapons(id:SkillId){return WEAPON_PROFILES.filter(mainHand=>canUseSkill(id,{mainHand,offHand:{kind:'shield',shield:SHIELD_PROFILES[0]}}));}

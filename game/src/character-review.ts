@@ -150,9 +150,13 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   allocate: attribute => result(allocateAttribute(p.character, attribute)),
 }));
 const tree = life.own(new SkillTreePanel(shell.panelMount, {
-  develop: command => result(executeCharacterCommand(p, command)), close: () => show('character'),
+  develop: command => {
+    const action = executeCharacterCommand(p, command);
+    if (action.ok && command.type === 'refundNode') tree.pointRefunded(command.id);
+    result(action);
+  }, close: () => show('character'),
   allocate: id => result(executeCharacterCommand(p, { type: 'allocateNode', id })), assign: (slot, skill) => result(assignSkill(p, slot, skill)),
-}));
+}, { autoTour: false }));
 const effectReview = new URLSearchParams(location.search).get('effects');
 if (effectReview) {
   const signatures = effectReview === 'guard' ? ['patient-bastion'] : effectReview === 'rogue' ? ['duelists-return','ashen-double'] : effectReview === 'bow' ? ['pale-huntsman'] : effectReview === 'ward' ? ['broken-seal','borrowed-life'] : ['cinderheart-testament','borrowed-life'];

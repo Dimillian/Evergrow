@@ -1,5 +1,7 @@
 # Journeys and local leads
 
+Historical design proposal: the September 19 Area journal supersedes its acceptance caps, dismissal and history-retention rules. Current behavior is documented in [Journeys](journeys.md).
+
 Design proposal · 2026-09-06. Single-site guidance, the journal and markers are now implemented locally; see [current Journeys guide](journeys.md) for the exact scope. Regional chains and personal milestone memory remain proposed. Design target: give the player a good next adventure while preserving free exploration. This guide proposes rules for a first implementation, not a change to current progression, rewards, spawning or saves.
 
 > Current implementation has since adopted natural completion XP and separate Recommended/Nearby lists at the player’s request. The [current guide](journeys.md) supersedes the reward and refresh policies below; remaining sections preserve the original proposal.

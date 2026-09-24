@@ -15,6 +15,7 @@ import { ENCOUNTER_RULES } from './encounter-director.ts';
 import { isSpawnHidden, type SpawnExclusion } from './spawn-visibility.ts';
 import { ROAMING_RULES } from './roaming-encounters.ts';
 import { sampleBiome } from './biomes.ts';
+import { worldDifficulty } from './world-difficulty.ts';
 
 export interface ConsoleExecution {
   /** Rechecked by every dispatch, including read-only help. Never infer local from connectivity. */
@@ -71,7 +72,8 @@ export async function executeConsoleCommand(sim:Simulation, raw:string, context:
           ||[...sim.enemies,...enemies].some(e=>e.hp>0&&Math.hypot(e.x-x,e.y-y)<e.radius+radius+12))continue;
         const lootSeed=(seed+Math.imul(enemies.length,0x9e3779b9))>>>0;
         const level=command.level??encounterMemberLevel(encounterScaleAt(x,y,sim.world.seed,p.level),command.rank,lootSeed);
-        enemies.push(createEnemy({id:next+enemies.length,kind:command.kind,rank:command.rank,level,lootSeed,lootIdentity:`console:${identity}:${enemies.length}`,x,y,
+        const difficulty=worldDifficulty(p.character.difficulty).id;
+        enemies.push(createEnemy({id:next+enemies.length,kind:command.kind,rank:command.rank,level,lootSeed,lootIdentity:`console:${identity}:${enemies.length}`,x,y,difficulty,rewardDifficulty:difficulty,
           biome:(sim.world.sampleBiome?.(x,y)??sampleBiome(x,y)).id,
           idleDuration:ENCOUNTER_RULES.initialIdleMin+(lootSeed/4294967296)*ENCOUNTER_RULES.initialIdleRange}));
       }
