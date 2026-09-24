@@ -10,7 +10,7 @@ type SortPriority = Exclude<InventorySort, 'compact'>;
 export type InventoryFilter = 'weapons' | 'armor' | 'jewelry' | 'offhand' | 'charms';
 const tiers: ItemTier[] = ['common', 'magic', 'rare', 'epic', 'legendary', 'unique'];
 export const INVENTORY_SORT_PRIORITY: Readonly<Record<InventorySort, readonly SortPriority[]>> = {
-  compact: ['type', 'rarity', 'recent'],
+  compact: ['rarity', 'type', 'recent'],
   rarity: ['rarity', 'type', 'recent'], type: ['type', 'rarity', 'recent'], recent: ['recent', 'rarity', 'type'],
 };
 
@@ -28,6 +28,14 @@ function orderedItems(sheet: CharacterSheet, items: Array<Item | null>, mode: In
   return [...items].sort((a, b) => {
     if (!a || !b) return a ? -1 : b ? 1 : 0;
     if (mode === 'compact') {
+      const tierDiff = tiers.indexOf(b.tier) - tiers.indexOf(a.tier);
+      if (tierDiff) return tierDiff;
+      const kindDiff = ITEM_KINDS.indexOf(a.kind) - ITEM_KINDS.indexOf(b.kind);
+      if (kindDiff) return kindDiff;
+      const levelDiff = (b.itemLevel ?? 0) - (a.itemLevel ?? 0);
+      if (levelDiff) return levelDiff;
+      const powerDiff = (b.power ?? 0) - (a.power ?? 0);
+      if (powerDiff) return powerDiff;
       const sa = itemFootprint(a), sb = itemFootprint(b);
       const size = sb.height - sa.height || sb.width - sa.width;
       if (size) return size;
@@ -38,7 +46,7 @@ function orderedItems(sheet: CharacterSheet, items: Array<Item | null>, mode: In
       recent: (recency.get(a.id) ?? recency.size) - (recency.get(b.id) ?? recency.size),
     };
     for (const priority of INVENTORY_SORT_PRIORITY[mode]) if (comparisons[priority]) return comparisons[priority];
-    return 0;
+    return (b.itemLevel ?? 0) - (a.itemLevel ?? 0) || (b.power ?? 0) - (a.power ?? 0);
   });
 }
 

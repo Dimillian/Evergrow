@@ -129,12 +129,13 @@ export class InventoryPanel {
         </section>
         <section class="character-inventory inventory-pack" id="character-section-1" data-section="1" aria-labelledby="inventory-title">
           <div class="character-section-title character-inventory-heading"><h3 id="inventory-title">Inventory</h3><div class="character-heading-actions">
+            <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-sort="compact" aria-label="Sort inventory (R)" data-tooltip="Sort inventory (R)" data-tooltip-placement="below">${uiIcon('sort')}</button>
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-sort-filter aria-label="Filter inventory" aria-haspopup="dialog" aria-expanded="false" aria-controls="inventory-sort-dialog" data-tooltip="Filter inventory" data-tooltip-placement="below">${uiIcon('sortFilter')}</button>
             <button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-equip-best aria-label="Equip best items" data-tooltip="Equip best items" data-tooltip-placement="below">${uiIcon('equipBest')}</button>
             ${actions.lock ? `<button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-lock-mode aria-pressed="false" aria-label="Lock items" data-tooltip="Lock items: click a piece to protect it from selling or dropping. L on a focused item also toggles its lock." data-tooltip-placement="below">${ITEM_LOCK_ICON}</button>` : ''}
             ${actions.drop ? `<span class="character-ground-drop" data-ground-drop role="img" tabindex="0" aria-label="Drag an item here to drop it on the ground" data-tooltip="Drag an item here to drop it on the ground." data-tooltip-placement="below">${uiIcon('dropItem')}</span>` : ''}
           </div><div class="character-inventory-counts"><span class="character-gold" data-gold></span></div></div>
-          <div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sortFilter')} Auto-sort</button><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
+          <div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sort')} Auto-sort <small>(R)</small></button><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
           <div class="character-grid-scroll ui-item-grid-scroll">
             <div class="character-bag character-tetris" role="group" aria-label="Inventory, ${PACK_COLUMNS} columns by ${PACK_ROWS} rows">
               ${Array.from({ length: PACK_CELLS }, (_, cell) => `<button type="button" class="character-grid-cell" data-cell="${cell}" data-location="cell-${cell}" style="grid-column:${cell % PACK_COLUMNS + 1};grid-row:${Math.floor(cell / PACK_COLUMNS) + 1}" aria-label="Pack row ${Math.floor(cell / PACK_COLUMNS) + 1}, column ${cell % PACK_COLUMNS + 1}"></button>`).join('')}
@@ -608,6 +609,9 @@ export class InventoryPanel {
       if (event.key === 'Escape' && this.dismissPopup()) { event.preventDefault(); event.stopPropagation(); return; }
       if (event.isTrusted) this.element.classList.remove('is-controller');
       if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key.toLowerCase() === 'r' && !event.repeat && !this.popup) {
+        event.preventDefault(); this.hideTooltip(); this.actions.sort('compact'); return;
+      }
       const location = this.locationFrom(event.target);
       if(location&&event.key.toLowerCase()==='l'&&this.actions.lock){const item=this.itemAt(location);if(item&&!event.repeat)this.actions.lock(item.id,!item.locked);event.preventDefault();return;}
       if (location && (event.key === 'Enter' || event.key === ' ')) {
