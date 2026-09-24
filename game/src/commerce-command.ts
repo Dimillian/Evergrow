@@ -10,9 +10,13 @@ export async function executeService(player: Player, npc: TownNPC, world: WorldQ
   if (!canInteractNPC(npc, player, world)) return { ok: false, message: 'This service is no longer in reach.' };
   const plan = planService(player.character, npc, player.level, quote);
   if (!plan.ok) return plan;
-  const candidate = { ...player, character: plan.character }; refreshCharacter(candidate);
+  const candidate = { ...player, character: plan.character };
+  if (quote.request.type === 'respec') { candidate.affixBuffs = undefined; candidate.skillEffects = undefined; }
+  refreshCharacter(candidate);
   const result = await persist(plan.character, candidate.hp, candidate.mana);
   if (!result.ok) return { ok: false, message: result.message ?? 'Could not save. No gold or items changed.' };
-  player.character = plan.character; if(quote.request.type==='respec') player.skillCooldowns={}; refreshCharacter(player);
+  player.character = plan.character;
+  if (quote.request.type === 'respec') { player.skillCooldowns = {}; player.affixBuffs = undefined; player.skillEffects = undefined; }
+  refreshCharacter(player);
   return { ok: true, message: plan.message };
 }

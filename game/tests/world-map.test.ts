@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WorldMap, mapTileBlend, mapTerrainSize, isMapSampleRevealed, selectMapPOIs, mapRegionLabels, MAP_TERRAIN_RULES, mapRoadPaths, pickMapPOI, chartedMapArea, getMinimapRect, projectMapPoint, unprojectMapPoint, zoomMapAt } from '../src/world-map.ts';
 import type { MapView } from '../src/world-map.ts';
-import { fitMapBounds, MAP_ZOOM } from '../src/map-view.ts';
+import { fitMapBounds, getMinimapChartRect, getMinimapHomeRect, MAP_ZOOM } from '../src/map-view.ts';
 import type { WorldPOI } from '../src/world-pois.ts';
 import { World } from '../src/world.ts';
 import { biomeMapColor } from '../src/biomes.ts';
@@ -20,7 +20,9 @@ test('area inspection reveals level only in charted terrain and respects sanctua
   assert.match(chartedMapArea(world, revealed, 6400, 0)!.label, /^Lv [1-9][0-9]*–[1-9][0-9]*/);
   assert.match(chartedMapArea(world, revealed, -6400, 0)!.label, /^Lv [1-9][0-9]*–[1-9][0-9]*/);
   assert.equal(chartedMapArea(world, revealed, 0, 0)?.label, 'Sanctuary');
-  assert.equal(chartedMapArea(world, revealed, 1, 0)!.name, getZoneAt(1, 0).name);
+  assert.equal(chartedMapArea(world, revealed, 1, 0)!.name, getZoneAt(1, 0).districtName);
+  assert.ok(!chartedMapArea(world, revealed, 1, 0)!.name.includes(' · '), 'the biome is shown separately');
+  assert.equal(chartedMapArea(world, revealed, 1, 0)!.biome, 'Deadwood');
 });
 
 test('world/map projection is reversible at fractional centers and negative coordinates', () => {
@@ -56,6 +58,14 @@ test('minimap bounds leave a margin in narrow and desktop viewports', () => {
   for (const [w, h] of [[390, 844], [540, 450], [960, 600], [1440, 900]]) {
     const r = getMinimapRect(w, h);
     assert.ok(r.x > 0 && r.y > 0 && r.x + r.width < w && r.y + r.height < h);
+    const chart = getMinimapChartRect(r);
+    assert.ok(chart.x > r.x && chart.x + chart.width < r.x + r.width);
+    assert.ok(chart.y >= r.y + 20 && chart.y + chart.height <= r.y + r.height - 16,
+      'chart markers stay clear of the location header and shared level/time footer');
+    const home = getMinimapHomeRect(w, h);
+    assert.ok(home.x > chart.x && home.x + home.width < chart.x + chart.width / 2);
+    assert.ok(home.y > chart.y + chart.height / 2 && home.y + home.height < chart.y + chart.height,
+      'Home stays in the lower-left chart corner, clear of metadata and the map center');
   }
 });
 
@@ -122,7 +132,8 @@ test('first map draw measures populated footer layout and aligns the canvas with
     opened: true, disposed: false, frame: 0, recenter: null, player,
     view: { x: 0, y: 0, width: 800, height: 500, centerX: player.x, centerY: player.y, zoom: .17 },
     canvas: { width: 300, height: 150 }, focusPing: { style: {} }, viewport, discoveries, status, coordinates,
-    exploration: { discoveredPOICount: 12, revision: 1, storageStatus: 'saved', persistenceMessage: '' },
+    legend: { setAvailable() {} },
+    exploration: { getDiscoveredPOIs: () => [], discoveredPOICount: 12, revision: 1, storageStatus: 'saved', persistenceMessage: '' },
     world: { isSanctuary: () => true },
     drawChart() {
       draws++;
@@ -158,7 +169,7 @@ test('journey focus holds on the player, eases to the objective, and pings its l
     opened: true, disposed: false, player, pingAnimations: [], focusTarget: null,
     focusPing: { hidden: true, style: {}, children: [ring, ring] },
     view: { x: 0, y: 0, width: 900, height: 560, centerX: player.x, centerY: player.y, zoom: .17 },
-    exploration: {}, tooltip: { hidden: true }, invalidate() {}, prepareLayout() { return true; }, drawChart() {},
+    exploration: {}, tooltip: { hidden: true }, areaInfo: { hidden: true }, invalidate() {}, prepareLayout() { return true; }, drawChart() {},
   });
   map.focusJourney(target);
   map.render();

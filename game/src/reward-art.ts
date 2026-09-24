@@ -1,4 +1,5 @@
 import { treasurePose } from './treasure-flight.ts';
+import { dropIdleHop } from './drop-idle-motion.ts';
 import type { GroundGold } from './gold.ts';
 import { REWARD_FLIGHT_SECONDS, type RewardFeedback, type LevelCelebration, type JourneyCelebration } from './reward-feedback.ts';
 import { HUD_ART, getHUDLayout } from './hud-layout.ts';
@@ -24,7 +25,8 @@ export function drawGroundGold(c: CanvasRenderingContext2D, piles: readonly Grou
       const spread = Math.sqrt(i) * 5 * Math.min(1, pile.age * 4);
       const bounce = reducedMotion || pile.flight ? 0 : Math.abs(Math.sin(pile.age * 11)) * (23 + i * 2) * Math.max(0, 1 - pile.age / .8);
       const x = flight.x + Math.cos(phase) * spread, y = flight.y-flight.height + Math.sin(phase) * spread * .5;
-      c.save(); c.translate(x, y - bounce - i * .4);
+      const hop = !reducedMotion && flight.landed && pile.age > 1.2 ? dropIdleHop(time, pile.id, i) : 0;
+      c.save(); c.translate(x, y - bounce - hop - i * .4);
       c.rotate(reducedMotion ? 0 : Math.sin(pile.age * 9 + phase) * Math.max(0, 1 - pile.age / .8) * 1.4);
       coin(c, 0, 0, 1.35); c.restore();
     }

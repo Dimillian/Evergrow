@@ -1,3 +1,4 @@
+import { validWorldDifficulty } from './world-difficulty.ts';
 import { encounterMemberLevel, encounterRewardLevel, validEncounterScale } from './encounter-scaling.ts';
 import { eventRecipe, recipeMembers } from './event-recipes.ts';
 import { object, number, integer, text } from './item-validation.ts';
@@ -14,7 +15,7 @@ export function validEvents(v: unknown): v is EventState {
     return false;
   if (v.claimed !== undefined && (!Array.isArray(v.claimed) || !v.claimed.every(id => text(id, 180) && (id.startsWith('site:') || id.startsWith('reliquary:')) && !Object.hasOwn(v.sites as object, id)) || new Set(v.claimed).size !== v.claimed.length)) return false;
   for (const [id, r] of Object.entries(v.sites)) {
-    if (!object(r) || (r.scaling !== undefined && (!validEncounterScale(r.scaling) || r.level !== encounterRewardLevel(r.scaling))) || !text(id, 180) || !id.startsWith('site:') && !id.startsWith('reliquary:') || r.id !== id
+    if (!object(r) || (r.difficulty!==undefined&&!validWorldDifficulty(r.difficulty)) || (r.scaling !== undefined && (!validEncounterScale(r.scaling) || r.level !== encounterRewardLevel(r.scaling))) || !text(id, 180) || !id.startsWith('site:') && !id.startsWith('reliquary:') || r.id !== id
       || !isEventKind(String(r.kind)) || !text(r.name, 100)
       || !number(r.x, -4e7, 4e7) || !number(r.y, -4e7, 4e7) || !integer(r.level, 1, 1e6) || !integer(r.seed, 0, 4294967295)
       || !Object.hasOwn(BIOMES, String(r.biome)) || !['active', 'paused', 'completed', 'claimed'].includes(String(r.phase))

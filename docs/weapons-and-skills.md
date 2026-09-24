@@ -30,7 +30,7 @@ When an otherwise eligible basic attack or assigned skill fails its mana check, 
 | Cinder Wand | `cinder-wand` | 1 | 16 | 1.92 | 440 | Fire bolt |
 | Hoarfrost Wand | `hoarfrost-wand` | 1 | 14 | 2.08 | 420 | Frost bolt |
 | Spark Wand | `spark-wand` | 1 | 11 | 2.48 | 460 | Lightning bolt |
-| Star Wand | `star-wand` | 1 | 17 | 1.84 | 450 | Arcane bolt |
+| Star Wand | `star-wand` | 1 | 17 | 1.84 | 450 | Radiant bolt (Arcane) |
 | Weathered Sword — starter | `weathered-sword` | 2 | 24 | 1.6 | 60 | Physical swing |
 | Unarmed — empty main hand | `unarmed` | 1 | 5 | 1.44 | 24 | Physical strike |
 
@@ -123,13 +123,15 @@ Fireball and Meteor recipes specify a three-second burn at 12% pre-critical dama
 
 Gear, XP, attributes, allocations, assignments, resources and skill cooldowns persist in each character’s local save slot. Each character also has a separate explored map. Temporary statuses, projectiles and ground effects are rebuilt when continuing; see [Character saves](character-saves.md). The expanded schools replace the earlier six-skill layout and IDs directly; no legacy save or skill adapter is retained.
 
-This is a concrete initial catalog for testing. Element labels and status effects are implemented, but an elemental resistance/penetration model, ammunition, durability and respecs are not. Persistent characters are implemented through the eight-slot save system. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
+This is a concrete initial catalog for testing. Elemental resistance and status effects are implemented. Full skill respec is available in the atlas and at the enchanter for 25 gold per refunded point; see [skill progression](skill-progression.md). Ammunition and durability are not implemented. Persistent characters are implemented through the eight-slot save system. Skills remain authored action recipes, rather than a general scripting system. Balance and combat feel remain for the user's playtesting.
 
 See [character systems](character-systems.md) for item tiers, point rewards, stat formulas, and inventory rules. Add weapon/profile content in `weapon-content.ts`, shared skill requirements/costs/icons in `skill-content.ts`, typed execution profiles in `skill-execution-content.ts`, execution-kind handlers in `skill-combat.ts`, projectile behavior in `projectile-combat.ts`, shared statuses in `combat-status.ts`, and delayed pulses in `ground-effects.ts`. Damage/death and rewards live in `combat-damage.ts` and `combat-rewards.ts`; Simulation preserves their ordered fixed-tick integration. Rendering consumes those definitions and events without awarding damage or effects.
 
 ## Action speed and efficiency
 
 Melee and bows use attack speed. Staff innate bolts and staff-or-wand-required spells use cast speed, independently of attack speed. Action duration is the reciprocal of the compatible weapon's effective actions per second (bounded to 0.25–12). Sweeps and casting recovery snapshot that duration; changing gear cannot shorten an action already underway. Dash travel retains its authored duration, while action recovery lasts at least that long. Casting poses, charging lights and dodge-cancel timing use the same snapshotted duration. Cooldown begins at activation and is separate from recovery.
+
+A deliberate skill press queues one next action through the current attack, cast, dash or dodge recovery, with 110 ms of grace afterward. A newer press replaces it; held basic attacks, right-click repeats and Whirlwind channel repeats cannot overwrite it. Movement continues during casting. The queue does not wait through a longer skill cooldown or mana shortage, and pause, focus changes and UI combat blocking clear it. Meteor and Cataclysm retain their separate, telegraphed impact delays after activation.
 
 Gear can roll Invocation (cast speed) and Efficiency (mana-cost reduction), with bounded percentage scaling. Inner Flame nodes grant cast speed; Battle Rhythm, Keen Pursuit and Quiet Current grant mana efficiency. Existing cooldown-reduction gear and nodes affect the second-row skills; a zero cooldown stays zero. Character statistics show both speed bonuses and mana-cost reduction. HUD affordability and atlas costs use the actual derived values.
 
@@ -194,3 +196,30 @@ Instant skills retain immediate contact/release and begin their pose at that con
 Critical chance/multiplier and life on hit now travel with attacks, dashes, projectiles and delayed direct-damage pulses. Equipment changes after acceptance cannot rewrite these offensive values. Periodic burns still cannot crit or trigger life on hit. Shield skills continue to derive damage and cadence from the held main weapon, including wand + shield; this existing hybrid rule is retained.
 
 The code audit fixes are covered by headless regression tests. No automated gameplay, browser visual acceptance or listening test was performed; the user owns combat-feel and visual testing. This pass preserves saves and introduces no progress reset.
+
+
+## Radiant wand basics · local September 14, 2026
+
+Wand & Grimoire now starts with **Star Wand + Astral Grimoire**. The Star Wand fires a narrow ivory-gold light dart with two short ribbons, etched wake fragments, a tip-anchored release seal and a brief star/seal impact. Its held crystal and the Astral Grimoire share restrained warm light; the book seal brightens with the snapshotted casting action. The existing wood, leather and brass geometry, world lighting and fixed CRT treatment remain authoritative. A short chime replaces the generic basic-cast rush. Radiant flight has no continuous particle emitter; release/impact effects share the existing bounded budgets, and reduced motion freezes decorative drift/expansion.
+
+Radiant is a **projectile presentation mapped to Arcane damage**, like Spirit. There is no new resistance, affix, healing, blind or status effect. Star Wand retains 17 base damage, 1.84 base actions/second, 450 reach and two base mana per bolt. Astral Grimoire retains +12 mana and +3% cooldown reduction at its authored base. This starter replaces the Cinder Wand's fire/burn and Ember Codex's mana regeneration with direct Arcane hits and cooldown support. Before character bonuses, Star Wand deals 31.28 direct damage/second; Cinder Wand deals 30.72 direct damage/second plus its non-stacking burn. These existing profile values are the first playtest baseline, not a promise of equal sustained output.
+
+`basicProjectileStyle` selects the basic's style from the acting weapon; the action and projectile retain it after gear changes. Star Wand works in either hand and needs no grimoire to fire radiant bolts. Fire/frost/lightning wands retain their elements. Assigned spells retain their authored effects, including Fireball's fire and burning. Resistance mapping, elemental hit accounting and Elemental Resonance treat radiant as Arcane; critical hits and Spellweave retain their ordinary rules.
+
+No save format change or progress reset. Existing Star Wands and ordinary Astral Grimoires receive the new art on presentation; owned Cinder Wands and Ember Codices remain fire equipment. The Broken Seal retains its authored Unique violet glow and original seal core, without the ordinary grimoire's radiant casting seal. New characters receive the revised starter pairing. Normal generation, trading and improvement recipes are unchanged. `/weapon-lights.html?sample=5&attack=0.42` stages the radiant pairing with the shared runtime art and basic-style resolver in disposable memory.
+
+## Arc Lightning travel — September 15, 2026
+
+Arc Lightning now releases a sequential traveling chain instead of resolving the whole pack on the casting tick. Base potency is 1.25× weapon spell damage (previously 1.4×, about 11% less); mana, recovery, target count and per-jump falloff are unchanged. Each flight takes 55 ms plus distance / 1,400, bounded to 90–300 ms. Damage and life on hit happen on arrival, with offense snapshotted at cast. The next living, visible on-screen target is chosen from the current impact position. Dead targets can still conduct onward without duplicate damage or rewards. A newly blocked line ends the chain. Storm Circuit revisits, Static Thread, Concentrated Current and Stormglass keep their existing roles.
+
+`chain-lightning.ts` owns the transient fixed-tick flights (24 simultaneous paid casts, rejected before mana payment at capacity). Death, relocation and checkpoint restoration discard them. No save payload change. `chain-lightning-art.ts` draws growing white-blue leaders, violet forked filaments, restrained sparks and arrival halos; moving tips contribute to the existing bounded scene-light budget. Reduced motion retains sequential arrival but suppresses moving debris and restless branches. Ground-container discharges and other skills retain their current hit timing.
+
+Storm Circuit tuning: eight hits with revisits retain the base 78% damage per jump, and cost 35% more mana (previously 70% retention and +70% mana). A full eight-hit chain deals about 21% more combined damage than the base five-hit chain. Travel speed and revisit healing restrictions are unchanged; Static Thread and Concentrated Current are unchanged.
+
+## Elemental spell presentation — 2026-09-15
+
+Fireball and Frost Lance now have dedicated player-skill silhouettes: a turbulent hot core and ember wake, or a faceted spear with crystal fragments. Innate bolts and enemy projectiles keep their own art. Frost Lance emits a small visual shatter at each confirmed piercing contact, without adding damage or changing its pierce budget. Ice Nova spreads branching ground frost and rising crystals; Absolute Zero uses a larger crystal crown and visible frost gathering during its existing delay. The expanding fronts are visual aftermath of confirmed hits, not a new damage delay.
+
+Meteor and Cataclysm retain their scheduled descent and staggered impacts, with gathering landing light, trailing embers, a pressure ring, flame lobes, molten cracks and ballistic stone fragments. Tempest follows its live field with an open rotating boundary; peripheral lightning and surface-light intensity read its actual pulse clock. The centre stays transparent. Reduced motion freezes orbit/trail motion and removes ballistic debris; existing spell timings, costs, damage and Techniques remain unchanged.
+
+`elemental-spell-art.ts` owns stateless bounded art, reused by projectile, ground and confirmed-impact presentation. Existing area/link retention and scene-light caps are unchanged. Particles are derived from a fixed number of samples rather than accumulated emitters. Spell playground previews continue to use the runtime renderers.

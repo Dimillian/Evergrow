@@ -1,3 +1,4 @@
+import { skillTooltipMarkup } from './skill-tree-tooltip.ts';
 import { controls } from './control-preferences.ts';
 import { SKILL_ACTIONS } from './control-bindings.ts';
 import { skillIconSVG } from './skill-icon.ts';
@@ -5,7 +6,7 @@ import type { Player } from './model.ts';
 import { HUD_ART, HUD_SKILL_SLOTS } from './hud-layout.ts';
 import { SKILL_DEFINITIONS, canUseSkill, skillRequirementLabel } from './skill-content.ts';
 import { resolveSkill } from './skill-progression.ts';
-import { unlockedSkills } from './skill-tree.ts';
+import { SKILL_NODES, unlockedSkills } from './skill-tree.ts';
 import { escapeUI } from './ui-components.ts';
 
 export const INVENTORY_SKILL_BINDINGS = HUD_SKILL_SLOTS.slice(1);
@@ -37,9 +38,18 @@ export function inventorySkillPickerMarkup(player: Player, slot: number): string
     const compatible = canUseSkill(skill.id, player.equipment), assigned = player.character.skillSlots.indexOf(skill.id);
     const selected = assigned === slot;
     const detail = `${resolved.reservation?`${resolved.reservation}% reserved · Auto active`:`${resolved.mana} mana`}${compatible ? '' : ` · Requires ${skillRequirementLabel(skill.requirement)}`}`;
-    return `<button type="button" class="inventory-skill-choice" data-assign-skill="${skill.id}" aria-pressed="${selected}" title="${escapeUI(detail)}" style="--skill-color:${skill.color}">
+    return `<button type="button" class="inventory-skill-choice" data-assign-skill="${skill.id}" aria-pressed="${selected}" style="--skill-color:${skill.color}">
       <span class="inventory-skill-icon">${skillIconSVG(skill.id, 24)}</span><span class="inventory-skill-copy"><strong>${escapeUI(resolved.variant?.name ?? skill.name)}</strong><small class="${compatible ? '' : 'is-loss'}">${escapeUI(detail)}</small></span>
       <span class="inventory-skill-binding">${selected ? '✓' : assigned >= 0 ? `← ${escapeUI(controls.label(SKILL_ACTIONS[assigned]))}` : ''}</span></button>`;
   }).join('') : '<p class="inventory-skill-empty">No unlocked skills yet. Learn one in the skill atlas.</p>'}</div>
   <footer class="inventory-skill-picker-footer"><button type="button" class="ui-button ui-button--quiet" data-assign-skill="" ${player.character.skillSlots[slot] ? '' : 'disabled'}>Clear ${binding}</button><button type="button" class="ui-button ui-button--quiet" data-skill-details>Skill details</button></footer>`;
+}
+
+/** Use the same resolved rank, Technique, costs and effects as the atlas. */
+export function inventorySkillTooltipMarkup(player: Player, id: import('./character-types.ts').SkillId): string {
+  const node = SKILL_NODES.get(`skill:${id}`);
+  if (!node) return '';
+  return skillTooltipMarkup(node, { allocated: new Set(player.character.allocatedNodes), reachable: new Set(),
+    routes: new Map(), level: player.level, sheet: player.character, costStats: player.derived })
+    + (!canUseSkill(id, player.equipment) ? `<p class="is-loss">Requires ${escapeUI(skillRequirementLabel(SKILL_DEFINITIONS[id].requirement))}</p>` : '');
 }

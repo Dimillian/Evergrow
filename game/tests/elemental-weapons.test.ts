@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { generateItem, deriveItem, createCharacterSheet, itemAffixPool } from '../src/items.ts';
+import { generateItem, generateUnique, deriveItem, createCharacterSheet, itemAffixPool } from '../src/items.ts';
+import { focusGlowColor, isRadiantGrimoire, RADIANT_COLORS } from '../src/radiant-content.ts';
+import { focusShapes } from '../src/focus-shapes.ts';
 import { ELEMENTAL_AFFIXES, isElementalAffix, weaponImpactStyle } from '../src/elemental-weapon.ts';
 import { WEAPON_PROFILES } from '../src/weapon-content.ts';
 import { improveItem } from '../src/item-improvement.ts';
@@ -87,6 +89,26 @@ test('caster lights follow actual tip geometry at all facings; offhand focus has
       assert.deepEqual(heldEquipmentLights(pose, 0, 0), reduced);
       pose.dead = true; assert.deepEqual(heldEquipmentLights(pose, 0, 0), []);
     }
+  }
+});
+test('ordinary Astral Grimoires gain radiant art while The Broken Seal retains its Unique palette', () => {
+  const sim = new Simulation(world, { spawn: false });
+  sim.player.character = createCharacterSheet('wand');
+  const ordinary = sim.player.character.equipped.offhand!;
+  const unique = generateUnique(7, 1, 'broken-seal');
+  for (const source of [ordinary, unique]) for (const item of [source, deriveItem(source), JSON.parse(JSON.stringify(source)) as Item]) {
+    const before = JSON.stringify(item), visual = item.focus!.visual;
+    const radiant = item.tier !== 'unique';
+    const glow = radiant ? RADIANT_COLORS.light : visual.glow;
+    assert.ok(validItem(item));
+    assert.equal(isRadiantGrimoire(visual), radiant, 'only the ordinary grimoire receives the radiant casting seal');
+    assert.equal(focusGlowColor(visual), glow);
+    const shapes = focusShapes(visual);
+    assert.ok(shapes.some(shape => shape.stroke === glow && shape.surface?.material === 'gem'));
+    assert.ok(shapes.some(shape => shape.fill === (radiant ? RADIANT_COLORS.core : '#f0e4ff')));
+    sim.player.character.equipped.offhand = item; refreshCharacter(sim.player);
+    assert.equal(heldEquipmentLights(playerPose(sim.player, 0), 0, 0)[1].color, glow);
+    assert.equal(JSON.stringify(item), before, 'presentation must not rewrite the saved item');
   }
 });
 test('saved enchanted equipment round-trips, and forged or mismatched elemental projections are rejected', async () => {

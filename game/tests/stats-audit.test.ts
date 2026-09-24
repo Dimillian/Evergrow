@@ -55,7 +55,7 @@ test('channel upkeep contributes actual mana spent, with no charge for a cancell
 test('a level-up kill uses pre-award gold bonuses, then unlocks eligible charms for future kills',()=>{
   const run=(charm:boolean)=>{
     const sim=new Simulation(world,{spawn:false}),p=sim.player;
-    if(charm){let item=generateItem(333,4,'charm','amber-pebble','common');item.affixes[0]={name:'Prosperity',stat:'goldFindPercent',value:0};item=deriveItem(item);item.affixes[0].value=100;addInventoryItem(p.character,item);}
+    if(charm){let item=generateItem(333,4,'charm','amber-pebble','common');item.affixes[0]={name:'Prosperity',stat:'goldFindPercent',value:0};item=deriveItem(item);item.affixes[0].value=100;addInventoryItem(p.character,item);p.character.inventoryLayout![item.id]=PACK_CELLS;}
     refreshCharacter(p);assert.equal(p.derived.goldFindMultiplier,1);p.xp=xpForNextLevel(1)-1;
     const e={...sim.spawnEnemy('stalker',40,0)!,rank:'elite' as const,level:1,lootSeed:741,xpReward:20};
     awardKillRewards(e,1,0,{player:p,groundItems:sim.groundItems,groundGold:sim.groundGold,pickups:sim.pickups,nextId:()=>900,emit:()=>{}});
@@ -108,7 +108,7 @@ test('all passive node bonuses merge once and real gear and charms share the sam
   const ids=SKILL_TREE.nodes.filter(n=>Object.keys(n.bonuses).length).map(n=>n.id),tree=getTreeBonuses(ids);
   assert.deepEqual(getTreeBonuses([...ids,...ids,'missing']),tree);
   const ring=generateItem(87,1,'ring');ring.implicit={strength:4,maxHp:20,fireResistance:10};ring.affixes=[];sheet.equipped.ring1=ring;
-  const charm=generateItem(133,1,'charm','jade-pebble','common');charm.affixes=[{name:'Test',stat:'strength',value:6},{name:'Test',stat:'fireResistance',value:5}];addInventoryItem(sheet,charm);
+  const charm=generateItem(133,1,'charm','jade-pebble','common');charm.affixes=[{name:'Test',stat:'strength',value:6},{name:'Test',stat:'fireResistance',value:5}];addInventoryItem(sheet,charm);sheet.inventoryLayout![charm.id]=72;
   assert.ok(sheet.inventoryLayout![charm.id]>=PACK_CELLS);
   const actual=deriveCharacterStats(sheet,{strength:2,maxHp:5},1);
   const empty=createCharacterSheet();for(const slot of EQUIPMENT_SLOTS)empty.equipped[slot]=null;

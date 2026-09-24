@@ -12,7 +12,17 @@
   overflow: auto;
   overscroll-behavior: contain;
 }
-.ground-loot-tooltip .ui-item-hover-card { border-radius: 0; }
+.ground-loot-tooltip .ui-item-hover-card { border-radius: 0; max-height: min(760px, calc(100dvh - 32px)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.ground-loot-tooltip .ground-comparison-title { color: #b9ccd0; font-size: 11px; letter-spacing: .04em; margin-bottom: 7px; }
+.ground-loot-tooltip .ground-equip-summary p { margin: 0 0 6px; color: #9faeb5; }
+.ground-loot-tooltip .ground-comparison-hint { margin-top: 10px; font-size: 10px; color: #94a5ad; }
+.ground-loot-tooltip kbd { font: inherit; color: #ccd6d6; border: 1px solid #b6cbd32b; padding: 1px 4px; }
+.ground-loot-tooltip .ground-equipped-item { border-top: 1px solid #b6cbd32b; margin-top: 16px; padding-top: 14px; }
+.ground-loot-tooltip .ground-equipped-item .ui-item-heading h4 { color: var(--item-color); }
+@media (min-width: 681px) {
+  .ground-loot-tooltip .ground-loot-candidate { order: 2; }
+  .ground-loot-tooltip .ground-loot-details { order: 1; }
+}
 .ground-loot-tooltip .ui-item-equipped-inline { display: inline-flex; align-items: center; padding: 2px 6px; border: 1px solid #aacbb966; border-radius: 999px; background: #243c35; font-size: 9px; line-height: 1; color: #c7ead4; white-space: nowrap; }
 .ground-loot-tooltip .ui-item-inline-change { font-size: 11px; white-space: nowrap; }
 @media (max-width: 680px) {

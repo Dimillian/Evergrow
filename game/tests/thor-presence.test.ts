@@ -6,7 +6,7 @@ import { thorSnapshot } from '../src/thor-state.ts';
 import { initialPlayer } from '../src/simulation.ts';
 import { freshJourneys } from '../src/journey-state.ts';
 import { isGameUIPoint } from '../src/ui-hit-test.ts';
-import { getMinimapRect, getPortalControlRect } from '../src/map-view.ts';
+import { getMinimapRect, getJourneyLogAnchor } from '../src/map-view.ts';
 
 test('companion transport availability is sampled at telemetry cadence and recovers after loss', t=>{
   const old=Object.getOwnPropertyDescriptor(globalThis,'window');
@@ -28,15 +28,19 @@ test('companion transport availability is sampled at telemetry cadence and recov
   const browser=new ThorNative({snapshot:()=>{throw new Error('No native bridge');},command:()=>{},background:()=>{},foreground:()=>{},back:()=>{}});
   browser.update(1000);browser.dispose();
 });
-test('map, portal and quest log share one navigation hit region visibility',()=>{
-  const width=900,height=600,map=getMinimapRect(width,height),portal=getPortalControlRect(width,height);
-  assert.equal(isGameUIPoint(map.x+20,map.y+30,width,height,null,true),true);
-  assert.equal(isGameUIPoint(map.x+20,map.y+30,width,height,null,false),false);
-  assert.equal(isGameUIPoint(portal.x+10,portal.y+10,width,height,null,true),true);
-  assert.equal(isGameUIPoint(portal.x+10,portal.y+10,width,height,null,false),false);
-  const log={x:map.x,y:portal.y+portal.height,width:map.width,height:80};
-  assert.equal(isGameUIPoint(log.x+10,log.y+20,width,height,log,true),true);
-  assert.equal(isGameUIPoint(log.x+10,log.y+20,width,height,log,false),false);
+test('right-side map and Journey log share visibility while their gap remains world input',()=>{
+  for(const [width,height] of [[540,450],[900,600],[1600,680]]){
+    const map=getMinimapRect(width,height),log={...getJourneyLogAnchor(width,height),height:80};
+    assert.equal(map.x+map.width,log.x+log.width,'both modules align to the right edge');
+    assert.ok(log.y-map.y-map.height>=20,'the modules have a visible gap');
+    assert.equal(isGameUIPoint(map.x+20,map.y+30,width,height,log,true),true);
+    assert.equal(isGameUIPoint(map.x+20,map.y+30,width,height,log,false),false);
+    assert.equal(isGameUIPoint(log.x+10,log.y+20,width,height,log,true),true);
+    assert.equal(isGameUIPoint(log.x+10,log.y+20,width,height,log,false),false);
+    for(const x of [map.x+1,map.x+map.width/2,map.x+map.width-1])
+      assert.equal(isGameUIPoint(x,(map.y+map.height+log.y)/2,width,height,log,true),false,'no invisible portal control remains');
+    assert.equal(isGameUIPoint(log.x+10,log.y+20,width,height,null,true),false,'a hidden log does not reserve space');
+  }
 });
 test('native companion allowlist forwards tab presence alongside gameplay commands',()=>{
   const source=readFileSync(new URL('../../android/app/src/main/java/com/dimillian/evergrow/MainActivity.kt',import.meta.url),'utf8');

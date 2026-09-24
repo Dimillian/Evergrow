@@ -45,7 +45,7 @@ async function boot() {
       reset();
     }
     stageForestPlayer(simulation.player, scene, time); simulation.time = time;
-    renderer.render(simulation, sceneWorld, dt, { phase: 'paused', reducedMotion: reduced.matches, fps: 0, debug: false });
+    renderer.render(simulation, sceneWorld, dt, { phase: 'paused', reducedMotion: reduced.matches });
     post!.render(renderer.canvas, time);
     c.fillStyle = '#091318'; c.fillRect(0, 0, 960, 640); c.drawImage(display, 0, 32);
     c.font = '18px "Evergrow Numerals", "Pixelify Sans"'; c.fillStyle = '#d8d8ab'; c.fillText('EVERGROW / THE LIVING FOREST', 16, 23);

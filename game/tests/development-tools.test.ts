@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { TOOLS, WORKSPACES, safeToolPath, toolForPath } from '../src/tools/catalog.ts';
 import { forgeItem, forgeProfiles, forgeMaterials } from '../src/tools/forge-model.ts';
 import { ITEM_KINDS, deriveItem } from '../src/items.ts';
-import { SkillStudy, studyWeapons } from '../src/tools/skill-scene.ts';
+import { SkillStudy, studyWeapons } from '../src/skill-showcase.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
 import { SKILL_SPECIALIZATIONS } from '../src/skill-progression.ts';
 import { DATASETS } from '../src/tools/datasets.ts';

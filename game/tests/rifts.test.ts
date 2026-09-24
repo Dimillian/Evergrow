@@ -1,3 +1,4 @@
+import { chronicleValues } from '../src/chronicle.ts';
 import { dungeonRunChest, dungeonRunExit } from '../src/dungeon-locations.ts';
 import { enemyTraitBuffs } from '../src/enemy-debuffs.ts';
 import test from 'node:test';
@@ -104,8 +105,8 @@ test('successful chest is atomic, guaranteed key, exactly once, and survives sav
  const m=floor.members.find(m=>m.id==='warden')!,boss=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;boss.hp=0;run.states.warden.hp=0;riftKill(sim,boss);
  assert.equal(run.rift!.phase,'complete');assert.equal(sim.expeditions.rifts!.clears,1);assert.equal(sim.expeditions.rifts!.best[0].seconds,405);
  sim.player.x=floor.chests[2].x;sim.player.y=floor.chests[2].y;
- assert.equal(dungeonChestProblem(sim,2),null);assert.equal((await claimDungeonChest(sim,2,()=>({ok:false,message:'disk'}))).ok,false);assert.equal(sim.groundItems.length,0);assert.equal(run.rift!.claimed,false);
- assert.equal((await claimDungeonChest(sim,2,ok)).ok,true);assert.equal(sim.groundItems.filter(d=>d.item.kind==='riftKey').length,1);assert.ok(sim.groundItems.length>=9);assert.ok(sim.groundGold.length);
+ assert.equal(dungeonChestProblem(sim,2),null);const failed=await claimDungeonChest(sim,2,()=>({ok:false,message:'disk'}));assert.equal(failed.ok,false);assert.equal(failed.celebration,undefined);assert.equal(sim.groundItems.length,0);assert.equal(run.rift!.claimed,false);
+ const claimed=await claimDungeonChest(sim,2,ok);assert.equal(claimed.ok,true);assert.deepEqual(claimed.celebration,{type:'blast',x:boss.x,y:boss.y,radius:110,duration:.7,color:'#ef739d'});assert.equal(sim.groundItems.filter(d=>d.item.kind==='riftKey').length,1);assert.ok(sim.groundItems.length>=9);assert.ok(sim.groundGold.length);
  assert.equal((await claimDungeonChest(sim,2,ok)).ok,false);const checkpoint=sim.captureCheckpoint();assert.ok(validExpeditions(checkpoint.expeditions));
  const saved=decodeCharacterSave(JSON.stringify({version:4,id:'test',name:'Rift',worldSeed:7319,worldVersion:10,createdAt:1,updatedAt:2,checkpoint}));assert.ok(saved,'complete checkpoint validates');assert.ok(decodeCharacterSave(JSON.stringify(saved)),'decoded keys remain valid on the next save');
 });
@@ -155,10 +156,10 @@ test('a crowded reward floor preserves dropped items and retries only outstandin
  boss.hp=0;riftKill(sim,boss);sim.player.x=floor.chests[2].x;sim.player.y=floor.chests[2].y;
  sim.groundItems=Array.from({length:LOOT_RULES.maxGroundItems},(_,i)=>({id:1000+i,x:sim.player.x,y:sim.player.y,item:createRiftKey(i,25)}));
  const original=structuredClone(sim.groundItems);
- assert.equal((await claimDungeonChest(sim,2,ok)).ok,true); // Gold can still be delivered.
+ const first=await claimDungeonChest(sim,2,ok);assert.equal(first.ok,true);assert.ok(first.celebration); // Gold can still be delivered.
  assert.deepEqual(sim.groundItems,original);assert.equal(currentDungeon(sim.expeditions)!.rift!.claimed,false);
  const gold=structuredClone(sim.groundGold);sim.groundItems=[];
- assert.equal((await claimDungeonChest(sim,2,ok)).ok,true);
+ const retry=await claimDungeonChest(sim,2,ok);assert.equal(retry.ok,true);assert.equal(retry.celebration,undefined,'partial reward retries must not repeat the celebration');
  assert.equal(sim.groundItems.length,riftRewardItemCount(run.entrance.rift!));assert.deepEqual(sim.groundGold,gold);
  assert.equal(currentDungeon(sim.expeditions)!.rift!.claimed,true);
  assert.equal((await claimDungeonChest(sim,2,ok)).ok,false);
@@ -270,4 +271,35 @@ test('rank modifier icons retain names, actual effects and permanent lifetimes',
   buffs.forEach((buff,i)=>{assert.equal(buff.name,traits[i].name);assert.equal(buff.summary,traits[i].description);assert.equal(buff.color,traits[i].color);assert.equal(buff.persistent,true);});
  }
  assert.deepEqual(enemyTraitBuffs({kind:'stalker',rank:'elite',lootSeed:73,hp:0}),[]);
+});
+
+test('rift Chronicle records durable entry, actual kills, successful clears and no duplicate credit',async()=>{
+ const {sim,run,floor}=await setup();
+ const values=()=>chronicleValues(sim.player.chronicle!.sources);
+ assert.equal(values().riftAttempts,1);assert.equal(values().riftKeysUsed,1);
+ const member=floor.members.find(m=>m.id!=='warden')!;
+ const enemy=sim.spawnEnemy(member.kind,member.x,member.y,member.rank,{campId:run.entrance.id,memberId:member.id,lootSeed:member.seed,level:25})!;
+ run.rift!.points=599;riftKill(sim,enemy);
+ assert.equal(values().riftKills,1,'guardian transition does not credit dissolved monsters');
+ const m=floor.members.find(m=>m.id==='warden')!;
+ const boss=sim.spawnEnemy(m.kind,m.x,m.y,m.rank,{campId:run.entrance.id,memberId:m.id,lootSeed:m.seed,level:25})!;
+ run.rift!.elapsed=245;riftKill(sim,boss);riftKill(sim,boss);
+ assert.equal(values().riftClears,1);assert.equal(values().riftKeyedClears,1);
+ assert.equal(values().bestRiftSeconds,245);assert.equal(values().highestRiftLevel,25);
+ assert.equal(values().riftFastClears,1);assert.equal(values()['seen:riftBiome:'+run.entrance.biome],1);
+ const checkpoint=sim.captureCheckpoint();sim.restoreCheckpoint(checkpoint);
+ assert.equal(values().riftClears,1);assert.equal(values().riftAttempts,1);
+});
+test('rift failure outcomes count once and failed abandonment saves do not count',async()=>{
+ const {sim,run}=await setup(false);tickRift(sim,600);tickRift(sim,1);
+ assert.equal(chronicleValues(sim.player.chronicle!.sources).riftTimeouts,1);
+ const {sim:dead}=await setup(false);dead.player.dead=true;tickRift(dead,1);tickRift(dead,1);
+ assert.equal(chronicleValues(dead.player.chronicle!.sources).riftDeaths,1);
+ const {sim:leaving}=await setup(false);leaving.player.x=leaving.player.y=0;
+ const fail=await planDungeonTravel(leaving,{kind:'exit'},surface,()=>({ok:false,message:'disk'}));assert.equal(fail.ok,false);
+ assert.equal(chronicleValues(leaving.player.chronicle!.sources).riftAbandoned,undefined);
+ const success=await planDungeonTravel(leaving,{kind:'exit'},surface,ok);assert.ok(success.ok);
+ assert.equal(chronicleValues(success.checkpoint.chronicle!.sources).riftAbandoned,1);
+ assert.equal(chronicleValues(success.checkpoint.chronicle!.sources).riftDeaths,undefined);
+ assert.equal(run.rift!.phase,'failed');
 });

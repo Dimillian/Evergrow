@@ -1,3 +1,4 @@
+import { createRiftShape, type RiftShape } from './rift-shape.ts';
 import { segmentDistanceSquared } from './combat-geometry.ts';
 import { bossLairCell, generateBossLair } from './wilderness-sites.ts';
 import { landscapePropProbability, landscapeRelief } from './natural-landscape.ts';
@@ -94,7 +95,11 @@ export class WorldLandscape {
   private collisionRegions = new Map<string, { props: Prop[]; sites: WildernessSite[]; buildings: Building[] }>();
 
   readonly wildernessOnly: boolean;
-  constructor(seed = 7319, wildernessOnly = false) {
+  readonly riftTerrain: boolean;
+  readonly riftShape: RiftShape | undefined;
+  constructor(seed = 7319, wildernessOnly = false, riftTerrain = false) {
+    this.riftTerrain = riftTerrain;
+    this.riftShape = riftTerrain ? createRiftShape(seed) : undefined;
     this.wildernessOnly = wildernessOnly;
     this.seed = seed >>> 0;
     this.hydrology = hydrology(this.seed);
@@ -151,7 +156,7 @@ export class WorldLandscape {
       this.wilderness.delete(key); this.wilderness.set(key, site); return site;
     }
     const site = generateWildernessSite(this.seed, cx, cy, (x, y, radius) =>
-      this.hydrology.sample(x, y).coverage > .05 || this.getSettlements(x - radius, y - radius, radius * 2, radius * 2).some(town =>
+      this.terrainWater(x, y).coverage > .05 || this.getSettlements(x - radius, y - radius, radius * 2, radius * 2).some(town =>
         Math.hypot(x - town.x, y - town.y) < town.radius + radius));
     this.wilderness.set(key, site);
     if (this.wilderness.size > WILDERNESS_RULES.cacheLimit) this.wilderness.delete(this.wilderness.keys().next().value!);
@@ -228,7 +233,7 @@ export class WorldLandscape {
   /** Cheap map samples share terrain/road colors without querying collision. */
   mapColor(x: number, y: number, sampleSize = 24): string {
     if (sampleSize > 48) {
-      const water = this.hydrology.sample(x, y).coverage;
+      const water = this.terrainWater(x, y).coverage;
       const [r, g, b] = biomeMapColor(this.sampleBiome(x, y).weights).map((v, i) => Math.round(v * (1 - water) + [29, 73, 85][i] * water));
       return `rgb(${r},${g},${b})`;
     }
@@ -244,6 +249,7 @@ export class WorldLandscape {
   }
 
   protected roadWeight(x: number, y: number): number {
+    if(this.riftShape)return (1-smoothstep(-100,0,this.riftShape.distance(x,y)))*.12;
     return roadSurface(x, y, this.seed).weight;
   }
 
@@ -256,11 +262,11 @@ export class WorldLandscape {
   protected surfaceColor(x: number, y: number, towns: Settlement[], detail: boolean): number[] {
     const damp = noise(x / 180, y / 180, this.seed + 201);
     const weights = this.sampleBiome(x, y).weights;
-    const profile = roadSurface(x, y, this.seed), road = profile.weight * (towns.some(t=>Math.hypot(x-t.x,y-t.y)<t.radius-100)?0:1);
+    const profile = roadSurface(x, y, this.seed), road = (this.riftShape ? this.roadWeight(x,y) : profile.weight) * (towns.some(t=>Math.hypot(x-t.x,y-t.y)<t.radius-100)?0:1);
     const paved = this.pavingWeight(towns, x, y, road);
     const base = detail ? biomeGround(weights, smoothstep(.50, .85, damp) * .65) : biomeMapColor(weights);
-    const hydro = this.hydrology.sample(x, y);
-    const water = Math.max(surfaceWaterWeight(weights, damp, road), hydro.coverage * (1 - paved));
+    const hydro = this.terrainWater(x, y);
+    const water = Math.max(surfaceWaterWeight(weights, damp, road)*(this.riftShape?smoothstep(-30,120,this.riftShape.distance(x,y)):1), hydro.coverage * (1 - paved));
     const wet = smoothstep(.35, .85, damp) * (.35 + weights.swamp * .65);
     const shallows = Math.max(0, 1 - hydro.depth / .65);
     const pool = [17 + shallows * 22, 51 + shallows * 25, 60 + shallows * 16];
@@ -271,7 +277,7 @@ export class WorldLandscape {
     const earth=[58+weights.sunscar*40,51+weights.sunscar*33,39+weights.sunscar*22];
     const stone=base.map((v,i)=>v*(1-strength)+earth[i]*strength+(town?.kind==='city'?3:0));
     const weather = detail ? (noise(x / 93, y / 93, this.seed + 203) - .5) * 18 : 0;
-    const relief = detail ? landscapeRelief(x,y,this.seed,weights) : 0;
+    const relief = (detail ? landscapeRelief(x,y,this.seed,weights) : 0) - (this.riftShape ? smoothstep(-20,100,this.riftShape.distance(x,y))*17 : 0);
     const grain = detail ? (noise(x / 18, y / 18, this.seed + 202) - .5) * 5 : 0;
     const track = profile.tracks * road * (1 - paved) * 3;
     const bank = hydro.bank * .7 + (detail ? weights.swamp * (smoothstep(.40, .50, damp) - smoothstep(.50, .64, damp)) * (1 - road) : 0);
@@ -281,9 +287,18 @@ export class WorldLandscape {
       + (stone[i] + weather * .7 - (detail ? wet * 4 : 0)) * paved + grain);
   }
 
+  protected terrainWater(x:number,y:number):WaterSample {
+    const water=this.hydrology.sample(x,y);
+    if(!this.riftShape)return water;
+    const edge=smoothstep(-30,120,this.riftShape.distance(x,y));
+    // Mire islands retain wet channels outside dry, connected combat routes.
+    const mire=this.sampleBiome(x,y).weights.swamp;
+    return {...water,coverage:Math.max(water.coverage,mire*.86)*edge,depth:water.depth*edge,bank:water.bank*edge};
+  }
+
   /** River/lake masks are shared by art and contact. Paving stays dry; roads become shallow fords. */
   sampleWater(x: number, y: number): WaterSample {
-    const w = this.hydrology.sample(x, y);
+    const w = this.terrainWater(x, y);
     if (w.coverage <= 0) return w;
     const towns = this.getSettlements(x, y, .01, .01), road = this.roadWeight(x, y);
     const paved = this.pavingWeight(towns, x, y, road);
@@ -297,7 +312,7 @@ export class WorldLandscape {
     const contact = groundContact(weights, noise(x / 180, y / 180, this.seed + 201), road,
       this.pavingWeight(towns, x, y, road), !!this.getBuildingAt(x, y));
     const river = this.sampleWater(x, y).coverage;
-    return { ...contact, simulatedWater: river > .1, water: contact.indoors ? 0 : Math.max(contact.water, river) };
+    return { ...contact, simulatedWater: river > .1, water: contact.indoors ? 0 : Math.max(contact.water*(this.riftShape?smoothstep(-30,120,this.riftShape.distance(x,y)):1), river) };
   }
 
   /** Half-open rectangle of ground contacts, returned in stable depth order. */
@@ -338,6 +353,19 @@ export class WorldLandscape {
   }
 
   private generateCellProp(cx: number, cy: number): Prop | null {
+    if(this.riftShape){
+      const x=(cx+.5+(random(cx,cy,this.seed,1)-.5)*.12)*PROP_CELL_SIZE;
+      const y=(cy+.5+(random(cx,cy,this.seed,2)-.5)*.12)*PROP_CELL_SIZE;
+      const edge=this.riftShape.distance(x,y);
+      if(edge<65)return null;
+      if(edge>320)return null; // A bounded natural ridge, not an infinite prop field.
+      const biome=this.sampleBiome(x,y).id;
+      const stone:PropKind=biome==='sunscar'?'sandstone':biome==='emberfall'?'basalt':biome==='frostpine'?'iceCrystal':biome==='highlands'?'limestone':'rock';
+      const tree:PropKind=biome==='verdant'?'canopy':biome==='swamp'?'willow':biome==='frostpine'?'snowPine':biome==='autumn'?'autumnTree':biome==='emberfall'?'charredTree':'deadTree';
+      const wooded=['verdant','swamp','frostpine','autumn','deadwood'].includes(biome);
+      const kind=wooded&&edge>155&&random(cx,cy,this.seed,9)>.3?tree:stone;
+      return {id:`rift-ridge:${cx}:${cy}`,x,y,radius:58,kind,biome,seed:hash(cx,cy,this.seed,7),scale:kind===tree?1.35:2.7+random(cx,cy,this.seed,8)*.7};
+    }
     const x = (cx + 0.18 + random(cx, cy, this.seed, 1) * 0.64) * PROP_CELL_SIZE;
     const y = (cy + 0.18 + random(cx, cy, this.seed, 2) * 0.64) * PROP_CELL_SIZE;
     if ((x / 180) ** 2 + (y / 140) ** 2 < 1) return null;
@@ -346,7 +374,7 @@ export class WorldLandscape {
 
     if (this.getWildernessSites(x - 18, y - 18, 36, 36).some(site => Math.hypot(x - site.x, y - site.y) < site.radius + 18)) return null;
     if (this.roadShrines(x - 44, y - 44, 88, 88).some(shrine => Math.hypot(x - shrine.x, y - shrine.y) < 44)) return null;
-    if (this.hydrology.sample(x, y).coverage > .12) return null;
+    if (this.terrainWater(x, y).coverage > .12) return null;
     const choice = random(cx, cy, this.seed, 4);
     const weights = this.sampleBiome(x, y).weights;
     const { biome, kind } = chooseBiomeProp(weights, random(cx, cy, this.seed, 41), choice);
@@ -397,7 +425,7 @@ export class WorldLandscape {
   }
 
   impactMaterial(x: number, y: number, radius: number): MaterialId {
-    const extent = radius + MAX_PROP_RADIUS;
+    const extent = radius + (this.riftTerrain ? 64 : MAX_PROP_RADIUS);
     const region = this.collisionRegion(x - extent, y - extent, extent * 2, extent * 2);
     for (const prop of region.props) if (Math.hypot(x - prop.x, y - prop.y) < radius + prop.radius) {
       if (prop.kind === 'iceCrystal') return 'ice';
@@ -424,7 +452,7 @@ export class WorldLandscape {
   blocked(x: number, y: number, radius: number): boolean {
     if (![x, y].every(isWorldCoordinate) || !Number.isFinite(radius)
       || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius) return true;
-    const extent = radius + MAX_PROP_RADIUS;
+    const extent = radius + (this.riftTerrain ? 64 : MAX_PROP_RADIUS);
     if (!validWorldRectangle(x - extent, y - extent, extent * 2, extent * 2)) return true;
     const region = this.collisionRegion(x - extent, y - extent, extent * 2, extent * 2);
     if (region.props.some(prop => inRectangle(prop, x - extent, y - extent, extent * 2, extent * 2) &&
@@ -444,7 +472,7 @@ export class WorldLandscape {
     if(this.blocked!==WorldLandscape.prototype.blocked)return undefined;
     if(first>last)return true;
     if(![ax,ay,bx,by].every(isWorldCoordinate)||radius<0||radius>WORLD_QUERY_LIMITS.collisionRadius||Math.hypot(bx-ax,by-ay)>4000)return undefined;
-    const extent=radius+MAX_PROP_RADIUS;
+    const extent=radius+(this.riftTerrain?64:MAX_PROP_RADIUS);
     const left=Math.min(ax,bx)-extent,top=Math.min(ay,by)-extent,width=Math.abs(bx-ax)+extent*2,height=Math.abs(by-ay)+extent*2;
     if(!validWorldRectangle(left,top,width,height))return undefined;
     const region=this.collisionRegion(left,top,width,height);
@@ -487,7 +515,7 @@ export class WorldLandscape {
     if (![x, y, x + dx, y + dy].every(isWorldCoordinate) || ![dx, dy, radius].every(Number.isFinite)
       || radius < 0 || radius > WORLD_QUERY_LIMITS.collisionRadius
       || Math.hypot(dx, dy) > WORLD_QUERY_LIMITS.movement) return { x, y };
-    const extent = radius + MAX_PROP_RADIUS + 1;
+    const extent = radius + (this.riftTerrain ? 64 : MAX_PROP_RADIUS) + 1;
     if (!validWorldRectangle(Math.min(x, x + dx) - extent, Math.min(y, y + dy) - extent,
       Math.abs(dx) + extent * 2, Math.abs(dy) + extent * 2)) return { x, y };
     const left = Math.min(x, x + dx), top = Math.min(y, y + dy);

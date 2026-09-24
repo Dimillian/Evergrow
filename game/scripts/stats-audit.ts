@@ -1,3 +1,4 @@
+import { PACK_CELLS } from '../src/inventory-grid.ts';
 /** Headless balance audit. Run: node --experimental-strip-types game/scripts/stats-audit.ts */
 import { initialPlayer } from '../src/simulation.ts';
 import { createCharacterSheet, generateItem, EQUIPMENT_SLOTS } from '../src/items.ts';
@@ -46,8 +47,10 @@ const charmSaturation=levels.filter(l=>l<=100).map(level=>{
   const p=initialPlayer(0,0);p.level=level;
   // A deliberately generous ceiling study: randomly rolled Legendary pebbles, not a realistic loot timeline.
   for(let i=0;i<48;i++) {
-    if (!addInventoryItem(p.character,generateItem(3247+i,level,'charm',`${CHARM_PROFILES[i%CHARM_PROFILES.length].flavor.id}-pebble`,'legendary')))
+    const item=generateItem(3247+i,level,'charm',`${CHARM_PROFILES[i%CHARM_PROFILES.length].flavor.id}-pebble`,'legendary');
+    if (!addInventoryItem(p.character,item))
       throw new Error('Charm study did not fit all 48 stones');
+    p.character.inventoryLayout![item.id]=PACK_CELLS+i;
   }
   refreshCharacter(p);return {level,gold:round((p.derived.goldFindMultiplier-1)*100),xp:round((p.derived.xpGainMultiplier-1)*100),resistance:p.derived.resistances,speed:round((p.derived.attackSpeedMultiplier-1)*100),life:p.maxHp,mana:p.maxMana};
 });

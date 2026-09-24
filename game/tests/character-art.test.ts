@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { characterBounds, fitCharacter } from '../src/character-framing.ts';
-import { playerFootCycle, playerMotion } from '../src/character-motion.ts';
+import { playerFootCycle } from '../src/player-leg-rig.ts';
+import { playerMotion } from '../src/character-motion.ts';
 import { getActiveSwingOffset } from '../src/attack-motion.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 import { weaponShapes } from '../src/weapon-shapes.ts';

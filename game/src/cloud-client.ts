@@ -294,10 +294,10 @@ export class CloudClient implements CharacterRepositoryPort, ExplorationPersiste
     await this.flush();
     const remote = await this.api<{ revision: number; bundle: SaveBundle | null }>(`characters/${index}`);
     const row = await this.cache<CloudRow | null>({ kind: 'inspect', index });
-    if (!row?.conflict) throw new Error('The save changed. Select the character again.');
-    if (row.token !== expected) throw new Error('Recovery changed. Select it again before resolving.');
+    if (!row?.conflict) throw new Error('The save changed. Retry to review the latest character.');
+    if (row.token !== expected) throw new Error('Recovery changed. Retry to review it before resolving.');
     const resolved = await this.cache({ kind: 'resolve', index, expected: row.token, bundle: remote.bundle, base: remote.revision });
-    if (!resolved) throw new Error('Recovery changed in another tab. Reopen it before resolving.');
+    if (!resolved) throw new Error('Recovery changed in another tab. Retry to review it before resolving.');
     this.setStatus('Synced');
   }
   dispose() { this.disposed = true; clearInterval(this.timer); this.worker?.terminate(); for (const r of this.requests.values()) r.reject(new Error('Save storage closed.')); this.requests.clear(); }

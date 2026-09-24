@@ -1,3 +1,5 @@
+import { worldDifficulty } from './world-difficulty.ts';
+import { metric, syncRiftChronicle } from './chronicle.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { dungeonMemberLevel } from './dungeon-state.ts';
@@ -9,7 +11,9 @@ import { RIFT_RULES, riftPoints, freshRiftLedger } from './rift-content.ts';
 export function tickRift(sim:Simulation,dt:number):void {
   const r=currentDungeon(sim.expeditions)?.rift;if(!r||r.phase==='failed'||r.phase==='complete')return;
   r.elapsed=Math.min(RIFT_RULES.duration,r.elapsed+dt);
-  if(sim.player.dead||r.elapsed>=RIFT_RULES.duration)r.phase='failed';
+  if(sim.player.dead||r.elapsed>=RIFT_RULES.duration){
+    r.phase='failed';metric(sim.player.chronicle,sim.player.dead?'riftDeaths':'riftTimeouts');
+  }
 }
 /** Called only by the exactly-once death commitment. */
 export function riftKill(sim:Simulation,enemy:Enemy):void {
@@ -17,7 +21,15 @@ export function riftKill(sim:Simulation,enemy:Enemy):void {
   if(!run||!r||enemy.campId!==run.entrance.id||r.phase==='failed'||r.phase==='complete'||sim.player.dead)return;
   if(enemy.campMemberId==='warden'){
     if(r.phase!=='boss'||r.elapsed>=RIFT_RULES.duration)return;
+    syncRiftChronicle(sim.player.chronicle,sim.expeditions.rifts);
     r.phase='complete';
+    const chronicle=sim.player.chronicle;
+    metric(chronicle,'riftClears');metric(chronicle,'highestRiftLevel',run.entrance.level);
+    metric(chronicle,'bestRiftSeconds',r.elapsed);
+    if(run.entrance.rift?.keyTier){metric(chronicle,'riftKeyedClears');metric(chronicle,'highestRiftKeyTier',run.entrance.rift.keyTier);}
+    if(r.elapsed<=300)metric(chronicle,'riftFastClears');
+    metric(chronicle,'seen:riftBiome:'+run.entrance.biome);
+
     // Rewards follow the actual kill, including a guardian pursued away from its arrival.
     r.treasure={x:enemy.x,y:enemy.y};
     r.exit={x:enemy.x,y:enemy.y};
@@ -32,7 +44,7 @@ export function riftKill(sim:Simulation,enemy:Enemy):void {
     const record={level:run.entrance.level,seconds:r.elapsed,keyTier:run.entrance.rift!.keyTier??0};
     const old=ledger.best.find(b=>b.level===record.level&&b.keyTier===record.keyTier);
     if(old)old.seconds=Math.min(old.seconds,record.seconds);else {ledger.best.push(record);ledger.best.sort((a,b)=>b.level-a.level);ledger.best=ledger.best.slice(0,600);}
-  }else if(r.phase==='hunt') {r.points=Math.min(RIFT_RULES.progress,r.points+riftPoints(enemy.rank));if(r.points>=RIFT_RULES.progress){r.phase='boss';clearRiftPack(sim);}}
+  }else if(r.phase==='hunt') {metric(sim.player.chronicle,'riftKills');metric(sim.player.chronicle,'riftRank:'+enemy.rank);r.points=Math.min(RIFT_RULES.progress,r.points+riftPoints(enemy.rank));if(r.points>=RIFT_RULES.progress){r.phase='boss';clearRiftPack(sim);}}
 }
 
 /** Deliberate, announced encounter transition; ordinary streaming still stays offscreen. */
@@ -64,7 +76,7 @@ export function updateRiftGuardian(sim:Simulation,emit:(event:CombatEvent)=>void
  if(r.elapsed-r.guardian.at<RIFT_RULES.guardianArrival||state.hp<=0||sim.enemies.some(e=>e.campMemberId==='warden'&&e.campId===run.entrance.id&&e.hp>0))return;
  const enemy=sim.spawnEnemy(member.kind,state.x,state.y,member.rank,{campId:run.entrance.id,memberId:member.id,lootSeed:member.seed,level:dungeonMemberLevel(run.entrance,member)});
  if(!enemy)return;
- enemy.hp=state.hp;enemy.homeX=state.x;enemy.homeY=state.y;enemy.bossPhases=state.bossPhases??0;
+ enemy.hp=state.hp*worldDifficulty(enemy.difficulty).health;enemy.homeX=state.x;enemy.homeY=state.y;enemy.bossPhases=state.bossPhases??0;
  enemy.state='chase';enemy.awareness=1;enemy.lastSeenX=sim.player.x;enemy.lastSeenY=sim.player.y;state.admitted=true;
  emit({type:'blast',x:enemy.x,y:enemy.y,radius:130,style:'arcane',color:'#f47dbb'});
 }

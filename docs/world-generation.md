@@ -46,3 +46,5 @@ Code tests cover minimum settlement separation, two-dimensional dispersion, conn
 ## Shared landscape queries and rifts (September 14, 2026)
 
 `world-landscape.ts` owns the existing DOM-free terrain, hydrology, prop generation, collision and navigation queries. `world.ts` extends it with cached canvas tiles; the ordinary overworld keeps the same default behavior and coordinates. Rifts use the wilderness-only option, disabling settlements/landmarks/shrines while retaining the actual natural landscape. The terrain worker receives that option explicitly. There is no parallel rift terrain generator; rift generation only places its roster and activity markers onto this landscape. See [rifts](rifts.md).
+
+Connected rift encounters (approved for publication September 14): an explicit `riftTerrain` profile applies `rift-shape.ts` clearings, broad reconnecting trails and biome ridges through `WorldLandscape`. Water, prop collision, maps and worker-rendered terrain use this same profile. Ordinary worlds and saved open-layout rifts retain their preceding landscape. See the connected encounters section in [Rifts](rifts.md).

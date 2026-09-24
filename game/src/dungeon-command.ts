@@ -1,3 +1,5 @@
+import { worldDifficulty } from './world-difficulty.ts';
+import { metric, syncRiftChronicle } from './chronicle.ts';
 import { dungeonRunChest, dungeonRunExit } from './dungeon-locations.ts';
 import { RIFT_RULES, freshRiftLedger, riftRandom, riftBonus } from './rift-content.ts';
 import { riftRewardItems } from './rift-rewards.ts';
@@ -13,7 +15,7 @@ import type { CharacterCheckpoint } from './character-save.ts';
 import type { DungeonEntrance } from './dungeon.ts';
 import { currentDungeon, createDungeonRun, compactExpeditions, type LocationContents } from './dungeon-state.ts';
 import { portalLanding, portalDepartureProblem, type PortalAnchor } from './travel.ts';
-import type { WorldQuery } from './model.ts';
+import type { CombatEvent, WorldQuery } from './model.ts';
 import type { Building } from './settlements.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { rollEnemyLoot } from './loot.ts';
@@ -78,9 +80,11 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             const keyIndex=checkpoint.character.inventory.findIndex(i=>i?.id===action.keyId),key=checkpoint.character.inventory[keyIndex];
             if(action.keyId&&(!key||key.kind!=='riftKey'||key.locked))return {ok:false,message:'Choose an unlocked rift key from your inventory.'};
             if(key){checkpoint.character.inventory[keyIndex]=null;if(checkpoint.character.inventoryLayout)delete checkpoint.character.inventoryLayout[key.id];}
+            syncRiftChronicle(checkpoint.chronicle,ledger);
+            metric(checkpoint.chronicle,'riftAttempts');if(key)metric(checkpoint.chronicle,'riftKeysUsed');
             ledger.attempts++;
             const random=riftRandom(((surface.seed??0)^Math.imul(ledger.attempts,0x9e3779b9))>>>0),seed=Math.floor(random()*4294967296),biome=startingBiome(seed);
-            expeditionEntrance={id:`dungeon:rift:${ledger.attempts}`,name:`Fractured ${BIOMES[biome].name}`,seed,biome,level:Math.max(1,Math.min(1e6,p.level+action.offset)),x:portal.door.x,y:portal.door.y,rift:{attempt:ledger.attempts,...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})}};
+            expeditionEntrance={id:`dungeon:rift:${ledger.attempts}`,name:`Fractured ${BIOMES[biome].name}`,seed,biome,level:Math.max(1,Math.min(1e6,p.level+action.offset)),x:portal.door.x,y:portal.door.y,rift:{attempt:ledger.attempts,layout:'clearings',...(key?{keySeed:key.seed,keyTier:key.recipe.riftKeyTier}:{})}};
             state.runs=state.runs.filter(r=>!r.entrance.rift);
         }
         if(action.kind==='expedition') {
@@ -124,6 +128,7 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
                 return { ok: false, message: 'Finish your active expedition first.' };
             const scaling = entrance.rift ? undefined : entrance.expedition ? entrance.scaling! : encounterScaleAt(entrance.x, entrance.y, surface.seed, p.level);
             next = createDungeonRun({ ...entrance, scaling, level: scaling?.base??entrance.level });
+            next.difficulty=p.character.difficulty??'normal';
             state.runs.push(next);
         }
         interruptTrial(checkpoint.events!,contents.actors);
@@ -159,7 +164,8 @@ export async function planDungeonTravel(sim: Simulation, action: DungeonAction, 
             state.route.status='failed';state.route.choice=null;state.route.cleared=0;state.runs=state.runs.filter(r=>!r.entrance.expedition);
         }
         if(run.rift){if(action.kind==='death'){checkpoint.dead=false;checkpoint.hp=p.maxHp;checkpoint.mana=p.maxMana;checkpoint.flasks=2;checkpoint.healCooldown=0;checkpoint.skillCooldowns={};}
-          if(run.rift.phase!=='complete')run.rift.phase='failed';state.runs=state.runs.filter(r=>r!==run);}
+          if(run.rift.phase!=='complete'&&run.rift.phase!=='failed'){metric(checkpoint.chronicle,action.kind==='death'?'riftDeaths':'riftAbandoned');run.rift.phase='failed';}
+          state.runs=state.runs.filter(r=>r!==run);}
         checkpoint.travel = { ...sim.travel, returnTo: action.kind === 'town' && !run.rift ? { x: p.x, y: p.y, town: action.anchor.band, dungeon: run.entrance.id } : null };
     }
     compactExpeditions(state, checkpoint.travel?.returnTo?.dungeon);
@@ -188,7 +194,7 @@ export function dungeonChestProblem(sim: Simulation, index: number): string | nu
         return 'Already claimed.';
     return null;
 }
-export async function claimDungeonChest(sim: Simulation, index: number, persist: PersistDungeon): Promise<{ ok: boolean; message: string }> {
+export async function claimDungeonChest(sim: Simulation, index: number, persist: PersistDungeon): Promise<{ ok: boolean; message: string; celebration?: Extract<CombatEvent,{type:'blast'}> }> {
     const problem = dungeonChestProblem(sim, index);
     if (problem)
         return { ok: false, message: problem };
@@ -198,9 +204,11 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     const floor = sim.dungeonFloor!, chest = dungeonRunChest(floor,run,index);
     const rewardLevel = run.entrance.scaling ? encounterRewardLevel(run.entrance.scaling, index === 2 ? 3 : 1) : run.entrance.level;
     const ranks = index === 2 ? ['normal', 'veteran', 'elite'] as const : ['veteran'] as const;
-    const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);
+    const difficulty = (run.chestDifficulties ??= {})[index as 0|1|2] ??= run.difficulty ?? 'normal';
+    const items = run.entrance.rift ? riftRewardItems(run.entrance,sim.player.level,difficulty) : index===2 && run.entrance.expedition ? expeditionRewardItems(run.entrance,sim.player.level,difficulty) : ranks.map((rank, i) => rollEnemyLoot({ playerLevel:sim.player.level, difficulty, seed: (run.entrance.seed + index * 1777 + i * 97) >>> 0, level: rewardLevel, biome: run.entrance.biome, kind: 'stalker', rank, firstKill: true, tierWeights: index === 2 ? BOSS_CHEST_LOOT_TABLES.dungeon[i] : undefined, encounter:index===2?'bossChest':'chest' })[0]);
     const gold = Math.round((run.entrance.rift ? RIFT_RULES.goldMultiplier*(1+riftBonus(run.entrance.rift,'gold')/100) : 1)*(index === 2 ? 45 + run.entrance.seed % 26 : 18) * (1 + .1 * (rewardLevel - 1)));
     const goldBit=run.entrance.rift ? 1 << items.length : index===2 && run.entrance.expedition?.stage===9 ? 64 : 8;
+    const firstClaim=run.chestMasks[index]===0;
     let mask = run.chestMasks[index], next = Math.max(1, ...sim.groundItems.map(i => i.id + 1), ...sim.groundGold.map(i => i.id + 1), ...sim.pickups.map(i => i.id + 1), ...sim.enemies.map(i => i.id + 1), ...sim.projectiles.map(i => i.id + 1));
     for (let i = 0; i < items.length; i++)
         if (!(mask & 1 << i)) {
@@ -209,7 +217,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
             mask |= 1 << i;
         }
     if (!(mask & goldBit) && (checkpoint.groundGold ??= []).length < GOLD_RULES.maxPiles) {
-        checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: Math.round(gold * sim.player.derived.goldFindMultiplier) });
+        checkpoint.groundGold.push({ id: next++, ...treasureLanding(sim.world,chest.x,chest.y,12,run.entrance.seed), flight:{x:chest.x,y:chest.y,at:sim.time,delay:.15}, age: 0, amount: Math.round(gold * sim.player.derived.goldFindMultiplier * worldDifficulty(difficulty).gold) });
         mask |= goldBit;
     }
     if (mask === run.chestMasks[index])
@@ -226,5 +234,6 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     sim.groundGold = checkpoint.groundGold!;
     sim.reserveIdentity(next);
     if(completion)sim.commitJourneyCheckpoint(checkpoint,completion);
-    return { ok: true, message: 'Dungeon treasure' };
+    return { ok: true, message: run.rift ? 'Crimson Rift Conquered' : 'Dungeon treasure',
+        ...(run.rift&&firstClaim ? {celebration:{type:'blast' as const,x:chest.x,y:chest.y,radius:110,duration:.7,color:'#ef739d'}} : {}) };
 }

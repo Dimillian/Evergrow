@@ -28,7 +28,7 @@ test('integer regeneration rolls respect stone area instead of rounding every ce
   const pebble=stone('astral-pebble',1),monolith=stone('astral-monolith',2);
   assert.equal(pebble.affixes[0].value,1);assert.ok(monolith.affixes[0].value>=8);
   const s=createCharacterSheet();s.inventory.fill(null);s.inventoryLayout={};
-  for(let i=0;i<48;i++)assert.ok(addInventoryItem(s,stone('astral-pebble',100+i)));
+  for(let i=0;i<48;i++){const item=stone('astral-pebble',100+i);assert.ok(addInventoryItem(s,item));s.inventoryLayout![item.id]=72+i;}
   assert.equal(deriveCharacterStats(s,{},35).manaRegeneration,10.6);
   for(const i of [pebble,monolith])assert.ok(i.affixes.every(a=>Number.isInteger(a.value)));
 });

@@ -10,6 +10,8 @@ export const ZONE_RULES = Object.freeze({ regionSize: 3600, travelPerLevel: 6000
 export interface ZoneProgression {
   id: string;
   name: string;
+  /** District title without the biome suffix, for separate area headings. */
+  districtName: string;
   /** Minimum ordinary level, independent of the character. */
   level: number;
   maxLevel: number;
@@ -78,7 +80,7 @@ export function getZoneAt(x: number, y: number, seed = 7319): ZoneProgression {
   const level = normalizeLevel(band[0] + extra), maxLevel = normalizeLevel(band[1] + extra);
   const biome = sampleBiome(px, py, seed).name;
   const name = `${['Raven', 'Ashen', 'Silver', 'Thorn', 'Gloam', 'Elder', 'Moon', 'Wandering', 'Sable', 'Hollow', 'Bramble', 'Whispering', 'Iron', 'Copper', 'Wren', 'Dusk', 'Windswept', 'Shrouded', 'Silent', 'Lost', 'Pale', 'Gilded', 'Cinder', 'Fallow'][hash % 24]} ${hazardous ? ['Wilds', 'Deeps', 'Banes', 'Wastes'][hash >>> 8 & 3] : ['March', 'Vale', 'Reach', 'Expanse', 'Glen', 'Basin'][Math.floor(hash / 13) % 6]}`;
-  const zone = Object.freeze({ id, name: `${name} · ${biome}`, level, maxLevel, originalLevel, x: px, y: py, hazardous, travel: route.travel });
+  const zone = Object.freeze({ id, name: `${name} · ${biome}`, districtName: name, level, maxLevel, originalLevel, x: px, y: py, hazardous, travel: route.travel });
   if (zones.size >= 2048)
     zones.delete(zones.keys().next().value!);
   zones.set(id, zone);

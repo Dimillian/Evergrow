@@ -18,18 +18,18 @@ Bindings use physical keyboard positions. Escape remains pause/back and cancels 
 | Hold left mouse | Repeat the basic weapon attack |
 | Right mouse / 1–4 | Use assigned skills; empty slots do nothing |
 | E / click a nearby NPC, town anchor or event object | Open services, use anchors or interact with a POI |
-| P / portal control below minimap | Cast town portal outside sanctuary; locate your return portal while in sanctuary |
+| P / minimap Home icon | Cast town portal outside sanctuary; the Home icon stays visible whenever outside sanctuary, including while moving. Casting still requires standing still. P also locates your return portal while in sanctuary |
 | C / I | Character, equipment, inventory, and attributes |
 | T | Skill tree and active skill assignments |
-| J / mini log below minimap | Open or close Journeys; Track explicitly pins an activity |
+| J / mini log below minimap | Open Area journal; Accept/Dismiss manages the quest list, Pin/Unpin only sets navigation |
 | Space | Dodge, using one of two regenerating charges |
 | Q | Dual potion: restores life and mana; charges return through kills |
 | Escape | Close a panel, pause, or resume |
-| M / click minimap | Toggle the full paused world map; M upgrades a Tab glance to this view |
+| M / click minimap | Toggle the full paused world map; closing a map opened through Journeys returns to the selected quest |
 | Hold Tab while playing | Show a simplified translucent exploration map; release to close |
 | Full map: drag / scroll / + and − | Pan / zoom |
 | N | Toggle synthesized sound |
-| F3 | Frame-rate and coordinate overlay |
+| F3 | Compact performance monitor with selectable live graphs |
 
 A town portal channels for three seconds. Movement, damage, attacking, skills, dodge, Escape, P again or leaving the gameplay input context cancels it. It costs nothing and refills nothing. E/click the town endpoint returns once to your departure point.
 

@@ -35,17 +35,23 @@ test('all stone shapes and flavors share deterministic item recipes, size budget
   const forged=stone();forged.recipe.profileId='missing';assert.equal(validItem(forged),false);
 });
 
-test('pickups use only the charm grid, with level-gated bonuses and atomic placement',()=>{
+test('picked-up charms stay inactive in the bag until explicitly moved into the charm grid',()=>{
   const s=createCharacterSheet(),a=stone(),b=stone(12,'storm-shard'),late=stone(13,'amber-monolith',20);
   for(const item of [a,b,late])assert.ok(addInventoryItem(s,item));
-  assert.equal(activeCharms(s).length,3);assert.equal(activeCharms(s,1).length,2);
-  for(const item of [a,b,late])assert.ok(resolvePackLayout(s)[item.id]>=PACK_CELLS);
-  const before=structuredClone(s);assert.equal(moveInventoryItem(s,0,0).ok,false);assert.deepEqual(s,before);
+  assert.equal(activeCharms(s).length,0);
+  for(const item of [a,b,late])assert.ok(resolvePackLayout(s)[item.id]<PACK_CELLS);
+  assert.ok(moveInventoryItem(s,0,PACK_CELLS).ok);
+  assert.ok(moveInventoryItem(s,2,PACK_CELLS+8).ok,'higher-level stones can be placed');
+  assert.equal(activeCharms(s).length,2);assert.equal(activeCharms(s,1).length,1);
   assert.equal(moveInventoryItem(s,1,PACK_CELLS+PACK_COLUMNS*3).ok,false,'no bottom overflow');
-  assert.ok(moveInventoryItem(s,2,PACK_CELLS+8).ok,'higher-level stones can be rearranged');
-  assert.ok(sortInventory(s,'compact').ok);assert.equal(activeCharms(s,1).length,2);
-  assert.ok(validPackLayout(s.inventory,s.inventoryLayout));
-  assert.equal(validPackLayout(s.inventory,{[a.id]:0}),false);
+  for(const mode of ['compact','rarity','type','recent'] as const){
+    assert.ok(sortInventory(s,mode).ok);assert.deepEqual(new Set(activeCharms(s).map(i=>i.id)),new Set([a.id,late.id]));
+    assert.ok(resolvePackLayout(s)[b.id]<PACK_CELLS);assert.ok(validPackLayout(s.inventory,s.inventoryLayout));
+  }
+  const layout=resolvePackLayout(s),bagCell=layout[b.id];
+  assert.ok(moveInventoryItem(s,s.inventory.findIndex(i=>i?.id===a.id),bagCell).ok,'two charms can swap between regions');
+  assert.deepEqual(new Set(activeCharms(s).map(i=>i.id)),new Set([b.id,late.id]));
+  assert.equal(validPackLayout(s.inventory,{[a.id]:0}),true);
   assert.equal(validPackLayout(s.inventory,{[a.id]:INVENTORY_CELLS}),false);
 });
 
@@ -94,7 +100,7 @@ test('pre-charm 64/72-slot saves can earn, pick up and persist new monster-dropp
     assert.equal(sim.requestGroundItem(drop.id),null);
     sim.update(FIXED_STEP,{moveX:0,moveY:0,aimX:0,aimY:0,attack:false,dodge:false,heal:false,skillSlot:null});
     assert.ok(sim.player.character.inventory.some(item=>item?.id===drop.item.id));
-    assert.ok(resolvePackLayout(sim.player.character)[drop.item.id]>=PACK_CELLS);
+    assert.ok(resolvePackLayout(sim.player.character)[drop.item.id]<PACK_CELLS);
     const picked=decodeCharacterSave(JSON.stringify({...record,checkpoint:sim.captureCheckpoint()}));assert.ok(picked);
     assert.ok(picked.checkpoint.character.inventory.some(item=>item?.id===drop.item.id));
   }
@@ -113,7 +119,7 @@ test('kill gold and XP bonuses apply once while preserving equipment rolls',()=>
 
 test('dedicated charm grid survives saves, including stones above character level',async()=>{
   const data=new Map<string,string>(),repo=new CharacterRepository({getItem:k=>data.get(k)??null,setItem:(k,v)=>{data.set(k,v);}}),session=new CharacterSession(repo,4),sim=new Simulation(world,{spawn:false});
-  const item=stone();assert.ok(addInventoryItem(sim.player.character,item));refreshCharacter(sim.player);
+  const item=stone();assert.ok(addInventoryItem(sim.player.character,item));assert.ok(moveInventoryItem(sim.player.character,0,PACK_CELLS).ok);refreshCharacter(sim.player);
   assert.ok(await session.create(0,'Stonekeeper',7319,sim.captureCheckpoint(),'charm-save',100));
   const saved=repo.read(0).record!;assert.ok(decodeCharacterSave(JSON.stringify(saved)));assert.equal(activeCharms(saved.checkpoint.character).length,1);
   const higher=structuredClone(saved);higher.checkpoint.character.inventory[0]=stone(55,'amber-shard',20);higher.checkpoint.character.inventoryLayout={[higher.checkpoint.character.inventory[0]!.id]:PACK_CELLS};
@@ -132,15 +138,16 @@ test('charms can be sold directly and item tooltips contain no stat explanations
 
 test('all 48 charm cells and 72 bag cells can be occupied without an invisible count limit',()=>{
   const s=createCharacterSheet();
-  for(let i=0;i<48;i++){const item=stone(1000+i);assert.ok(addInventoryItem(s,item));}
-  assert.equal(addInventoryItem(s,stone(3000)),false,'no fallback into the empty bag');
+  for(let i=0;i<48;i++){const item=stone(1000+i);assert.ok(addInventoryItem(s,item));assert.ok(moveInventoryItem(s,i,PACK_CELLS+i).ok);}
+  const extra=stone(3000);assert.ok(addInventoryItem(s,extra),'full active grid still allows bag collection');
+  s.inventory[48]=null;delete s.inventoryLayout![extra.id];
   for(let i=0;i<72;i++)assert.ok(addInventoryItem(s,generateItem(2000+i,1,'ring',undefined,'common')));
   assert.equal(activeCharms(s).length,48);assert.equal(s.inventory.filter(Boolean).length,120);
   assert.equal(addInventoryItem(s,stone(3000)),false);assert.ok(validPackLayout(s.inventory,s.inventoryLayout));
 });
 
-test('a full equipment bag does not prevent charm collection',()=>{
+test('a full bag leaves charms on the ground even when the charm grid is empty',()=>{
   const s=createCharacterSheet();
   for(let i=0;i<72;i++)assert.ok(addInventoryItem(s,generateItem(5000+i,1,'ring',undefined,'common')));
-  assert.ok(addInventoryItem(s,stone()));assert.equal(activeCharms(s,1).length,1);
+  const before=structuredClone(s);assert.equal(addInventoryItem(s,stone()),false);assert.deepEqual(s,before);assert.equal(activeCharms(s,1).length,0);
 });

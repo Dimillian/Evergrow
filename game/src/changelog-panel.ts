@@ -60,7 +60,7 @@ export class ChangelogPanel {
     for (const button of this.element.querySelectorAll<HTMLElement>('[data-release]')) button.setAttribute('aria-current', String(Number(button.dataset.release) === index));
     const entry = entries[index], body = this.element.querySelector<HTMLElement>('#changelog-entry')!;
     body.innerHTML = `<header><time datetime="${entry.date}">${changelogDate(entry.date)}</time><h3>v${escapeUI(entry.version)}</h3></header>
-      ${entry.notices.map(n => `<p class="changelog-notice">${inline(n)}</p>`).join('')}
+      ${entry.notices.map(n => `<p class="${n === 'Development recap.' ? 'changelog-recap' : 'changelog-notice'}">${inline(n)}</p>`).join('')}
       ${entry.sections.map(section => `<section class="changelog-section" data-kind="${section.title}"><h4>${section.title}</h4><ul>${section.items.map(item => `<li>${inline(item)}</li>`).join('')}</ul></section>`).join('')}`;
     body.scrollTop = 0;
   }

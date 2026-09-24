@@ -1,3 +1,4 @@
+import { projectileDamageType } from './resistance-content.ts';
 import { AURA_RULES, admittedAuras, auraRank, resolveAura, type AuraId } from './aura-content.ts';
 import type { Player, Enemy, ProjectileStyle } from './model.ts';
 import { isBossKind } from './encounter-scaling.ts';
@@ -33,8 +34,8 @@ export function bloodOathHit(p:Player,enemy:Enemy,melee:boolean):number {
  return 1+stacks*power/100;
 }
 export function resonanceHit(p:Player,e:Enemy,style:ProjectileStyle|undefined,periodic:boolean):number {
- const element=style==='spirit'?'arcane':style;
- if(!element||element==='arrow')return 1;
+ const element=style ? projectileDamageType(style) : undefined;
+ if(!element||element==='physical')return 1;
  const existing=e.auraExposure?.[element],bonus=existing&&existing.remaining>0?existing.power:0;
  const power=auraPower(p,'elementalResonance');
  if(power&&!periodic)(e.auraExposure??={})[element]={power,remaining:AURA_RULES.exposureDuration};
@@ -58,13 +59,13 @@ export function advanceAuras(p:Player,enemies:readonly Enemy[],dt:number,moving:
  let struck=false;
  for(const e of enemies){
   if(e.state==='dead')continue;const range=Math.hypot(e.x-p.x,e.y-p.y);
-  if(range>90+e.radius||!visible(p.x,p.y,e.x,e.y))continue;
+  if(range>AURA_RULES.thornRadius+e.radius||!visible(p.x,p.y,e.x,e.y))continue;
   // Keep proximity coverage continuous; applySlow halves boss durations too.
   // Boss resistance is expressed by half potency here, not gaps between pulses.
   const boss=isBossKind(e.kind);
   if(slow)applySlow(e,{duration:(AURA_RULES.pulseInterval+.05)*(boss?2:1),factor:1-slow/100*(boss?.5:1)});
-  if(damage&&range<=70+e.radius){hit(e,damage,element);struck=true;}
+  if(damage&&range<=AURA_RULES.spikeRadius+e.radius){hit(e,damage,element);struck=true;}
  }
- if(struck)pulse(element,70);
+ if(struck)pulse(element,AURA_RULES.spikeRadius);
  s.element=(s.element+1)%3;
 }

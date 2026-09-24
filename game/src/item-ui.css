@@ -126,3 +126,8 @@
 .ui-rarity-badge[data-tier="unique"] {color:#ef82ad;}
 
 .ui-item-property.ui-rift-modifier > span,.ui-item-property.ui-rift-modifier > strong{color:inherit}
+
+.ui-item-alt-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; padding: 2px 7px; margin: 4px 0 0; border-radius: 3px; border: 1px solid #96b8c32e; background: #0c182470; color: #a5bfc9; font: inherit; font-size: 11px; line-height: normal; text-align: left; transition: background 120ms, border-color 120ms, color 120ms; }
+.ui-item-alt-toggle:hover, .ui-item-alt-toggle:focus-visible { background: #182939; border-color: #96b8c366; color: #e6f2f5; outline: none; }
+.ui-item-alt-toggle kbd { display: inline-block; padding: 1px 4px; border: 1px solid #96b8c366; border-radius: 2px; background: #081119; color: #c4dbe2; font: 600 10px 'Evergrow Numerals', system-ui, sans-serif; line-height: 1.2; }
+

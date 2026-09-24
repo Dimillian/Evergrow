@@ -17,7 +17,7 @@ test('allocated, equipment, charm and tree attributes share the reduced conversi
   const ring=generateItem(8,35,'ring','moonstone-ring','rare');
   ring.implicit={};ring.affixes=[{name:'Might',stat:'strength',value:10},{name:'Insight',stat:'intelligence',value:10}];sheet.equipped.ring1=ring;
   const charm=generateItem(9,35,'charm','storm-pebble','rare');charm.affixes=[{name:'Insight',stat:'intelligence',value:4}];
-  assert.ok(addInventoryItem(sheet,charm));
+  assert.ok(addInventoryItem(sheet,charm));sheet.inventoryLayout![charm.id]=72;
   const stats=deriveCharacterStats(sheet,{strength:5,intelligence:5,damagePercent:20,spellDamagePercent:30},35);
   assert.equal(stats.attackDamageMultiplier,1.725);
   assert.equal(stats.spellDamageMultiplier,1.885);

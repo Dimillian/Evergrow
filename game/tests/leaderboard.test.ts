@@ -15,6 +15,6 @@ test('gear power only measures equipped recipes, with empty slots contributing z
 });
 test('enhancement raises gear power using the shared item derivation',()=>{
  const sheet=createCharacterSheet();const before=equippedGearPower(sheet);
- sheet.equipped.weapon!.recipe.enhancement=10;
+ sheet.equipped.weapon=deriveItem({...sheet.equipped.weapon!,recipe:{...sheet.equipped.weapon!.recipe,enhancement:10}});
  assert(equippedGearPower(sheet)>before);
 });

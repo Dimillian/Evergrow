@@ -1,7 +1,38 @@
-.event-panel { position:absolute; inset:0; z-index:18; display:grid; place-items:center; padding:18px; background:#040910aa; backdrop-filter:blur(4px); }
+.event-panel { position:absolute; inset:0; z-index:18; display:grid; place-items:center; padding:18px; background:#040910aa; }
 .event-panel[hidden] { display:none; }
-.event-window { width:min(480px,100%); }
-.event-choices { display:grid; gap:12px; padding:24px; }
-.event-choice { display:grid; text-align:left; gap:7px; padding:16px; }
-.event-choice strong { font-weight:400; font-size:19px; }
-.event-choice span { color:var(--ui-muted); font-size:14px; }
+.event-window { width:min(600px,100%); max-height:100%; }
+.event-window .ui-window-header { padding:8px 18px; }
+.event-heading { display:flex; align-items:center; gap:10px; min-width:0; }
+.event-heading .ui-title { font-size:19px; font-weight:400; }
+.event-heading .ui-header-emblem { color:#b8cbd4; }
+.event-window .ui-button--icon { width:44px; height:44px; padding:10px; flex-shrink:0; }
+.event-body { padding:22px 24px; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#829da9 #10202b; }
+.event-place h3 { font-size:25px; line-height:1.2; font-weight:400; color:#f0e9d8; margin:0 0 10px; }
+.event-meta { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; font-size:13px; line-height:1.35; color:#a7bac4; }
+.event-level { display:inline-flex; align-items:center; gap:5px; border:1px solid #acc5d34d; padding:3px 7px; color:#d2e1e9; background:#b7cfdf0c; }
+.event-level strong { font-size:15px; font-weight:500; }
+.event-meta > span:not(:first-child):not(:nth-child(2)) { padding-left:12px; border-left:1px solid #b4c9d13a; }
+.event-objective { font-size:18px; line-height:1.5; color:#d9e0dc; margin:20px 0; }
+.event-choice-prompt { margin:0 0 9px; font-size:13px; color:#a2b4be; }
+.event-choices { display:grid; gap:10px; }
+.event-choice.ui-button { width:100%; display:flex; gap:14px; align-items:start; padding:16px; white-space:normal; text-align:left; background-color:#08121c52; border-color:#8aa4b44a; min-width:0; color:#dfe8e7; }
+.event-choice.ui-button:hover { border-color:#c5dce8a0; }
+.event-choice-mark { display:grid; place-items:center; flex:0 0 44px; height:44px; border:1px solid #a7c3d142; background:#c6dce90c; color:#cbdbdf; }
+.event-choice-mark svg { width:28px; height:28px; }
+.event-choice-copy { display:grid; min-width:0; gap:7px; flex:1; }
+.event-choice-copy strong { font-size:20px; line-height:1.2; font-weight:400; color:#f0e7d2; }
+.event-choice-detail { font-size:15px; color:#aebdc5; line-height:1.45; }
+.event-choice-reward { display:flex; align-items:center; gap:7px; font-size:14px; line-height:1.4; color:#b9d1b2; margin-top:4px; }
+.event-choice-reward svg { width:17px; height:17px; flex-shrink:0; }
+.event-choice-indicator { align-self:center; color:#bbcbd5; display:flex; }
+.event-choice-indicator svg { width:18px; height:18px; }
+@media (max-width:620px) {
+  .event-body { padding:18px 16px; }
+  .event-choice.ui-button { gap:10px; padding:12px; }
+  .event-choice-copy strong { font-size:18px; }
+  .event-choice-mark { flex-basis:34px; height:34px; }
+  .event-choice-mark svg { width:23px; height:23px; }
+}
+@media (forced-colors:active) {
+  .event-window :is(.event-level,.event-choice-mark,.event-choice) { border-color:ButtonText; }
+}

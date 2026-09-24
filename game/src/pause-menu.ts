@@ -81,6 +81,9 @@ export class PauseMenu {
     this.root.querySelector('.pause-detail')!.scrollTop = 0;
     this.controller.clear();
   }
+  openDifficulty(returnToGame: () => void): void {
+    if (!this.busy) this.windows.open('difficulty', returnToGame);
+  }
   private open(destination: PauseDestination): void {
     if (this.busy) return;
     this.navigation.focus = destination;
@@ -91,7 +94,7 @@ export class PauseMenu {
       case 'map': this.actions.openMap?.(); return;
       case 'journeys': this.actions.openJourneys?.(); return;
       case 'chronicle': this.actions.openChronicle?.(); return;
-      case 'options': case 'controls': case 'leaderboard': case 'changelog': this.windows.open(destination); return;
+      case 'difficulty': case 'options': case 'controls': case 'leaderboard': case 'changelog': this.windows.open(destination); return;
     }
   }
   updateGamepad(pad: GamepadInput, now: number): void {

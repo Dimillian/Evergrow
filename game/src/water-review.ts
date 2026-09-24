@@ -39,7 +39,7 @@ function draw(now: number) {
   renderer.handleEvents(stageWaterScene(sim, scene, time, time + dt), motion.matches); time += dt;
   renderer.cameraX = scene.x; renderer.cameraY = scene.y - 80;
   const renderStart = performance.now();
-  renderer.render(sim, world, dt, { phase: 'playing', reducedMotion: motion.matches, waterAge, fps: 60, debug: false });
+  renderer.render(sim, world, dt, { phase: 'playing', reducedMotion: motion.matches, waterAge });
   fx.render(renderer.canvas, time);
   renderAverage += (performance.now() - renderStart - renderAverage) * .04;
   canvas.dataset.renderMs = renderAverage.toFixed(2);

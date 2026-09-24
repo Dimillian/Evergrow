@@ -16,6 +16,7 @@ class GeometryContext {
   save() { this.stack.push([this.offsetX, this.offsetY, this.globalAlpha]); }
   restore() { [this.offsetX, this.offsetY, this.globalAlpha] = this.stack.pop()!; }
   translate(x: number, y: number) { this.offsetX += x; this.offsetY += y; }
+  scale(x: number, y: number) { assert.equal(x, 1); assert.equal(y, 1); }
   rotate(n: number) { assert.ok(Number.isFinite(n)); this.commands.push(['rotate', n]); }
   clip() {}
   beginPath() {} closePath() {} fill() { this.commands.push(['fill', this.fillStyle]); }

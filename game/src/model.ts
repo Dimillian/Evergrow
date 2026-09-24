@@ -112,7 +112,7 @@ export interface WeaponDefinition {
 
 export type WeaponFamily = 'sword' | 'axe' | 'mace' | 'dagger' | 'bow' | 'staff' | 'wand' | 'unarmed';
 export type DamageType = 'physical' | 'fire' | 'frost' | 'lightning' | 'arcane';
-export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit';
+export type ProjectileStyle = 'arrow' | 'fire' | 'frost' | 'lightning' | 'arcane' | 'spirit' | 'radiant';
 export interface ShieldDefinition {
   id: string; name: string; blockChance: number; blockReduction: number;
   visual: { material?: GearMaterial; kind: 'buckler' | 'kite' | 'tower'; base: string; edge: string; trim: string; shadow: string };
@@ -155,8 +155,12 @@ export interface Player {
   /** Position at the beginning of the most recently completed simulation tick. */
   prevX: number;
   prevY: number;
+  /** Input-smoothed velocity used by movement, independent of collision correction. */
   vx: number;
   vy: number;
+  /** Actual movement per second in the last tick, used only for locomotion presentation. */
+  locomotionVX: number;
+  locomotionVY: number;
   angle: number;
   hp: number;
   maxHp: number;
@@ -206,6 +210,12 @@ export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'ember
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
 export interface Enemy {
+  difficulty?: import('./world-difficulty.ts').WorldDifficulty;
+  rewardDifficulty?: import('./world-difficulty.ts').WorldDifficulty;
+  /** Transient support link, never serialized; source death disables it immediately. */
+  riftWardSource?: Enemy;
+  riftSpecialCooldown?:number;
+  riftWarning?:{kind:'storm'|'fire';x:number;y:number;originX:number;originY:number;angle:number;remaining:number;damage:number};
   rift?: import('./rift-content.ts').RiftTag;
   auraExposure?: Partial<Record<'fire'|'frost'|'lightning'|'arcane',{power:number;remaining:number}>>;
   decoyTarget?: {id:number;x:number;y:number;radius:number;hit?:boolean};
@@ -267,9 +277,12 @@ export interface Enemy {
   radius: number;
   stagger: number;
   /** Applied duration retained for status progress; never drives combat. */
-  statusDurations?: Partial<Record<'burn' | 'slow' | 'freeze' | 'stun' | 'stagger', number>>;
+  statusDurations?: Partial<Record<'burn' | 'slow' | 'freeze' | 'stun' | 'stagger' | 'fracture' | 'chill', number>>;
+  reactionCooldown?: number;
+  fractureTime?: number;
   freezeTime?: number;
   stunTime?: number;
+  chillTime?: number;
   attackHit: boolean;
   interrupted: boolean;
   slowTime: number;
@@ -336,6 +349,7 @@ export interface Pickup {
 interface EventAppearance {
   readonly x: number; readonly y: number;
   readonly color?: string; readonly style?: ProjectileStyle; readonly skill?: SkillId;
+  readonly reaction?: 'melt' | 'overload' | 'superconduct' | 'singularity' | 'combustion' | 'cascade';
 }
 export type CombatEvent = EventAppearance & (
   | { readonly type: 'insufficient-mana' }
@@ -363,7 +377,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'level'; readonly level: number; readonly skillPoints: number; readonly statPoints: number }
   | { readonly type: 'notice'; readonly message: string }
   | { readonly type: 'blast'; readonly groundKind?: GroundEffect['kind']; readonly radius: number; readonly duration?: number; readonly enemyKind?: EnemyKind }
-  | { readonly type: 'chain'; readonly toX: number; readonly toY: number; readonly duration?: number }
+  | { readonly type: 'chain'; readonly chainTargetId?: number; readonly travelDuration?: number; readonly toX: number; readonly toY: number; readonly duration?: number }
   | { readonly type: 'block'; readonly angle: number; readonly value: number }
   | { readonly type: 'ground'; readonly radius: number; readonly duration: number; readonly style: ProjectileStyle; readonly skill: SkillId }
 );

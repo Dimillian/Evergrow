@@ -95,10 +95,11 @@ export function validItem(v: unknown): v is Item {
       || !['base', 'edge', 'trim', 'shadow', 'glow'].every(key => color((f.visual as ObjectValue)[key]))) return false;
   } else if (v.focus !== undefined) return false;
   if(v.tier==='unique'){
+    // Power is a recalculated presentation cache, not part of the fixed combat recipe.
     try{
       const expected=deriveItem(v as unknown as Item);
       if(JSON.stringify(expected.affixes)!==JSON.stringify(v.affixes)||JSON.stringify(expected.implicit)!==JSON.stringify(v.implicit)
-        ||expected.requiredLevel!==v.requiredLevel||expected.power!==v.power||expected.weapon?.damage!==(v.weapon as Item['weapon'])?.damage)return false;
+        ||expected.requiredLevel!==v.requiredLevel||expected.weapon?.damage!==(v.weapon as Item['weapon'])?.damage)return false;
     }catch{return false;}
   }
   return true;

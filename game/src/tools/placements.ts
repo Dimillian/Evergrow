@@ -25,7 +25,7 @@ function select(p:typeof places[number]|undefined){selected=p;drawMap();
   if(!p){renderer.reset();fx.render(renderer.canvas,0);root.querySelector('#details')!.textContent='';return;}
   root.querySelector('#details')!.textContent=JSON.stringify(p,null,2);
   const sim=new Simulation(world,{seed:query.seed,spawn:false,startX:p.x,startY:p.y+80});sim.time=12;
-  renderer.reset();renderer.resize(700,500);renderer.cameraX=p.x;renderer.cameraY=p.y-35;renderer.render(sim,world,0,{phase:'paused',reducedMotion:true,fps:0,debug:false});fx.render(renderer.canvas,12);
+  renderer.reset();renderer.resize(700,500);renderer.cameraX=p.x;renderer.cameraY=p.y-35;renderer.render(sim,world,0,{phase:'paused',reducedMotion:true});fx.render(renderer.canvas,12);
   for(const b of root.querySelectorAll<HTMLElement>('[data-place]'))b.setAttribute('aria-pressed',String(b.dataset.place===p.id));
   const state=new URLSearchParams({...Object.fromEntries(Object.entries(query).map(([k,v])=>[k,String(v)])),kind,place:p.id});history.replaceState(null,'',`?${state}`);reportRoute();
 }

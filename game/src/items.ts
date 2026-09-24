@@ -123,7 +123,7 @@ export function itemAffixPool(item: { kind: ItemKind; weapon?: { family: string;
   const preferred=jewelry?.affinity??specialty;
   const stats = leather||cloth ? [...specialty,'maxHp','armor',...(item.kind==='gloves'?[cloth?'castSpeedPercent':'attackSpeedPercent']:item.kind==='boots'?['moveSpeedPercent']:item.kind==='head'&&cloth?['cooldownPercent']:[])] : item.kind === 'amulet' ? [...AFFIXES, ...SHIELD_AFFIXES].map(a => a.stat)
     : item.kind === 'weapon' ? melee
-      ? ['areaPercent', 'damagePercent', 'critChance', 'critDamage', 'lifeOnHit', 'strength', 'dexterity', 'intelligence', 'spellDamagePercent']
+      ? ['areaPercent', 'damagePercent', 'critChance', 'critDamage', 'lifeOnHit', 'strength', 'dexterity']
       : item.weapon?.family === 'bow' ? ['projectilePierce', 'damagePercent', 'critChance', 'critDamage', 'dexterity', 'lifeOnHit', 'strength']
       : [item.weapon?.family === 'staff' ? 'areaPercent' : 'projectilePierce', 'spellDamagePercent', 'intelligence', 'maxMana', 'critChance', 'critDamage', 'manaCostPercent', 'manaRegen']
     : SLOT_AFFIXES[item.kind] ?? [];
@@ -142,18 +142,24 @@ export function affixConflicts(stat: StatKey, occupied: readonly StatKey[]): boo
     || ['attackSpeedPercent', 'castSpeedPercent'].includes(stat) && occupied.some(s => ['attackSpeedPercent', 'castSpeedPercent'].includes(s));
 }
 /** Concentrated slots need meaningful rolls; percentage growth remains bounded. */
-export function affixPotency(kind: ItemKind, stat: StatKey): number {
+export function affixPotency(kind: ItemKind, stat: StatKey, authored = false): number {
   if (stat === 'moveSpeedPercent') return kind === 'boots' ? 5 : 2.5;
-  if (stat === 'attackSpeedPercent' || stat === 'castSpeedPercent') return kind === 'gloves' ? 4 : 2;
+  if (stat === 'attackSpeedPercent' || stat === 'castSpeedPercent') return kind === 'gloves' ? (authored ? 4 : 3) : 2;
   if (kind === 'chest' && ['maxHp', 'armor', 'lifeRegen'].includes(stat)) return 1.75;
   if (kind === 'head' && ['maxMana', 'manaCostPercent'].includes(stat)) return 1.5;
   if (kind === 'cloak' && ['lifeRegen', 'manaRegen', 'cooldownPercent'].includes(stat)) return 1.5;
   if (kind === 'grimoire' && ['maxMana', 'manaRegen', 'manaCostPercent'].includes(stat)) return 1.5;
   if (kind === 'orb' && ['spellDamagePercent', 'critChance', 'critDamage'].includes(stat)) return 1.5;
   if (kind === 'shield' && ['blockChance', 'blockReduction'].includes(stat)) return 2;
-  if (kind === 'weapon' && ['damagePercent', 'spellDamagePercent'].includes(stat)) return 2;
+  if (kind === 'weapon' && ['damagePercent', 'spellDamagePercent'].includes(stat)) return authored ? 2 : 4;
   return 1;
 }
+/** Random weapons trade some guaranteed base damage for stronger rolled damage.
+ * Uniques keep their authored stat budgets; their skill power is a separate chase. */
+function weaponBaseBudget(materialScale: number, authored = false): number {
+  return authored ? materialScale : 1 + (materialScale - 1) * .35;
+}
+
 function focusImplicit(profileId: string, level: number, quality: number): StatModifiers {
   const profile = FOCUS_PROFILES.find(p => p.id === profileId)!;
   return Object.fromEntries(Object.entries(profile.implicit).map(([stat, value]) => [stat,
@@ -239,10 +245,10 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
     recipe: { manaVersion: 1, offenseVersion: 1, rollVersion: 1, materialId, ...((weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile) ? { profileId: (weaponProfile ?? shieldProfile ?? focusProfile ?? jewelryProfile)!.id } : {}), starter: false, enhancement: 0, revision: 0, targetedRolls: 0, fullRolls: 0, rolls },
     id: `item-${seed.toString(36)}-${level}-${weaponProfile?.id ?? shieldProfile?.id ?? focusProfile?.id ?? jewelryProfile?.id ?? itemKind}-${materialId}-${tier}`, seed, name, baseName, kind: itemKind, tier,
     itemLevel: level, requiredLevel: Math.max(1, level - 2),
-    power: Math.round(level * 10 + quality * baseScale * 12 + affixes.length * 7), implicit, affixes, appearance,
+    power: 0, implicit, affixes, appearance,
   };
   if (weaponProfile) {
-    item.weapon = { ...weaponProfile, id: item.id, name, damage: Math.round(weaponProfile.damage * growth),
+    item.weapon = { ...weaponProfile, id: item.id, name, damage: Math.round(weaponProfile.damage * growth * weaponBaseBudget(baseScale) / baseScale),
       visual: { ...weaponProfile.visual, material: surface, metal: appearance.base, edge: appearance.edge, grip: appearance.shadow, guard: appearance.trim } };
   }
   if (shieldProfile) {
@@ -257,7 +263,7 @@ export function generateItem(seed: number, itemLevel: number, kind?: ItemKind, p
 export const STARTER_LOADOUTS = Object.freeze([
   { id: 'sword-shield', label: 'Sword & shield', detail: 'Quick · guarded', profileId: 'longsword', offhandProfileId: 'iron-buckler' },
   { id: 'sword', label: 'Two-handed sword', detail: 'Heavy · two-handed', profileId: 'weathered-sword', offhandProfileId: null },
-  { id: 'wand', label: 'Wand & grimoire', detail: 'Quick casting · sustain', profileId: 'cinder-wand', offhandProfileId: 'ember-codex' },
+  { id: 'wand', label: 'Wand & grimoire', detail: 'Radiant bolts · quick casting', profileId: 'star-wand', offhandProfileId: 'astral-grimoire' },
   { id: 'fire', label: 'Fire staff', detail: 'Powerful · two-handed', profileId: 'ember-staff', offhandProfileId: null },
   { id: 'bow', label: 'Shortbow', detail: 'Fast · short range', profileId: 'thorn-shortbow', offhandProfileId: null },
   { id: 'longbow', label: 'Longbow', detail: 'Heavy · long range', profileId: 'warden-longbow', offhandProfileId: null },
@@ -286,6 +292,7 @@ export function createStarterLoadout(id: StarterLoadoutId): { weapon: Item; offh
     if (offhand.shield) offhand.shield = { ...offhand.shield, id: offhand.id, name: offhand.name };
     if (offhand.focus) offhand.focus = { ...offhand.focus, id: offhand.id, name: offhand.name };
   }
+  item.power = estimateItemPower(item);
   return { weapon: item, offhand };
 }
 
@@ -318,6 +325,10 @@ export function deriveItem(item: Item): Item {
   if(item.kind==='riftKey')return {...createRiftKey(item.seed,item.itemLevel,item.recipe.riftKeyTier),...(item.locked!==undefined?{locked:item.locked}:{}),...(item.newPickup?{newPickup:true as const}:{})};
   if (item.tier === 'unique') return deriveUnique(item);
   if (item.kind === 'charm') return deriveCharm(item);
+  return deriveEquipment(item);
+}
+
+function deriveEquipment(item: Item): Item {
   const next: Item = { ...item, implicit: {}, affixes: [], recipe: { ...item.recipe, manaVersion: 1, offenseVersion: 1, rollVersion: 1, rolls: [...item.recipe.rolls] } };
   const r = item.recipe, quality = TIER_POWER[item.tier], enhance = 1 + .05 * r.enhancement;
   const baseScale = itemMaterialScale(item);
@@ -334,7 +345,7 @@ export function deriveItem(item: Item): Item {
     if (item.kind === 'ring') next.implicit.damagePercent = 2 * itemPercentageScale(item.itemLevel) * quality * enhance * baseScale;
   }
   if (JEWELRY_PROFILES.some(p=>p.id===r.profileId)) next.implicit=jewelryImplicit(r.profileId!,item.itemLevel,quality*enhance*baseScale);
-  if (weapon && item.weapon) next.weapon = { ...item.weapon, damage: Math.round(weapon.damage * growth) };
+  if (weapon && item.weapon) next.weapon = { ...item.weapon, damage: Math.round(weapon.damage * growth * (r.starter ? 1 : weaponBaseBudget(baseScale, item.tier === 'unique') / baseScale)) };
   if (shield && item.shield) next.shield = { ...item.shield,
     blockChance: shield.blockChance * enhance,
     blockReduction: shield.blockReduction * enhance };
@@ -342,10 +353,9 @@ export function deriveItem(item: Item): Item {
     const definition = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES, ...SKILL_AFFIXES].find(a => a.stat === affix.stat)!;
     const level = (PERCENT_STATS.has(affix.stat) || isManaBudgetStat(affix.stat) || isOffensiveAttribute(affix.stat)) ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
     return { name: definition.name, stat: definition.stat,
-      value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? (definition.base + level * definition.growth) * itemRollMultiplier(r.rolls[index]) * quality * enhance * affixPotency(item.kind, definition.stat)) };
+      value: boundResistanceRoll(definition.stat, discreteAffixValue(definition.stat, r.rolls[index], item.itemLevel) ?? (definition.base + level * definition.growth) * itemRollMultiplier(r.rolls[index]) * quality * enhance * affixPotency(item.kind, definition.stat, item.tier === 'unique')) };
   });
   next.requiredLevel = Math.max(1, item.itemLevel - 2);
-  next.power = Math.round((item.itemLevel * 10 + quality * baseScale * 12 + item.affixes.length * 7) * enhance);
   return roundItemStats(next);
 }
 
@@ -358,7 +368,61 @@ export function roundItemStats(item: Item): Item {
     affixes: item.affixes.map(affix => ({ ...affix, value: wholeItemStat(affix.value) })),
     ...(item.shield ? { shield: { ...item.shield, blockChance: wholeItemStat(item.shield.blockChance), blockReduction: wholeItemStat(item.shield.blockReduction) } } : {}),
   };
+  next.power = estimateItemPower(next);
   return next.weapon?.enchantment || next.affixes.some(affix => isElementalAffix(affix.stat)) ? applyWeaponEnchantment(next) : next;
+}
+
+/** Build-neutral gear quality, using actual values rather than the saved score.
+ * Normalize stat units against their ordinary same-level slot budget. This is
+ * neither build DPS nor a valuation of a Unique's skill-changing power. */
+export function estimateItemPower(item: Item): number {
+  if (item.kind === 'riftKey') return 0;
+  if (item.recipe.starter && !item.weapon && !item.focus && !item.shield && !item.affixes.length) return 1;
+  const quality = TIER_POWER[item.tier], enhance = 1 + .05 * item.recipe.enhancement;
+  let base = quality * enhance * (item.kind === 'charm' ? charmProfile(item)!.size.potency : itemMaterialScale(item));
+  const profile = item.recipe.profileId === STARTING_SWORD.id ? STARTING_SWORD : WEAPON_PROFILES.find(p => p.id === item.recipe.profileId);
+  if (item.weapon && profile) base = item.weapon.damage / (profile.damage * itemPowerScale(item.itemLevel));
+  const definitions = [...AFFIXES, ...SHIELD_AFFIXES, ...ELEMENTAL_AFFIXES, ...SKILL_AFFIXES, ...CHARM_UTILITY_AFFIXES];
+  const physical = item.weapon && item.weapon.attackKind !== 'bolt';
+  const rolled = item.affixes.reduce((total, affix) => {
+    const definition = definitions.find(a => a.stat === affix.stat);
+    if (!definition) return total;
+    const level = PERCENT_STATS.has(affix.stat) || isManaBudgetStat(affix.stat) || isOffensiveAttribute(affix.stat)
+      ? itemAffixGrowthLevel(item.itemLevel) : item.itemLevel - 1;
+    const reference = isSkillStat(affix.stat) || affix.stat === 'projectilePierce' ? 1
+      : Math.max(1, (definition.base + level * definition.growth) * affixPotency(item.kind, affix.stat, item.tier === 'unique'));
+    // Support stats still matter; a spell-only bonus on a physical weapon does not.
+    const relevance = physical && ['intelligence', 'spellDamagePercent', 'castSpeedPercent'].includes(affix.stat) ? 0
+      : item.weapon && ['damagePercent', 'spellDamagePercent', 'critChance', 'critDamage'].includes(affix.stat) ? 1.25
+      : item.weapon && ['maxMana', 'manaRegen', 'manaCostPercent'].includes(affix.stat) ? .7 : 1;
+    return total + Math.max(0, affix.value) / reference * relevance;
+  }, 0);
+  return Math.max(1, Math.round((item.itemLevel + 5) * 10 * (.65 * base + .12 * rolled)));
+}
+
+/** Apply current random weapon/glove budgets on a validated save copy. Keep
+ * identities, enhancements and quantiles; replace only obsolete caster affixes. */
+export function refreshEquipmentBudgets(item: Item): Item {
+  if (item.tier === 'unique' || item.recipe.starter || !['weapon', 'gloves'].includes(item.kind)) return item;
+  let next = item;
+  if (item.weapon && item.weapon.attackKind !== 'bolt') {
+    const affixes = item.affixes.map(a => ({...a})), pool = itemAffixPool(item);
+    for (let i = 0; i < affixes.length; i++) {
+      if (!['intelligence', 'spellDamagePercent', 'castSpeedPercent'].includes(affixes[i].stat)) continue;
+      const occupied = affixes.filter((_, index) => i !== index).map(a => a.stat);
+      const preferred: StatKey[] = affixes[i].stat === 'intelligence'
+        ? ['strength', 'dexterity', 'critDamage', 'lifeOnHit'] : ['damagePercent', 'critDamage', 'lifeOnHit', 'dexterity'];
+      const definition = preferred.map(stat => pool.find(a => a.stat === stat)).find(a => a && !affixConflicts(a.stat, occupied))
+        ?? pool.find(a => !affixConflicts(a.stat, occupied));
+      if (!definition) throw new Error('No replacement weapon affix');
+      affixes[i] = {name: definition.name, stat: definition.stat, value: 0};
+    }
+    next = {...item, affixes};
+  }
+  const current = deriveItem(next);
+  return {...item, ...(item.weapon ? {weapon: {...item.weapon, damage: current.weapon!.damage}} : {}),
+    affixes: item.affixes.map((affix, i) => affix.stat !== current.affixes[i].stat
+      || ['damagePercent', 'spellDamagePercent', 'attackSpeedPercent', 'castSpeedPercent'].includes(affix.stat) ? current.affixes[i] : affix)};
 }
 
 /** Rebuild elemental projection after generation or services, clearing removed affixes. */
@@ -403,7 +467,7 @@ function deriveCharm(item:Item):Item {
     const growth=(PERCENT_STATS.has(a.stat)||isManaBudgetStat(a.stat)||isOffensiveAttribute(a.stat))?itemAffixGrowthLevel(item.itemLevel):item.itemLevel-1;
     return {name:definition.name,stat:a.stat,value:boundResistanceRoll(a.stat,(definition.base+growth*definition.growth)*quality*(a.stat==='manaRegen'?profile.size.width*profile.size.height*.35:profile.size.potency)*itemRollMultiplier(item.recipe.rolls[i]))};
   });
-  return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:Math.round((item.itemLevel*10+affixes.length*7)*profile.size.potency*TIER_POWER[item.tier]*(1+.05*item.recipe.enhancement)),recipe:{...item.recipe,manaVersion:1,offenseVersion:1,rollVersion:1,rolls:[...item.recipe.rolls]}});
+  return roundItemStats({...item,affixes,implicit:{},requiredLevel:Math.max(1,item.itemLevel-2),power:0,recipe:{...item.recipe,manaVersion:1,offenseVersion:1,rollVersion:1,rolls:[...item.recipe.rolls]}});
 }
 export const itemAffixCount = (item:Pick<Item,'kind'|'tier'|'recipe'>) => item.kind==='riftKey'?0: item.kind==='charm'?charmAffixCount(item):TIER_AFFIXES[item.tier];
 
@@ -471,7 +535,7 @@ export function generateUnique(seed:number, level:number, uniqueId?:string):Item
 }
 function deriveUnique(item:Item):Item {
   const definition=uniqueDefinition(item);if(!definition)throw new RangeError('Unknown unique item');
-  const next=deriveItem({...item,tier:'legendary'});
+  const next=deriveEquipment(item);
   const name=definition.name;
   next.tier='unique';next.name=name;
   next.appearance={...next.appearance,trim:UNIQUE_COLOR,edge:'#d7b6ee'};

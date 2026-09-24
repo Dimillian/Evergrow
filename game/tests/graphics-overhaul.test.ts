@@ -1,3 +1,5 @@
+import { ArtLibrary } from '../src/prop-art.ts';
+import { EnvironmentArt } from '../src/environment-art.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GroundDressing, GROUND_DRESSING_LIMIT, drawGroundPatches } from '../src/ground-art.ts';
@@ -59,5 +61,26 @@ test('every tree family regenerates finite rooted and foliage layers without see
     assert.equal(first.foliage?.length ?? 0, ['deadTree', 'charredTree'].includes(kind) ? 0 : 2);
     assert.notEqual(first.image, second.image);
     assert.ok(a.every(c => c.commands.length > 10));
+  }
+});
+
+
+test('enlarged rift props rerasterize geometry while keeping logical bounds and bounded variants', () => {
+  const contexts: Context[] = [], art = new ArtLibrary(factory(contexts));
+  const normal = art.getRock(42), large = art.getRock(42, 3.4);
+  assert.equal(large.width, normal.width);
+  assert.equal(large.anchorY, normal.anchorY);
+  assert.equal(large.image.width, normal.image.width * 4);
+  assert.deepEqual(contexts[1].commands.slice(1), contexts[0].commands.slice(1));
+  assert.equal(art.getRock(42, 2.7), large);
+  assert.equal(art.getRock(42, 100), large);
+  const environment = new EnvironmentArt(factory([]));
+  for (const kind of ['canopy', 'sandstone', 'iceCrystal', 'basalt', 'limestone'] as const) {
+    const small = environment.getSprite({...prop(42), kind})!;
+    const big = environment.getSprite({...prop(42), kind, scale: 3.4})!;
+    assert.equal(big.width, small.width);
+    assert.equal(big.anchorY, small.anchorY);
+    assert.equal(big.image.width, small.image.width * 4);
+    for (const layer of big.foliage ?? []) assert.equal(layer.width, big.image.width);
   }
 });

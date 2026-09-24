@@ -1,6 +1,12 @@
 export interface Achievement { id:string; name:string; group:string; metric:string; tiers:readonly number[]; description:string; glyph:string; }
 const family=(id:string,name:string,group:string,metric:string,tiers:number[],description:string,glyph:string):Achievement=>({id,name,group,metric,tiers,description,glyph});
 export const ACHIEVEMENTS:readonly Achievement[]=[
+ family('rift-delver','Breach breaker','Rifts','riftClears',[1,10,50],'Defeat rift guardians before the timer expires.','star'),
+ family('rift-keyed','Into the storm','Rifts','riftKeyedClears',[1,10,50],'Clear rifts empowered by a key.','gem'),
+ family('rift-height','Beyond the veil','Rifts','highestRiftLevel',[30,60,100],'Clear a rift at this level or higher.','crown'),
+ family('rift-speed','Against the void','Rifts','riftFastClears',[1,10,25],'Clear a rift, including its guardian, within five minutes.','spark'),
+ family('rift-worlds','Fractured worlds','Rifts','riftBiomes',[3,6,9],'Clear rifts in different biomes.','compass'),
+ family('rift-keys','Master of the breach','Rifts','highestRiftKeyTier',[3,4,5],'Clear rifts using Rare, Epic, then Legendary keys.','gem'),
  family('slayer','Slayer','Combat','kills',[100,1000,10000],'Defeat enemies.','blade'),
  family('veterans','Battle tested','Combat','rank:veteran',[10,100,1000],'Defeat veterans.','blade'),
  family('elites','Elite hunter','Combat','rank:elite',[5,50,500],'Defeat elites.','crown'),
@@ -38,10 +44,11 @@ export const ACHIEVEMENTS:readonly Achievement[]=[
  family('mana','Deep reserves','Progression','manaSpent',[1000,10000,100000],'Spend mana on attacks and skills.','flask'),
 ];
 export function achievementValue(a:Achievement,values:Record<string,number>):number {
- return a.metric==='biomes'?Object.keys(values).filter(k=>k.startsWith('seen:biome:')&&values[k]>0).length:values[a.metric]??0;
+ return a.metric==='riftBiomes'?Object.keys(values).filter(k=>k.startsWith('seen:riftBiome:')&&values[k]>0).length:a.metric==='biomes'?Object.keys(values).filter(k=>k.startsWith('seen:biome:')&&values[k]>0).length:values[a.metric]??0;
 }
 export function achievementTier(a:Achievement,values:Record<string,number>):number {const n=achievementValue(a,values);return a.tiers.filter(t=>n>=t).length;}
 export const STAT_GROUPS:Record<string,readonly [string,string][]>={
+ Rifts:[['riftAttempts','Rifts entered'],['riftClears','Guardians defeated'],['highestRiftLevel','Highest rift cleared'],['bestRiftSeconds','Fastest clear'],['riftKeyedClears','Keyed rifts cleared'],['riftKeysUsed','Keys used'],['riftFastClears','Clears under five minutes'],['riftKills','Rift monsters slain'],['riftDeaths','Runs lost to death'],['riftTimeouts','Runs timed out'],['riftAbandoned','Runs abandoned']],
  Combat:[['kills','Enemies slain'],['damage','Damage dealt'],['directDamage','Direct damage'],['periodicDamage','Damage over time'],['hits','Hits landed'],['crits','Critical hits'],['largestHit','Largest hit'],['highestEnemy','Highest enemy level'],['bosses','Bosses defeated']],
  Survival:[['damageTaken','Damage taken'],['damageBlocked','Damage blocked'],['blocks','Blocks'],['healing','Life restored'],['manaRestored','Mana restored'],['manaSpent','Mana spent'],['potions','Potions used'],['dodges','Dodges'],['deaths','Deaths'],['longestLife','Longest life']],
  Loot:[['items','Equipment collected'],['goldEarned','Gold earned'],['goldFound','Gold picked up'],['goldSales','Gold from sales'],['goldSpent','Gold spent'],['largestGold','Largest gold pickup'],['containers','Containers broken'],['highestEnhancement','Best enhancement']],
@@ -51,6 +58,17 @@ export const STAT_GROUPS:Record<string,readonly [string,string][]>={
 
 /** Explain measurement rules without filling the statistics screen with extra copy. */
 export const CHRONICLE_STAT_HELP:Readonly<Record<string,string>>={
+ riftAttempts:'Successfully entered rifts. Failed entry or save attempts do not count.',
+ riftClears:'Rift guardians defeated before time expires. Each run counts once, independently of chest collection.',
+ highestRiftLevel:'The highest rift level you have cleared, including keyed rifts.',
+ bestRiftSeconds:'Fastest full clear including the guardian, across all levels and keys. Pauses and offline time are excluded.',
+ riftKeyedClears:'Successful clears with an optional key consumed on entry. Tracked from this update.',
+ riftKeysUsed:'Keys consumed by successful entry transactions. Tracked from this update.',
+ riftFastClears:'Full clears within five active minutes, including the guardian. Tracked from this update.',
+ riftKills:'Hunt monsters actually defeated. Enemies removed when the guardian arrives do not count. Tracked from this update.',
+ riftDeaths:'Runs ended by player death. Tracked from this update.',
+ riftTimeouts:'Runs ended when the ten-minute timer expired. Tracked from this update.',
+ riftAbandoned:'Unfinished runs left voluntarily. Pausing or closing the game is not abandonment. Tracked from this update.',
  time:'Time spent playing. Paused menus and closed sessions do not count.',
  damage:'Actual enemy life removed by your attacks and effects. Overkill is excluded.',
  directDamage:'Damage from direct hits, excluding damage over time.',

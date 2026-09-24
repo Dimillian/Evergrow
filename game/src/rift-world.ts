@@ -8,7 +8,7 @@ export class RiftWorld extends World {
   readonly dungeonLevel: number;
   readonly dungeonBiome;
   constructor(floor:DungeonFloor,entrance:DungeonEntrance){
-    super(floor.seed,true);this.floor=floor;this.entrance=entrance;
+    super(floor.seed,true,floor.rift?.layout==='clearings');this.floor=floor;this.entrance=entrance;
     this.dungeonLevel=entrance.level;this.dungeonBiome=this.sampleBiome(floor.entry.x,floor.entry.y).id;
   }
   override isSanctuary(x:number,y:number){return Math.hypot(x-this.floor.entry.x,y-this.floor.entry.y)<120;}

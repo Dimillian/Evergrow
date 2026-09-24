@@ -62,7 +62,7 @@ if(new URLSearchParams(location.search).has('charms')) {
   p.character.inventory.fill(null);p.character.inventoryLayout={};
   CHARM_SIZES.forEach((size,i)=>{
     const item=generateItem(8400+i,p.level,'charm',`${CHARM_FLAVORS[i].id}-${size.id}`,(['common','magic','rare','epic','legendary','rare'] as const)[i]);
-    p.character.inventory[i]=item;
+    p.character.inventory[i]=item;p.character.inventoryLayout![item.id]=PACK_CELLS+i*2;
   });
   p.character.stash=Array(96).fill(null);
   p.character.stash[0]=generateItem(8701,p.level,'charm','jade-monolith','legendary');
@@ -164,9 +164,13 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   allocate: attribute => result(allocateAttribute(p.character, attribute)),
 }));
 const tree = life.own(new SkillTreePanel(shell.panelMount, {
-  develop: command => result(executeCharacterCommand(p, command)), close: () => show('character'),
+  develop: command => {
+    const action = executeCharacterCommand(p, command);
+    if (action.ok && command.type === 'refundNode') tree.pointRefunded(command.id);
+    result(action);
+  }, close: () => show('character'),
   allocate: id => result(executeCharacterCommand(p, { type: 'allocateNode', id })), assign: (slot, skill) => result(assignSkill(p, slot, skill)),
-}));
+}, { autoTour: false }));
 const effectReview = new URLSearchParams(location.search).get('effects');
 if (effectReview) {
   const signatures = effectReview === 'guard' ? ['patient-bastion'] : effectReview === 'rogue' ? ['duelists-return','ashen-double'] : effectReview === 'bow' ? ['pale-huntsman'] : effectReview === 'ward' ? ['broken-seal','borrowed-life'] : ['cinderheart-testament','borrowed-life'];
@@ -203,7 +207,7 @@ function background() {
   const w = innerWidth, h = innerHeight, density = devicePixelRatio || 1;
   shell.canvas.width = Math.round(w * density); shell.canvas.height = Math.round(h * density);
   renderer.resize(Math.round(680 * w / h), 680);
-  renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true, debug: false, fps: 60 });
+  renderer.render(sim, world, 0, { phase: 'paused', reducedMotion: true });
   fx.render(renderer.canvas, 0);
   shell.uiCanvas.width = Math.round(w * density); shell.uiCanvas.height = Math.round(h * density);
   const ui = shell.uiCanvas.getContext('2d')!;

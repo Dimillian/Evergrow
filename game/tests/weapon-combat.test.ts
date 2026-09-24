@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { FIXED_STEP, Simulation } from '../src/simulation.ts';
 import { assignSkill, refreshCharacter } from '../src/character.ts';
 import { equipItem } from '../src/inventory.ts';
-import { generateItem } from '../src/items.ts';
+import { createCharacterSheet, generateItem, deriveItem } from '../src/items.ts';
+import { validItem } from '../src/item-validation.ts';
+import { projectileDamageType } from '../src/resistance-content.ts';
+import { resonanceHit } from '../src/auras.ts';
 import { allocateNode, SKILL_TREE } from '../src/skill-tree.ts';
 import { buildSkillRoutes, previewSkillRoute } from '../src/skill-tree-routes.ts';
 import { SKILL_DEFINITIONS } from '../src/skill-content.ts';
@@ -57,6 +60,64 @@ function skillSim(id: SkillId, world = openWorld): Simulation {
 }
 function cast(sim: Simulation, aimX = 400, aimY = 0): void { sim.update(FIXED_STEP, { ...idle, aimX, aimY, skillSlot: 0 }); }
 const hitEvents = (events: CombatEvent[], enemy?: Enemy) => events.filter((event): event is Extract<CombatEvent, { type: 'hit' }> => event.type === 'hit' && (!enemy || event.targetId === enemy.id));
+
+test('radiant starter basics pay once, retain their released identity and hit without burning', () => {
+  const sim = make(); sim.player.character = createCharacterSheet('wand'); refreshCharacter(sim.player);
+  const p = sim.player, enemy = target(sim, 160);
+  assert.equal(p.character.equipped.weapon!.recipe.profileId, 'star-wand');
+  assert.equal(p.character.equipped.offhand!.recipe.profileId, 'astral-grimoire');
+  for (const item of [p.character.equipped.weapon!, p.character.equipped.offhand!]) {
+    assert.ok(validItem(JSON.parse(JSON.stringify(item))));
+    assert.ok(validItem(deriveItem(item)), 'normal improvement reconstruction remains supported');
+  }
+  p.derived.critChance = 0; p.derived.manaRegeneration = 0;
+  const mana = p.mana;
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  const damage = p.attack!.damage;
+  close(p.mana, mana - 2);
+  advance(sim, p.attack!.activeStart + FIXED_STEP * 2);
+  assert.equal(sim.projectiles[0].effects!.style, 'radiant');
+  assert.equal(projectileDamageType('radiant'), 'arcane');
+  equip(sim, 'ember-staff'); p.derived.manaRegeneration = 0;
+  advance(sim, .65);
+  const hits = hitEvents(sim.drainEvents(), enemy);
+  assert.equal(hits.length, 1); assert.equal(hits[0].style, 'radiant');
+  assert.equal(hits[0].value, damage); assert.equal(hits[0].elementalValue, damage);
+  assert.equal(enemy.burnTime, 0); assert.equal(enemy.slowTime, 0);
+  close(p.mana, mana - 2);
+});
+
+test('radiant light shares Arcane aura exposure, including spirit follow-up hits', () => {
+  const sim = make(), p = sim.player, enemy = target(sim, 160);
+  p.auras!.powers.elementalResonance = 12;
+  assert.equal(resonanceHit(p, enemy, 'radiant', false), 1);
+  assert.deepEqual(Object.keys(enemy.auraExposure!), ['arcane']);
+  close(resonanceHit(p, enemy, 'spirit', false), 1.12);
+  close(resonanceHit(p, enemy, 'arcane', false), 1.12);
+  assert.equal(resonanceHit(p, enemy, 'fire', false), 1);
+});
+
+test('an offhand Star Wand keeps its radiant basic without a grimoire', () => {
+  const sim = make(); equip(sim, 'longsword'); equip(sim, 'star-wand', true);
+  sim.player.nextAttackHand = 'off'; sim.player.derived.manaRegeneration = 0;
+  const mana = sim.player.mana;
+  sim.update(FIXED_STEP, { ...idle, attack: true });
+  assert.equal(sim.player.attack!.hand, 'off');
+  advance(sim, sim.player.attack!.activeStart + FIXED_STEP * 2);
+  assert.equal(sim.projectiles[0].effects!.style, 'radiant');
+  assert.equal(sim.projectiles[0].launch!.hand, 'off');
+  close(sim.player.mana, mana - 2);
+});
+
+test('Fireball cast through a radiant wand retains its fire damage and burning recipe', () => {
+  const sim = make(); equip(sim, 'star-wand'); unlock(sim, 'fireball');
+  const enemy = target(sim, 80);
+  cast(sim); assert.equal(sim.projectiles[0].effects!.style, 'fire');
+  advance(sim, .35);
+  assert.ok(enemy.burnTime > 0);
+  assert.ok(hitEvents(sim.drainEvents(), enemy).every(hit => hit.style === 'fire'));
+});
+
 function incoming(sim: Simulation, damage = 40): void {
   sim.projectiles.push({ id: 99999, x: -12, y: 0, prevX: -12, prevY: 0, vx: 600, vy: 0, angle: 0, radius: 4,
     damage, life: 1, sourceLevel: 1, maxLife: 1, owner: 'enemy', hitIds: new Set() });
@@ -318,6 +379,8 @@ test('Arc Lightning acquires and bounces only inside the actual combat viewport'
   sim.setSpawnExclusion({ x: -1000, y: -1000, width: 2000, height: 2000 });
   const visible = target(sim, 60), offscreen = target(sim, 155);
   cast(sim, 60);
+  assert.equal(hitEvents(sim.drainEvents(), visible).length, 0, 'chain damage waits for arrival');
+  advance(sim, .5);
   assert.equal(hitEvents(sim.drainEvents(), visible).length, 1);
   assert.equal(offscreen.hp, offscreen.maxHp, 'padded spawn coverage cannot permit a bounce');
 

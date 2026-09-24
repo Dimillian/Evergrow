@@ -1,3 +1,4 @@
+import { DifficultyPanel, type DifficultyActions } from './world-difficulty-panel.ts';
 import { controls } from './control-preferences.ts';
 import { audioControlsMarkup, bindAudioControls, type AudioControlActions } from './audio-controls.ts';
 import { ControlsPanel, controlsMarkup } from './controls-panel.ts';
@@ -9,8 +10,8 @@ import { GamepadMenu } from './gamepad-menu.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import './pause-system-windows.css';
 
-export type SystemDestination = 'options' | 'controls' | 'changelog' | 'leaderboard';
-export interface SystemWindowActions extends AudioControlActions {
+export type SystemDestination = 'options' | 'controls' | 'changelog' | 'leaderboard' | 'difficulty';
+export interface SystemWindowActions extends AudioControlActions, DifficultyActions {
   groundLootNames?(): GroundLootNameplates;
   setGroundLootNames?(mode: GroundLootNameplates): void;
   zoom?(factor: number): void;
@@ -27,11 +28,12 @@ function optionsMarkup(): string {
     </section><p class="system-window-status" role="status"></p>`;
 }
 
-/** Independent windows within the paused phase. Closing restores the menu, never gameplay. */
+/** Windows within the paused phase, returning to their menu or gameplay entry point. */
 export class PauseSystemWindows {
   private window?: HTMLElement;
   private life?: AbortController;
   private controls?: ControlsPanel;
+  private difficultyPanel?: DifficultyPanel;
   private changelog?: ChangelogPanel;
   private leaderboard?: LeaderboardPanel;
   private refreshAudio?: () => void;
@@ -40,14 +42,16 @@ export class PauseSystemWindows {
   private readonly root: HTMLElement;
   private readonly actions: SystemWindowActions;
   private readonly onClose: () => void;
+  private returnToGame?: () => void;
   constructor(root: HTMLElement, actions: SystemWindowActions, onClose: () => void) {
     this.root = root; this.actions = actions; this.onClose = onClose;
   }
   get opened(): boolean { return !!this.window; }
 
-  open(destination: SystemDestination): void {
+  open(destination: SystemDestination, returnToGame?: () => void): void {
     if (this.opened) return;
     if (destination === 'leaderboard' && (!this.actions.leaderboard || !this.actions.leaderboardAvailable?.())) return;
+    this.returnToGame = returnToGame;
     this.life = new AbortController();
     const signal = this.life.signal;
     this.root.querySelector<HTMLElement>('.pause-menu-stack')!.hidden = true;
@@ -60,17 +64,18 @@ export class PauseSystemWindows {
       this.window.classList.add('pause-changelog');
       this.changelog.open();
     } else {
-      const title = destination === 'options' ? 'Options' : destination === 'controls' ? 'Controls' : 'Leaderboard';
+      const title = destination === 'difficulty' ? 'World difficulty' : destination === 'options' ? 'Options' : destination === 'controls' ? 'Controls' : 'Leaderboard';
       this.window = document.createElement('section');
       this.window.className = `ui-window system-window system-window--${destination}`;
       this.window.setAttribute('role', 'dialog'); this.window.setAttribute('aria-modal', 'true');
       this.window.setAttribute('aria-labelledby', 'system-window-title');
       this.window.innerHTML = `<header class="ui-window-header"><h2 id="system-window-title" class="ui-title">${title}</h2><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-system-close aria-label="Close ${title}">${uiIcon('close')}</button></header>
-        <div class="system-window-body ui-scroll-area">${destination === 'options' ? optionsMarkup() : destination === 'controls' ? controlsMarkup() : '<div data-system-rankings></div>'}</div>
-        <footer class="ui-window-footer system-window-footer"><span>EVERGROW</span><span>Esc / B · Back to System</span></footer>`;
+        <div class="system-window-body ui-scroll-area">${destination === 'options' ? optionsMarkup() : destination === 'controls' ? controlsMarkup() : destination === 'difficulty' ? '<div data-system-difficulty></div>' : '<div data-system-rankings></div>'}</div>
+        <footer class="ui-window-footer system-window-footer"><span>EVERGROW</span><span>Esc / B · ${returnToGame ? 'Back to game' : 'Back to menu'}</span></footer>`;
       this.root.append(this.window);
       this.window.querySelector('[data-system-close]')!.addEventListener('click', () => this.back(), { signal });
       if (destination === 'controls') this.controls = new ControlsPanel(this.window, signal);
+      else if (destination === 'difficulty') this.difficultyPanel = new DifficultyPanel(this.window.querySelector('[data-system-difficulty]')!, this.actions, signal);
       else if (destination === 'options') this.bindOptions(signal);
       else {
         this.leaderboard = new LeaderboardPanel(this.window.querySelector('[data-system-rankings]')!, this.actions.leaderboard!, () => this.close());
@@ -120,11 +125,15 @@ export class PauseSystemWindows {
   }
   back(): boolean {
     if (!this.opened) return false;
+    if (this.difficultyPanel?.busy) return true;
     if (!this.controls?.cancel()) this.close();
     return true;
   }
   private close(notify = true): void {
     if (!this.opened) return;
+    const onClose = this.returnToGame ?? this.onClose;
+    this.returnToGame = undefined;
+    this.difficultyPanel = undefined;
     this.controls?.cancel(false); this.controls = undefined;
     this.life?.abort(); this.life = undefined;
     this.changelog?.dispose(); this.changelog = undefined;
@@ -132,7 +141,7 @@ export class PauseSystemWindows {
     this.window?.remove(); this.window = undefined; this.refreshAudio = undefined;
     this.root.querySelector<HTMLElement>('.pause-menu-stack')!.hidden = false;
     this.root.setAttribute('role', 'dialog'); this.root.setAttribute('aria-modal', 'true'); this.root.setAttribute('aria-labelledby', 'menu-title');
-    if (notify) this.onClose();
+    if (notify) onClose();
   }
   updateGamepad(pad: GamepadInput, now: number): void {
     if (!this.window) return;

@@ -35,7 +35,7 @@ if(!scene)throw new Error('No clear appearance staging location found.');
 const width=selected===null?480:960,height=selected===null?360:600;renderer.resize(width,height);
 const output=document.createElement('canvas');output.width=width;output.height=height;
 const post=new PostFX(output);
-const settings={phase:'playing' as const,reducedMotion:true,fps:60,debug:false};
+const settings={phase:'playing' as const,reducedMotion:true};
 for(const sample of samples.filter(s=>selected===null||s.index===selected)){
   const sim=new Simulation(world,{seed:7319,spawn:false,startX:scene.x,startY:scene.y});
   sim.player.character=sample.sheet;refreshCharacter(sim.player);sim.player.hp=sim.player.maxHp;sim.player.mana=sim.player.maxMana;

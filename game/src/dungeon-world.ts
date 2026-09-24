@@ -32,6 +32,7 @@ export class DungeonWorld extends World {
     override navigationTarget(x: number, y: number, tx: number, ty: number, radius=24) { return this.geometry.navigationTarget(x, y, tx, ty, radius); }
     override mapColor(x: number, y: number):string { return this.blocked(x, y, 0) ? '#080d14' : '#465653'; }
     override atlasColor(x: number, y: number) { return this.mapColor(x, y); }
+    override get cacheStats() { return { ...super.cacheStats, groundTiles: this.tiles.size }; }
     override dispose() { this.tiles.clear(); super.dispose(); }
     override getGroundTile(tx: number, ty: number, create?: () => HTMLCanvasElement) {
         const key = `${tx}:${ty}`;

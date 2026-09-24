@@ -1,3 +1,4 @@
+import { riftMechanic } from './rift-encounters.ts';
 import { enemyModifiers } from './enemy-modifiers.ts';
 import { isBossKind } from './wilderness-boss-content.ts';
 import { type EnemyDebuffState } from './enemy-debuffs.ts';
@@ -15,6 +16,7 @@ export interface EnemyPlateOptions {
   /** Status icons are owned by the shared DOM effect strip. */
   hasDebuffs?: boolean;
   touch?: boolean;
+  compactLandscape?: boolean;
   /** Safe-area top inset in the same logical coordinates as the UI canvas. */
   topInset?: number;
   opacity?: number;
@@ -31,13 +33,16 @@ const compactNumber = new Intl.NumberFormat('en-US', { notation: 'compact', maxi
 const compact = (value: number) => value >= 10_000 ? compactNumber.format(value) : `${Math.ceil(value)}`;
 
 /** A centered target readout that shares the existing navigation and map space. */
-export function getEnemyPlateLayout(width: number, height: number, touch = false, topInset = 0, hasDebuffs = false): { x: number; y: number; width: number; height: number } {
+export function getEnemyPlateLayout(width: number, height: number, touch = false, topInset = 0, hasDebuffs = false, compactLandscape = false): { x: number; y: number; width: number; height: number } {
   const plateHeight = hasDebuffs ? 114 : 70;
   width = Math.max(0, Number.isFinite(width) ? width : 0);
   height = Math.max(0, Number.isFinite(height) ? height : 0);
   if (touch) {
     const plateWidth = Math.max(0, Math.min(240, width - 24));
-    const y = Math.max(8, (Number.isFinite(topInset) ? topInset : 0) + 6);
+    const safeTop = Math.max(8, (Number.isFinite(topInset) ? topInset : 0) + 6);
+    // Normal mobile surfaces clear the top-left gold counter; tiny embedded
+    // studies retain the compact fallback when there is no vertical room.
+    const y = height >= 134 ? Math.max(compactLandscape ? 32 : 64, safeTop) : safeTop;
     return {x: (width - plateWidth) / 2, y, width: plateWidth, height: plateWidth >= 160 && y + 70 <= height ? (y + plateHeight <= height ? plateHeight : 70) : 0};
   }
   const map = getMinimapRect(width, height);
@@ -96,7 +101,7 @@ function bloodMotion(c: CanvasRenderingContext2D, x: number, y: number, width: n
 /** Native text and restrained metalwork, drawn after world post-processing. */
 export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, 'kind' | 'hp' | 'maxHp' | 'level' | 'rank'> & EnemyDebuffState & Partial<Pick<Enemy,'lootSeed'|'rift'>>,
   width: number, height: number, options: EnemyPlateOptions = {}): void {
-  const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset, options.hasDebuffs);
+  const layout = getEnemyPlateLayout(width, height, options.touch, options.topInset, options.hasDebuffs, options.compactLandscape);
   const opacity = clamp(options.opacity ?? 1);
   if (!layout.height || opacity <= 0) return;
   const w = layout.width;
@@ -117,7 +122,8 @@ export function drawEnemyPlate(c: CanvasRenderingContext2D, enemy: Pick<Enemy, '
 
   c.save(); c.shadowColor = '#010409'; c.shadowBlur = 3; c.shadowOffsetY = 1;
   const traits=enemyModifiers(enemy);
-  const name = options.name ?? ENEMY_DEFINITIONS[enemy.kind].name;
+  const role=riftMechanic(enemy);
+  const name = options.name ?? (role==='ritual'?'Rift Cantor':role==='storm'?'Stormbound '+ENEMY_DEFINITIONS[enemy.kind].name:role==='fire'?'Cinder '+ENEMY_DEFINITIONS[enemy.kind].name:ENEMY_DEFINITIONS[enemy.kind].name);
   text(c, name, w / 2, 28, Math.min(1.13, (w - 30) / Math.max(1, textWidth(name))), enemy.rank==='normal'?UI.ivory:rank.color, 'center'); c.restore();
   if(traits.length){
     const cell=(w-18)/traits.length;

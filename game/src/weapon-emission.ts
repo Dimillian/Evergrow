@@ -1,3 +1,4 @@
+import { weaponGlowColor, focusGlowColor } from './radiant-content.ts';
 import type { CharacterPose } from './art-types.ts';
 import type { WeaponVisual } from './model.ts';
 import { playerMotion, characterTransform, PLAYER_ART_SCALE } from './character-motion.ts';
@@ -18,7 +19,7 @@ export function heldEquipmentLights(pose: CharacterPose, x: number, y: number) {
   };
   const lights: Array<{ x: number; y: number; radius: number; power: number; color: string; shadows: boolean; core: number; fire: boolean }> = [];
   const weapon = (v: WeaponVisual | undefined, origin: Point, angle: number, scale: number) => {
-    const color = v?.element && ELEMENT_COLORS[v.element];
+    const color = v && (weaponGlowColor(v) ?? (v.element && ELEMENT_COLORS[v.element]));
     if (!v || !color || v.kind === 'bow' || v.kind === 'unarmed') return;
     const caster = v.kind === 'staff' || v.kind === 'wand';
     const length = (weaponArtLength(v) * (caster ? 1 : .72) - (caster ? 1 : 0)) * scale;
@@ -32,7 +33,7 @@ export function heldEquipmentLights(pose: CharacterPose, x: number, y: number) {
   if (pose.offHand?.kind === 'weapon') weapon(pose.offHand.visual, motion.offWeaponOrigin, motion.offWeaponAngle, motion.offWeaponScale);
   if (pose.offHand?.kind === 'focus') {
     const v = pose.offHand.visual, hand = projectArmPoint(motion.offArm.hand), center = focusGlowCenter(v, time);
-    lights.push({ ...project([hand[0] + center[0], hand[1] + center[1]]), color: v.glow,
+    lights.push({ ...project([hand[0] + center[0], hand[1] + center[1]]), color: focusGlowColor(v),
       core: v.kind === 'orb' ? 3 : .8, fire: v.motif === 'ember',
       radius: v.kind === 'orb' ? 128 : 78, power: (v.kind === 'orb' ? .57 : .3) * (1 + Math.sin(time * 1.6) * .045), shadows: true });
   }

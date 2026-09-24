@@ -3,12 +3,15 @@ import { mixColor, type Point } from './art-primitives.ts';
 import type { GearShape } from './weapon-shapes.ts';
 import { hairShapes } from './appearance-hair-shapes.ts';
 import { facialHairShapes, faceAccessoryShapes } from './appearance-face-details.ts';
+import { isHeadProfile } from './character-facing.ts';
+import { appearanceProfileShapes } from './appearance-profile-shapes.ts';
 
 const fill = (points: readonly Point[], color: string): GearShape => ({ points, fill: color });
 const line = (points: readonly Point[], color: string, width = .6): GearShape => ({ points, stroke: color, width });
 
 /** All shapes are local to the existing head mount. Body proportions never change. */
 export function appearanceHeadShapes(appearance: Readonly<CharacterAppearance>, facing: number, covered: boolean): GearShape[] {
+  if (isHeadProfile(facing)) return appearanceProfileShapes(appearance, facing, covered);
   const skin = appearancePalette(SKIN_PALETTES, appearance.skin);
   const hair = appearancePalette(HAIR_PALETTES, appearance.hairColor);
   const back = Math.sin(facing) < -.16, side = Math.cos(facing), look = side * .8;

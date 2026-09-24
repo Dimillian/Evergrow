@@ -2,9 +2,7 @@ import { SKILL_TREE, SKILL_NODES, SKILL_TERRITORIES, type SkillNode } from './sk
 /** Screen-space budgets prevent higher zoom from turning every star into a caption. */
 export function atlasLabelBudget(zoom: number, width: number, height: number) {
   const capacity = Math.max(3, Math.min(10, Math.floor(width * height / 85000)));
-  return { landmarks: zoom >= .72 ? Math.min(4, capacity) : capacity,
-    clusters: zoom >= .72 ? 2 : zoom >= .27 ? Math.min(5, capacity) : 0,
-    techniques: zoom >= .72 ? 3 : 0 };
+  return { clusters: zoom >= .72 ? 2 : zoom >= .27 ? Math.min(5, capacity) : 0 };
 }
 export function atlasLabelCandidates(view: { zoom: number; width: number; height: number; centerX: number; centerY: number;
   selected?: string | null; hovered?: string | null; labelExclusions?: readonly AtlasLabelBox[]; matches(node: SkillNode): boolean }) {
@@ -15,14 +13,11 @@ export function atlasLabelCandidates(view: { zoom: number; width: number; height
   const distance = (n: { x: number; y: number }) => Math.hypot(n.x-anchor.x,n.y-anchor.y);
   const byDistance = (a: { x: number; y: number }, b: { x: number; y: number }) => distance(a)-distance(b);
   const budget = atlasLabelBudget(z,w,h);
-  const landmarks = SKILL_TREE.nodes.filter(n => (n.kind==='major'||n.kind==='origin') && !focused.includes(n) && visible(n) && view.matches(n) && (z>=.22||n.kind==='origin')).sort(byDistance);
   const clusterIds = new Set(focused.map(n=>n.cluster));
   const clusters = SKILL_TREE.clusters.filter(c=>!c.id.startsWith('development:') && visible(c)
     && SKILL_TREE.nodes.some(n=>n.cluster===c.id&&view.matches(n)))
     .sort((a,b)=>Number(clusterIds.has(b.id))-Number(clusterIds.has(a.id))||byDistance(a,b));
-  const owner = focused.at(-1), skill = owner?.skill ?? owner?.developmentSkill;
-  const techniques = skill ? SKILL_TREE.nodes.filter(n=>n.specialization&&n.developmentSkill===skill&&visible(n)&&view.matches(n)&&!focused.includes(n)) : [];
-  return { focused, landmarks: landmarks.slice(0,budget.landmarks), clusters: clusters.slice(0,budget.clusters), techniques: techniques.slice(0,budget.techniques) };
+  return { focused, clusters: clusters.slice(0,budget.clusters) };
 }
 
 export interface AtlasLabelBox { x: number; y: number; width: number; height: number }
@@ -97,7 +92,7 @@ const territories=SKILL_TERRITORIES.map(t=>{
   const nodes=SKILL_TREE.nodes.filter(n=>n.territory===t.id);
   return {...t,x:nodes.reduce((sum,n)=>sum+n.x,0)/nodes.length,y:nodes.reduce((sum,n)=>sum+n.y,0)/nodes.length};
 });
-/** Priority is focus, its Techniques, nearby landmarks, then optional geographic captions. */
+/** Only selected/hovered nodes receive names; geographic captions remain secondary. */
 export function layoutAtlasCaptions(view: LabelView & { allocated?: ReadonlySet<string> },
   measure: (text: string, size: number)=>number, rankLabel?: (node: SkillNode)=>string | undefined): AtlasCaption[] {
   const obstacles=atlasLabelObstacles(view),result:AtlasCaption[]=[],occupied:AtlasLabelBox[]=[...(view.labelExclusions??[])];
@@ -115,8 +110,6 @@ export function layoutAtlasCaptions(view: LabelView & { allocated?: ReadonlySet<
     if(anchorVisible(n))add(n.kind==='origin'?'THE ROOT':n.name,n.id,{...screen(n,view),radius:skillNodeScreenRadius(n,view.zoom)},color,size);
   };
   for(const n of captions.focused)labelNode(n);
-  for(const n of captions.techniques)labelNode(n,11,'#b9d2e4');
-  for(const n of captions.landmarks)labelNode(n);
   for(const n of captions.focused){
     const rank=rankLabel?.(n);
     if(rank&&anchorVisible(n))add(rank,n.id,{...screen(n,view),radius:skillNodeScreenRadius(n,view.zoom)},'#ffe2af',10);

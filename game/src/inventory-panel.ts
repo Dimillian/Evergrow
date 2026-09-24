@@ -1,3 +1,4 @@
+import { emptySlotIcon } from './equipment-slot-art.ts';
 import { UITooltipStack } from './ui-tooltip-stack.ts';
 import type { HUDOptions } from './hud.ts';
 import { InventoryHUD } from './inventory-hud.ts';
@@ -63,22 +64,6 @@ const RIGHT_SLOTS: EquipmentSlot[] = ['weapon', 'offhand', 'amulet', 'ring1', 'r
 const number = (value: number, decimals = 0) => Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: decimals }) : '—';
 const locationKey = (location: ItemLocation) => location.type === 'bag' ? location.index < 0 ? `cell-${location.cell}` : `bag-${location.index}` : `equipment-${location.slot}`;
 
-function emptySlotIcon(slot: EquipmentSlot): string {
-  const glyphs: Record<EquipmentSlot, string> = {
-    weapon: '<path d="m10 30 20-20 3-1-1 4-20 19m-4-8 9 9m-9-4-4 4 3 3 4-4"/>',
-    offhand: '<path d="M21 7 34 12v11c0 8-7 13-13 16C15 36 8 31 8 23V12ZM21 13v19M14 21h14"/>',
-    head: '<path d="M12 28V16l5-7h8l5 7v12l-6 3v-9h-6v9Zm1-8h16m-8-10v9"/>',
-    chest: '<path d="m14 10 7 3 7-3 7 9-7 4v11H14V23l-7-4Zm0 13 7 4 7-4"/>',
-    gloves: '<path d="m13 31-4-12 2-2 5 6V10h3v10-12h3v12-10h3v11-8h3v16l-5 5h-7Z"/>',
-    legs: '<path d="M12 9h19l-2 25h-8l-1-16-1 16h-9Zm0 5h18"/>',
-    boots: '<path d="M14 9h13v15l6 6v4H12V23Zm1 15h11M15 14h10"/>',
-    cloak: '<path d="m17 9 4 3 4-3 8 26-12-4-12 4Zm4 3v19"/>',
-    amulet: '<path d="M12 9v9a9 9 0 0 0 18 0V9m-9 17-5 6 5 6 5-6Z"/>',
-    ring1: '<circle cx="21" cy="25" r="9"/><path d="m16 13 5-5 5 5-5 5Z"/>',
-    ring2: '<circle cx="21" cy="25" r="9"/><path d="m16 13 5-5 5 5-5 5Z"/>',
-  };
-  return `<svg viewBox="0 0 42 42" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">${glyphs[slot]}</svg>`;
-}
 
 /** Inventory presents one authoritative character sheet; all mutations go through simulation actions. */
 export class InventoryPanel {
@@ -138,7 +123,7 @@ export class InventoryPanel {
           </div>
           <dl class="character-portrait-metrics" aria-label="Character level and gear power">
             <div><dt>Level</dt><dd data-level></dd></div>
-            <div><dt>Gear power</dt><dd data-gear-power></dd></div>
+            <div title="Gear quality from level, base stats, enhancement and affix rolls. Not build DPS or Unique skill power."><dt>Gear power</dt><dd data-gear-power></dd></div>
           </dl>
           <div class="character-portrait-footer"><button class="ui-button ui-button--quiet ui-button--icon" data-turn="-1" aria-label="Turn character left">‹</button><div><span class="character-portrait-label">Equipped weapon</span><strong data-weapon-name></strong></div><button class="ui-button ui-button--quiet ui-button--icon" data-turn="1" aria-label="Turn character right">›</button></div>
           <div class="character-points"><span>${uiIcon('skilltree')}Skill points <strong data-skill-points></strong></span><span>${uiIcon('plus')}Attribute points <strong data-stat-points></strong></span></div>
@@ -241,6 +226,14 @@ export class InventoryPanel {
         initialFocus: () => this.window.querySelector<HTMLButtonElement>('[data-close]') });
       this.animate();
     }
+  }
+
+  openTouchTab(tab:'bag'|'stats'):void {
+    this.section=tab==='stats'?2:1;
+    this.window.dataset.touchTab=tab;
+    this.updateSectionHighlight();
+    for(const button of this.window.querySelectorAll<HTMLElement>('[data-touch-tab]'))
+      button.setAttribute('aria-pressed',String(button.dataset.touchTab===tab));
   }
 
   refresh(player: Player): void {

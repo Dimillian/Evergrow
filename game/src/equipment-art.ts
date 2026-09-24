@@ -1,10 +1,14 @@
 import { armorAccessoryShapes, type ArmorAccessory } from './armor-accessory-shapes.ts';
 import { bootShapes } from './boot-shapes.ts';
+import { bootProjection } from './boot-projection.ts';
 import { gearMaterialStops, gearMaterialMarks, gearCanvasLight } from './gear-material.ts';
+import { focusGlowColor, isRadiantGrimoire } from './radiant-content.ts';
+import { drawRadiantSeal } from './radiant-art.ts';
 import { drawWeaponEnchantment, drawEquipmentGlow } from './weapon-enchantment-art.ts';
 import { focusShapes, focusGlowCenter } from './focus-shapes.ts';
 import { appearanceHeadShapes } from './appearance-shapes.ts';
-import { appearancePalette, SKIN_PALETTES, type CharacterAppearance } from './appearance-content.ts';
+import { appearancePalette, DEFAULT_APPEARANCE, SKIN_PALETTES, type CharacterAppearance } from './appearance-content.ts';
+import { torsoFacing } from './character-facing.ts';
 import { armorShapes } from './armor-shapes.ts';
 import { STARTING_SWORD } from './equipment.ts';
 import type { FocusDefinition, ShieldDefinition } from './model.ts';
@@ -28,12 +32,15 @@ export const STARTER_OUTFIT: CharacterOutfit = {
 };
 
 const shadingCache = new WeakMap<GearShape,{key:string;stops:Array<readonly [number,string]>}>();
-export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color): void {
+export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color, project?: (point: Point) => Point): void {
   const matrix = ctx.getTransform(), fine = Math.hypot(matrix.a, matrix.b) >= 2.4;
   const lighting = gearCanvasLight(ctx), facing = Math.round(Math.atan2(matrix.b,matrix.a)*128)/128;
   const lightKey=`${facing}:${lighting.direction.map(v=>Math.round(v*64)).join(',')}:${lighting.color}:${Math.round(lighting.power*64)}`;
   for (const shape of shapes) {
     if (shape.fine && !fine) continue;
+    // Deformation changes geometry only. Material shading stays keyed by the
+    // immutable source shape, including when a different actor shares it.
+    const points = project ? shape.points.map(project) : shape.points;
     let stops:Array<readonly [number,string]>|undefined;
     if(shape.surface) {
       const cached=shadingCache.get(shape);
@@ -41,9 +48,9 @@ export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly G
       else {stops=gearMaterialStops(shape.fill??shape.stroke??'#808080',shape.surface,facing,lighting);shadingCache.set(shape,{key:lightKey,stops});}
     }
     if (shape.fill) {
-      polygon(ctx, shape.points, color(!fine && stops ? stops[1][1] : shape.fill));
+      polygon(ctx, points, color(!fine && stops ? stops[1][1] : shape.fill));
       if (fine && shape.surface && !shape.fine) {
-        const xs=shape.points.map(p=>p[0]),ys=shape.points.map(p=>p[1]);
+        const xs=points.map(p=>p[0]),ys=points.map(p=>p[1]);
         const left=Math.min(...xs),top=Math.min(...ys),w=Math.max(...xs)-left,h=Math.max(...ys)-top;
         if(w*h>1) {
           ctx.save();ctx.clip();
@@ -55,7 +62,7 @@ export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly G
         }
       }
     }
-    if (shape.stroke) line(ctx, shape.points, color(stops ? stops[1][1] : shape.stroke), shape.width ?? .7);
+    if (shape.stroke) line(ctx, points, color(stops ? stops[1][1] : shape.stroke), shape.width ?? .7);
   }
 }
 
@@ -109,24 +116,43 @@ export function gauntlet(ctx: CanvasRenderingContext2D, hand: Point, piece: Armo
   ctx.restore();
 }
 
-export function armorSegment(ctx:CanvasRenderingContext2D, from:Point, to:Point, piece:ArmorPiece, color:Color, kind:Extract<ArmorAccessory,'bracer'|'thigh'>):void {
+export function armorSegment(ctx:CanvasRenderingContext2D, from:Point, to:Point, piece:ArmorPiece, color:Color, kind:Extract<ArmorAccessory,'bracer'|'thigh'>, width = 1):void {
   const dx=to[0]-from[0],dy=to[1]-from[1],length=Math.hypot(dx,dy);
-  ctx.save();ctx.translate(...from);ctx.rotate(-Math.atan2(dx,dy));ctx.scale(1,length/(kind==='thigh'?7:6));
+  ctx.save();ctx.translate(...from);ctx.rotate(-Math.atan2(dx,dy));ctx.scale(width,length/(kind==='thigh'?7:6));
   drawGearShapes(ctx,armorAccessoryShapes(kind,piece),color);ctx.restore();
 }
-export function kneeArmor(ctx:CanvasRenderingContext2D, point:Point, piece:ArmorPiece, color:Color):void {
-  ctx.save();ctx.translate(...point);drawGearShapes(ctx,armorAccessoryShapes('knee',piece),color);ctx.restore();
+export function kneeArmor(ctx:CanvasRenderingContext2D, point:Point, piece:ArmorPiece, color:Color, facing:number):void {
+  ctx.save();ctx.translate(...point);ctx.scale(.55+.45*Math.abs(Math.sin(facing)),1);
+  drawGearShapes(ctx,armorAccessoryShapes('knee',piece),color);ctx.restore();
 }
 
 const BARE_BOOT: ArmorPiece = { style: 'leather', seed: 11, material: LEATHER };
-export function armorBoot(ctx: CanvasRenderingContext2D, anchor: Point, piece: ArmorPiece | null, color: Color, direction: number): void {
+export function armorBoot(ctx: CanvasRenderingContext2D, anchor: Point, piece: ArmorPiece | null, color: Color, facing: number, ankle: Point, knee: Point): void {
   ctx.save(); ctx.translate(...anchor);
-  drawGearShapes(ctx, bootShapes(piece ?? BARE_BOOT, direction), color);
+  drawGearShapes(ctx, bootShapes(piece ?? BARE_BOOT, facing), color, bootProjection(ankle, knee));
   ctx.restore();
 }
 
-export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, color: Color): void {
+export function chestArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, color: Color, facing = Math.PI / 2): void {
+  const turn = torsoFacing(facing), m = piece?.material ?? {base:'#1b3338',shadow:'#14292d',edge:'#496257',trim:'#644834'};
   ctx.save(); ctx.translate(...PLAYER_ATTACHMENTS.chest);
+  // The side wall remains a solid volume as the front plate turns edge-on.
+  ctx.save(); ctx.scale(turn.width, 1);
+  const hem = piece?.style === 'cloth' ? 17 : 11;
+  polygon(ctx, [[-5.8,-6],[-2.8,-7],[2.8,-7],[5.8,-5.8],[6,3],[5,hem],[-5,hem],[-6,3]],color(m.shadow));
+  polygon(ctx, [[-4.8,-5.7],[-2.5,-6.5],[2.5,-6.5],[4.8,-5.4],[5,3],[4.1,hem-.8],[-4.1,hem-.8],[-5,3]],color(m.base));
+  line(ctx,[[-3.8,-4.8],[-4.2,2],[-3.5,hem-1]],color(m.edge),.45);
+  line(ctx,[[-4.4,7.8],[4.4,7.8]],color(piece?.style==='cloth'?m.trim:'#644834'),1.7);
+  ctx.restore();
+  if(turn.surface < .001) {ctx.restore();return;}
+  ctx.translate(turn.surfaceOffset,0); ctx.scale(turn.surface,1);
+  if(turn.back) {
+    polygon(ctx,[[-5.5,-5.8],[-2.6,-7],[2.6,-7],[5.5,-5.8],[5,3],[4.2,hem],[-4.2,hem],[-5,3]],color(m.base));
+    line(ctx,[[-4.9,-4.5],[0,-3.3],[4.9,-4.5]],color(m.edge),.5);
+    line(ctx,[[0,-3],[0,hem-1]],color(m.shadow),.6);
+    line(ctx,[[-4.6,7.8],[4.6,7.8]],color(piece?.style==='cloth'?m.trim:'#644834'),1.7);
+    ctx.restore();return;
+  }
   polygon(ctx, [[-6, -7], [6, -7], [7, 6], [4, 11], [-5, 11], [-7, 4]], color('#1b3338'));
   // Dark quilted fabric remains visible between separately attached armor pieces.
   for (let row = 0; row < 3; row++) {
@@ -155,45 +181,29 @@ export function shoulderArmor(ctx: CanvasRenderingContext2D, anchor: Point, elbo
 
 export function headArmor(ctx: CanvasRenderingContext2D, piece: ArmorPiece | null, color: Color, facing: number, appearance?: Readonly<CharacterAppearance>): void {
   ctx.save(); ctx.translate(Math.cos(facing) * 1.4, PLAYER_ATTACHMENTS.head[1]);
-  const back = Math.sin(facing) < -.16;
-  const side = Math.cos(facing), look = side * .8;
+  const look = appearance ?? DEFAULT_APPEARANCE;
   const m = piece?.material ?? LEATHER;
-  // A skin neck seated inside a dark gorget gives the helmet a separate volume.
-  polygon(ctx, [[-1.7, 3.8], [1.9, 3.8], [2.1, 6.7], [-2, 6.7]], color(appearance ? appearancePalette(SKIN_PALETTES, appearance.skin).shadow : '#9e8069'));
+  const width = torsoFacing(facing).width;
+  ctx.save(); ctx.scale(width, 1);
+  polygon(ctx, [[-1.7, 3.8], [1.9, 3.8], [2.1, 6.7], [-2, 6.7]], color(appearancePalette(SKIN_PALETTES, look.skin).shadow));
   polygon(ctx, [[-3.5, 5.4], [-1.9, 5.8], [0, 6.9], [2.3, 5.6], [3.6, 5.2], [3.1, 7.3], [0, 8], [-3.1, 7]], color(m.shadow));
   line(ctx, [[-3, 5.8], [0, 7.2], [3.1, 5.6]], color(m.edge), .65);
-  if (appearance) {
-    drawGearShapes(ctx, appearanceHeadShapes(appearance, facing, !!piece), color);
-    if (piece) drawGearShapes(ctx, armorShapes('head', piece, facing), color);
-    ctx.restore(); return;
-  }
-  polygon(ctx, [[-4.2, -.8], [-3.2, -3.9], [.6, -4.8], [3.7, -2.7], [4.2, .6], [2.7, 4.1], [.7, 5.3], [-2, 4.6], [-3.9, 1.8]], color('#403b39'));
-  if (!back) {
-    polygon(ctx, [[-3 + look, -1.4], [.2 + look, -2.6], [2.7 + look, -1.3], [3 + look, 2.4], [1.1 + look, 4.7], [-1.1 + look, 4.4], [-2.6 + look, 2.6]], color('#b89a7d'));
-    polygon(ctx, [[-3 + look, -1.4], [-1.1 + look, -.7], [-.7 + look, 3.8], [-1.1 + look, 4.4], [-2.6 + look, 2.6]], color('#755f51'));
-    polygon(ctx, [[.2 + look, 1.1], [1 + look, 2.2], [.4 + look, 2.7], [-.1 + look, 2.1]], color('#e0c39c'));
-    // Near eye is full width, far eye foreshortens; no fixed forward-looking mask.
-    for (const eye of [-1, 1]) {
-      const width = .9 - Math.max(0, side * eye) * .35;
-      line(ctx, [[eye * 1.6 + look - width / 2, 1.25], [eye * 1.6 + look + width / 2, 1.25]], color('#263239'), .65);
-    }
-    line(ctx, [[-.8 + look, 3.1], [.9 + look, 3.3]], color('#65504b'), .55);
-    line(ctx, [[-.5 + look, 4.2], [.8 + look, 4.3]], color('#d6b991'), .45);
-  }
+  ctx.restore();
+  drawGearShapes(ctx, appearanceHeadShapes(look, facing, !!piece), color);
   if (piece) drawGearShapes(ctx, armorShapes('head', piece, facing), color);
-  else {
-    polygon(ctx, [[-4.2, -.7], [-3.2, -3.9], [.6, -4.8], [3.7, -2.7], [3.8, -.6], [2.1, -1.4], [1, -2.5], [-1.5, -1.8], [-2.2, .1], [-3.6, 1.4]], color('#4c3b32'));
-    line(ctx, [[-3.4, -1.5], [-2.6, -3], [.3, -3.7], [2.4, -2.4]], color('#8f7457'), .7);
-    if (back) polygon(ctx, [[-3.7, -.4], [3.7, -.4], [3.5, 3.2], [1.8, 4.8], [-2.3, 4.2], [-3.8, 2.1]], color('#4c3b32'));
-  }
   ctx.restore();
 }
 
 /** Bound spellbooks face their owner; luminous orbs levitate above the palm. */
-export function heldFocus(ctx: CanvasRenderingContext2D, hand: Point, visual: FocusDefinition['visual'], color: Color, time = 0, facing = Math.PI / 2): void {
+export function heldFocus(ctx: CanvasRenderingContext2D, hand: Point, visual: FocusDefinition['visual'], color: Color, time = 0, facing = Math.PI / 2, charge = 0): void {
   ctx.save(); ctx.translate(hand[0], hand[1]);
   drawGearShapes(ctx, focusShapes(visual, time, facing), color);
   const [cx, cy] = focusGlowCenter(visual, time);
-  drawEquipmentGlow(ctx, cx, cy, visual.kind === 'orb' ? 10 : 5, visual.glow, .5 + Math.sin(time * 1.6) * .06);
+  drawEquipmentGlow(ctx, cx, cy, visual.kind === 'orb' ? 10 : 5, focusGlowColor(visual), .5 + Math.sin(time * 1.6) * .06 + charge * .2);
+  if (isRadiantGrimoire(visual) && charge > .05) {
+    ctx.translate(cx, cy); ctx.scale(.62 + .38 * Math.abs(Math.sin(facing)), 1);
+    ctx.globalCompositeOperation = 'screen'; ctx.globalAlpha *= charge * .8;
+    drawRadiantSeal(ctx, 3.2, .35);
+  }
   ctx.restore();
 }

@@ -11,7 +11,7 @@ import { eventLabel, eventSite, type EventKind, type EventRecord, type EventSite
 import { eventRewards } from './poi-rewards.ts';
 import { treasureLanding } from './treasure-flight.ts';
 import { EventPanel } from './poi-panel.ts';
-import { EVENT_RECIPES, eventRecipe } from './event-recipes.ts';
+import { EVENT_RECIPES, eventRecipe, isTrialKind } from './event-recipes.ts';
 import { eventStudyProfile, stageEventProgress } from './tools/event-progress-study.ts';
 import { eventProgress } from './event-progress.ts';
 import { EVENT_CARD_MOTION } from './event-progress-presentation.ts';
@@ -24,10 +24,15 @@ const views: readonly [EventKind, string][] = [
 ];
 const root = document.querySelector<HTMLElement>('#event-review')!;
 const lifetime = new AbortController();
-type PreviewState = 'available' | 'progress' | 'opening' | 'claimed';
+type PreviewState = 'available' | 'progress' | 'opening' | 'completed' | 'claimed';
 let disposed = false, frame = 0, world: World | undefined, fx: PostFX | undefined, panel: EventPanel | undefined;
 async function boot() {
   if (!import.meta.env.DEV) throw new Error('Local review only.');
+  if (new URLSearchParams(location.search).has('choices')) {
+    const study = await import('./tools/event-choice-study.ts');
+    await study.mountChoiceStudy(root, lifetime.signal);
+    return;
+  }
   installUITheme(); await loadGameFont(); if (disposed) return;
   world = new World(7319); const scene = world;
   const landmarks = scene.getWildernessSites(-8000, -8000, 16000, 16000);
@@ -37,17 +42,21 @@ async function boot() {
   const renderer = new Renderer(), display = document.createElement('canvas'), canvas = document.createElement('canvas');
   for (const c of [display, canvas]) { c.width = 1920; c.height = 1280; }
   canvas.className = 'layout-review-scene'; canvas.setAttribute('role', 'img');
-  root.innerHTML = `<header class="layout-review-header"><h1>World events</h1></header>
+  root.innerHTML = `<header class="layout-review-header"><h1>World events</h1><a class="layout-review-download" href="/events.html?choices">Choice UI ↗</a></header>
     <nav class="layout-review-views event-review-events" aria-label="World event"></nav>
     <div class="event-review-settings">
-      <div class="event-review-state"><span class="event-review-label">Preview state</span><div class="event-review-segments" role="group" aria-label="Preview state"><button data-preview-state="available" aria-pressed="true">Available</button><button data-preview-state="progress" aria-pressed="false">In progress</button><button data-preview-state="opening" aria-pressed="false">Opening</button><button data-preview-state="claimed" aria-pressed="false">Claimed</button></div></div>
-      <label class="event-review-recipe" hidden><span class="event-review-label">Encounter recipe</span><select class="progress-recipe"></select></label>
-      <button class="choice-button">View choices ↗</button>
+      <div class="event-review-state"><span class="event-review-label">Preview state</span><div class="event-review-segments" role="group" aria-label="Preview state"><button data-preview-state="available" aria-pressed="true">Available</button><button data-preview-state="progress" aria-pressed="false">In progress</button><button data-preview-state="opening" aria-pressed="false">Opening</button><button data-preview-state="completed" aria-pressed="false">Completed</button><button data-preview-state="claimed" aria-pressed="false">Claimed</button></div></div>
     </div>
-    <div class="event-review-progress" hidden><button class="progress-play">Pause</button><label class="event-review-timeline">Timeline <input class="progress-time" type="range" min="0" step="0.1" value="0"></label><label>Speed <select class="progress-speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select></label><button class="progress-restart">Restart</button><output class="progress-readout"></output></div>
-    <div class="event-review-progress card-motion-controls" hidden role="group" aria-label="HUD card animation"><span class="event-review-label">HUD card</span><button class="card-enter">Replay entrance</button><button class="card-exit">Replay exit</button><label class="event-review-timeline">Animation <input class="card-time" type="range" min="0" max="${EVENT_CARD_MOTION.duration}" step="0.01" value="0"></label><label>Motion speed <select class="card-speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="0.25">0.25×</option></select></label><output class="card-readout">Replay or scrub the card animation; event time stays paused.</output></div>
-    <p class="layout-review-static progress-note">Disposable visual preview · No combat or saves.</p>
-    <figure class="layout-review-figure"><div class="layout-review-frame"></div></figure>`;
+    <div class="event-review-workspace">
+      <figure class="layout-review-figure"><div class="layout-review-frame"></div></figure>
+      <aside class="event-review-controls" aria-label="Event preview controls">
+        <label class="event-review-recipe" hidden><span class="event-review-label">Encounter recipe</span><select class="progress-recipe"></select></label>
+        <button class="choice-button">View choices ↗</button>
+        <div class="event-review-progress" hidden><button class="progress-play">Pause</button><label class="event-review-timeline">Timeline <input class="progress-time" type="range" min="0" step="0.1" value="0"></label><label>Speed <select class="progress-speed"><option value="1">1×</option><option value="5">5×</option><option value="10">10×</option></select></label><button class="progress-restart">Restart</button><output class="progress-readout"></output></div>
+        <div class="event-review-progress card-motion-controls" hidden role="group" aria-label="HUD card animation"><span class="event-review-label">HUD card</span><button class="card-enter">Replay entrance</button><button class="card-exit">Replay exit</button><label class="event-review-timeline">Animation <input class="card-time" type="range" min="0" max="${EVENT_CARD_MOTION.duration}" step="0.01" value="0"></label><label>Motion speed <select class="card-speed"><option value="1">1×</option><option value="0.5">0.5×</option><option value="0.25">0.25×</option></select></label><output class="card-readout">Replay or scrub the card animation; event time stays paused.</output></div>
+        <p class="layout-review-static progress-note">Disposable visual preview · No combat or saves.</p>
+      </aside>
+    </div>`;
   root.querySelector('.layout-review-frame')!.append(canvas);
   panel = new EventPanel(document.body, { close: () => panel!.close(), choose: () => panel!.close() });
   const params = new URLSearchParams(location.search);
@@ -71,7 +80,7 @@ async function boot() {
   const buttons = new Map<EventKind, HTMLButtonElement>();
   const reviewRecord = (phase: EventRecord['phase']): EventRecord => ({ ...selected, phase, choice: kind === 'caravan' ? 'goods' : kind === 'standingStones' ? 'haste' : null, wavesCleared: kind === 'cursedChest' ? 6 : 0, delivered: 0, bonusGranted: phase === 'claimed' });
   function paint(animated = false, dt = 0) {
-    const settings = { phase: 'playing' as const, reducedMotion: !animated || matchMedia('(prefers-reduced-motion: reduce)').matches, fps: 0, debug: false };
+    const settings = { phase: 'playing' as const, fixedCamera: true, reducedMotion: !animated || matchMedia('(prefers-reduced-motion: reduce)').matches };
     renderer.render(sim, scene, dt, settings); fx ??= new PostFX(display); fx.render(renderer.canvas, sim.time);
     const c = canvas.getContext('2d')!; c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(display, 0, 0);
     c.save(); c.scale(2, 2); renderer.renderUI(c, sim, scene, settings); c.restore();
@@ -95,13 +104,26 @@ async function boot() {
     note.textContent = 'Disposable visual preview · No combat or saves.';
     sim = new Simulation(scene, { spawn: false, seed: 7319, startX: selected.x + 42, startY: selected.y + 35 });
     sim.time = 12; sim.player.angle = -Math.PI / 2;
-    if (previewState === 'claimed') sim.eventState.sites[selected.id] = reviewRecord('claimed');
+    if (previewState === 'completed') {
+      if (kind === 'camp') {
+        const checkpoint = sim.captureCheckpoint(); checkpoint.clearedCamps = [selected.id]; sim.restoreCheckpoint(checkpoint);
+      } else sim.eventState.sites[selected.id] = reviewRecord('completed');
+    } else if (previewState === 'claimed') {
+      if (kind === 'camp') {
+        const checkpoint = sim.captureCheckpoint(); checkpoint.clearedCamps = [selected.id]; sim.restoreCheckpoint(checkpoint);
+      }
+      sim.eventState.sites[selected.id] = reviewRecord('claimed');
+    }
     const landmark = ['cursedChest','reliquary'].includes(kind)?undefined:landmarks.find(s => s.id === selected.id);
-    renderer.reset(); renderer.resize(960, 640); renderer.cameraX = landmark?.x ?? selected.x; renderer.cameraY = (landmark?.y ?? selected.y) - 40;
+    renderer.reset(); renderer.resize(960, 640); renderer.cameraX = landmark?.x ?? selected.x;
+    // The chapel's long north-facing nave otherwise leaves its reward anchor
+    // beneath the bottom HUD; center farther south so the scene reads higher.
+    renderer.cameraY = (landmark?.y ?? selected.y) + (kind === 'ruinedChapel' ? 100 : -40);
     paint();
     for (const [id, b] of buttons) b.setAttribute('aria-current', String(id === kind));
     root.querySelector<HTMLButtonElement>('.choice-button')!.hidden = ['reliquary', 'camp', 'watchtower'].includes(kind);
     root.querySelector<HTMLButtonElement>('[data-preview-state="opening"]')!.disabled = ['watchtower', 'standingStones'].includes(kind);
+    root.querySelector<HTMLButtonElement>('[data-preview-state="completed"]')!.disabled = kind !== 'camp' && !isTrialKind(kind);
     syncState();
     root.dataset.ready = 'true'; root.setAttribute('aria-busy', 'false');
   }
@@ -117,6 +139,7 @@ async function boot() {
   }
   function showState(state: PreviewState) {
     if (state === 'opening' && ['watchtower', 'standingStones'].includes(kind)) state = 'claimed';
+    if (state === 'completed' && kind !== 'camp' && !isTrialKind(kind)) state = 'claimed';
     previewState = state;
     if (state === 'progress') startProgress();
     else if (state === 'opening') startOpening();
@@ -252,7 +275,7 @@ async function boot() {
     frame = requestAnimationFrame(animate);
   }
   const initialState = params.get('state');
-  showState(initialState === 'progress' || initialState === 'opening' || initialState === 'claimed' ? initialState : 'available');
+  showState(initialState === 'progress' || initialState === 'opening' || initialState === 'completed' || initialState === 'claimed' ? initialState : 'available');
 }
 void boot().catch(e => { root.textContent = String(e); root.dataset.ready = 'error'; });
 function dispose() { disposed = true; cancelAnimationFrame(frame); lifetime.abort(); panel?.dispose(); fx?.dispose(); world?.dispose(); }

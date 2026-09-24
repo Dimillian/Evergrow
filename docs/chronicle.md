@@ -2,7 +2,7 @@
 
 Local: the Uniques collection lists found and unfound designs, with filters, search and hover details. Successful pickup records first finder/date and highest item level through existing source ledgers; selling or dropping an item does not erase discovery. See [Unique items](unique-items.md).
 
-Local update: wilderness bosses now count toward Kingslayer and have three dedicated achievement families. The current catalog has 35 families / 100 tiers; earlier 32-family / 91-tier counts below describe the initial release. See [boss lairs](wilderness-bosses.md).
+Local update: wilderness bosses now count toward Kingslayer and have three dedicated achievement families. That checkpoint had 35 families / 100 tiers; earlier 32-family / 91-tier counts below describe the initial release. See [boss lairs](wilderness-bosses.md).
 
 Published in v0.5.0 on 2026-09-07 with matching cloud client, API and additive D1 migration. Sites confirmed deployment success; cross-device acceptance remains a player check.
 
@@ -45,3 +45,12 @@ Existing saves contribute recorded kills, playtime and current level. Previously
 Headless regression coverage includes cumulative/import deduplication, earliest receipts, deleted-slot retention, stale writes, old-history recovery, cloud account isolation and conflict exclusion, overkill/element splits, deaths, Spellblade, movement/teleports, commerce, save dates, and panel return behavior. Standard type checking includes the new measurement modules in the headless boundary.
 
 The v0.5.0 deployment packages `drizzle/0001_worthless_slipstream.sql` through the normal Sites migration workflow with matching client/server code. Do not deploy the cloud client independently of its endpoint/schema. See [release record](releases.md).
+
+
+## Rift records (local September 14)
+
+Statistics now includes Rifts: entries, clears, highest level, fastest full clear (minutes:seconds), keyed clears, keys consumed, five-minute clears, hunt kills and outcomes (death, timeout, voluntary abandonment). Rift rank and cleared-biome breakdowns follow. Overview includes rift clears and highest rift level. Six Rift achievement families add 18 tiers, bringing the catalog to 41 families / 118 tiers: 1/10/50 clears; 1/10/50 keyed clears; level 30/60/100 clears; 1/10/25 clears within five minutes; 3/6/9 biomes; Rare/Epic/Legendary keyed clears.
+
+Entry and abandonment counters are staged in the existing durable travel transaction. Hunt kills and guardian victory use their existing confirmed runtime transitions; dissolved packs earn no kill credit, chest retries do not add clears, and failed runs count only once. Rift guardians count as bosses, not ordinary crypt completions. No new reward or network request is attached to achievements.
+
+Existing measured attempts, clears, highest level, fastest times and best completed key rarity backfill from the per-character rift ledger without duplication across reloads or imports. Historic failure reasons, hunt kills, biome completions and keyed/speed-clear totals were not stored and are tracked prospectively. The existing entry screen retains detailed best times by level and key. Fastest-clear Chronicle records merge by minimum, while normal cumulative totals still deduplicate by source identity. No save reset.

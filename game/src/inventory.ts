@@ -124,7 +124,7 @@ export function moveInventoryItem(sheet: CharacterSheet, from: number, to: numbe
 export function addInventoryItem(sheet: CharacterSheet, item: Item): boolean {
   if (sheet.inventory.some(existing => existing?.id === item.id) || EQUIPMENT_SLOTS.some(slot => sheet.equipped[slot]?.id === item.id)) return false;
   const layout = resolvePackLayout(sheet);
-  if (sheet.inventory.some(existing => existing && (existing.kind === 'charm') === (item.kind === 'charm') && layout[existing.id] === undefined)) return false;
+  if (sheet.inventory.some(existing => existing && layout[existing.id] === undefined)) return false;
   const empty = sheet.inventory.findIndex(existing => existing === null);
   const index = empty >= 0 ? empty : sheet.inventory.length < INVENTORY_CELLS ? sheet.inventory.length : -1;
   const cell = findPackSpace(item, packOccupancy(sheet.inventory, layout));

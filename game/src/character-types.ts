@@ -45,6 +45,7 @@ export type SkillId = import('./aura-content.ts').AuraId | 'repulse' | 'ironCita
   | 'volley' | 'piercingShot' | 'ricochet' | 'rainOfArrows' | 'backstab'
   | 'cataclysm' | 'tempest' | 'absoluteZero' | 'fireball' | 'arcLightning' | 'iceNova' | 'frostLance' | 'meteor' | 'siphon';
 export interface CharacterSheet extends GoldWallet {
+  difficulty?: import('./world-difficulty.ts').WorldDifficulty;
   treeVersion?: number;
   treeRefunded?: true;
   look: import('./character-look.ts').CharacterLook;

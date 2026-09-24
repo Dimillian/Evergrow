@@ -31,7 +31,7 @@ test('Spellblade needs both melee and magic on the same enemy; crit and periodic
 test('lethal damage records actual life removed and one death; immunity cannot add damage',()=>{const sim=new Simulation(world,{spawn:false}),p=sim.player;p.hp=9;p.equipment.offHand=null;const context={player:p,world,random:()=>1,emit:(e:CombatEvent)=>trackChronicleEvent(p,[],e)};damagePlayer(999,0,1,'physical',context);damagePlayer(999,0,1,'physical',context);const v=chronicleValues(p.chronicle!.sources);assert.equal(v.damageTaken,9);assert.equal(v.deaths,1);});
 test('only simulation time and movement count; changing location does not award distance',()=>{const sim=new Simulation(world,{spawn:false});sim.player.x=0;sim.player.y=0;for(let i=0;i<120;i++)sim.update(1/120,{...input,moveX:1});let v=chronicleValues(sim.player.chronicle!.sources);assert.ok(Math.abs(v.time-1)<1e-10);assert.ok(v.distance>0&&v.distance<200);const distance=v.distance;sim.player.x+=100000;sim.update(1/120,input);v=chronicleValues(sim.player.chronicle!.sources);assert.ok(v.distance-distance<2);const snapshot=sim.captureCheckpoint();sim.restoreCheckpoint(snapshot);assert.deepEqual(sim.player.chronicle,snapshot.chronicle);});
 test('commerce records only actual gold differences and enhancement records',()=>{const c=freshChronicle();trackCommerce(c,500,200,7);trackCommerce(c,200,240,5);trackCommerce(c,240,240);const v=chronicleValues(c.sources);assert.equal(v.goldSpent,300);assert.equal(v.goldEarned,40);assert.equal(v.goldSales,40);assert.equal(v.highestEnhancement,7);});
-test('all achievement families have stable unique IDs, ascending tiers and reachable metrics',()=>{assert.equal(ACHIEVEMENTS.length,35);assert.equal(new Set(ACHIEVEMENTS.map(a=>a.id)).size,35);for(const a of ACHIEVEMENTS){assert.ok(a.tiers.every((n,i)=>n>0&&(!i||n>a.tiers[i-1])));assert.equal(achievementTier(a,{}),0);}});
+test('all achievement families have stable unique IDs, ascending tiers and reachable metrics',()=>{assert.equal(ACHIEVEMENTS.length,41);assert.equal(new Set(ACHIEVEMENTS.map(a=>a.id)).size,41);for(const a of ACHIEVEMENTS){assert.ok(a.tiers.every((n,i)=>n>0&&(!i||n>a.tiers[i-1])));assert.equal(achievementTier(a,{}),0);}});
 
 test('early local Chronicle history is upgraded without blocking saves or losing counters',async()=>{const factory=new IDBFactory(),db=openSaveDatabase(factory);try{const r=record('a',100),saved=await db.execute({id:1,method:'write',index:0,expected:null,record:r}) as SaveResult;assert.ok(saved.ok);const early=recordChronicle(emptyChronicle(),r) as Partial<ChronicleLedger>;delete early.unlocked;
  await new Promise<void>((resolve,reject)=>{const open=factory.open('evergrow-local');open.onerror=()=>reject(open.error);open.onsuccess=()=>{const raw=open.result,tx=raw.transaction('characters','readwrite');tx.objectStore('characters').put(['chronicle',JSON.stringify(early)],'chronicle');tx.oncomplete=()=>{raw.close();resolve();};tx.onerror=()=>{raw.close();reject(tx.error);};};});
@@ -51,4 +51,31 @@ test('compact cloud history shows pending progress but excludes conflicted recov
   assert.equal('bundle' in view,false);
   assert.equal(counts(await cache.execute({kind:'read-history'}) as ChronicleLedger).kills,undefined,'viewing pending progress does not permanently merge it');
  }finally{await cache.close();}
+});
+
+test('rift history backfills measured records once and imported copies do not inflate totals',()=>{
+ const r=record('rift-a');r.checkpoint.expeditions!.rifts={attempts:8,clears:5,highest:42,best:[{level:42,seconds:312,keyTier:3},{level:25,seconds:221,keyTier:0}]};
+ const progress=progressForRecord(r),v=chronicleValues(progress.sources);
+ assert.equal(v.riftAttempts,8);assert.equal(v.riftClears,5);assert.equal(v.highestRiftLevel,42);assert.equal(v.bestRiftSeconds,221);
+ assert.equal(v.riftDeaths,undefined);assert.equal(v.riftKeyedClears,undefined);
+ r.checkpoint.chronicle=progress;
+ const copy={...structuredClone(r),id:'rift-b'};copy.checkpoint.chronicle=forkChronicle(r,'rift-b');
+ let ledger=recordChronicle(emptyChronicle(),r);ledger=recordChronicle(ledger,copy);ledger=recordChronicle(ledger,r);
+ assert.equal(counts(ledger).riftClears,5);assert.equal(counts(ledger).bestRiftSeconds,221);
+ assert.equal(achievementTier(ACHIEVEMENTS.find(a=>a.id==='rift-delver')!,v),1);
+ assert.equal(achievementTier(ACHIEVEMENTS.find(a=>a.id==='rift-keys')!,v),1);
+});
+test('fastest rift record uses minima across saves, characters and out-of-order cloud merges',()=>{
+ const a=record('a'),b=record('b');metric(a.checkpoint.chronicle,'bestRiftSeconds',320);
+ const old=structuredClone(a);metric(a.checkpoint.chronicle,'bestRiftSeconds',240);metric(a.checkpoint.chronicle,'bestRiftSeconds',400);
+ metric(b.checkpoint.chronicle,'bestRiftSeconds',280);
+ let ledger=emptyChronicle();for(const r of [a,b,old,a])ledger=recordChronicle(ledger,r);
+ assert.equal(counts(ledger).bestRiftSeconds,240);
+ assert.deepEqual(mergeChronicles(ledger,ledger),ledger);
+});
+test('rift guardians count as bosses but do not inflate ordinary dungeon clears',()=>{
+ const sim=new Simulation(world,{spawn:false}),enemy=sim.spawnEnemy('briarMatriarch',100,0)!;
+ enemy.campId='dungeon:rift:1';enemy.campMemberId='warden';
+ trackChronicleEvent(sim.player,[enemy],{type:'kill',targetId:enemy.id,enemyKind:enemy.kind,x:enemy.x,y:enemy.y,angle:0,facing:0,remainingHp:0});
+ const v=chronicleValues(sim.player.chronicle!.sources);assert.equal(v.bosses,1);assert.equal(v.crypts,undefined);
 });

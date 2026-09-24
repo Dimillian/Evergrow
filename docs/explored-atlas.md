@@ -14,6 +14,8 @@ The seed tabs change the local review. The map retains normal panning, zooming a
 
 ## Runtime improvements
 
+The Light & Open minimap keeps its right-side position with a larger chart and a quiet outline. Its location name is above the terrain; the level range / Sanctuary and day/time share one footer. Surface and dungeon maps consume the same frame and chart bounds. Journeys sits separately below with a 26-logical-pixel gap; the old portal row is removed. A small Home button appears in the lower-left chart corner whenever the player is outside town; it stays visible during movement and casting, stays clear of the metadata footer, and hides in sanctuary. Fog, world-to-map zoom, POI filters and player centering retain their existing behavior.
+
 Hold Tab from gameplay for a simplified exploration overlay: no frame, header, footer, coordinate grid or danger labels; terrain is drawn at 58% opacity, with a bright player marker and no on-map toolbar. The world keeps running with normal gameplay controls. The chart always centers on the player and mouse input passes through to the game. Release Tab to close. M (including from a Tab glance), the minimap button and Journey Show on Map open the full paused map. See [controls](controls.md).
 
 The full map's upper-right compass is a simple procedural Canvas rose with four faceted points and cardinal lettering, without a surrounding frame, bearing ticks or diagonal points. North is highlighted in gold and stays aligned with the north-up chart. The map-compass-art.ts module owns this native-resolution ornament; no image asset or world state is involved.
@@ -54,8 +56,20 @@ Journey **Show on map** uses the same easing and arrival highlight at the object
 
 Map input is coalesced into display frames, ordinary hover does not repaint terrain, and new atlas detail builds progressively within a cooperative generation budget. A complete low-resolution preview covers revealed terrain immediately and finished tiles crossfade into it over 240 ms (instant with reduced motion). Fine fog masks use row-run copies; district contours are cached in world-aligned tiles and rechecked against current discovery. See [panel performance](panel-performance.md) for budgets, verification and measured limits.
 
-Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. The full paused map keeps its normal tooltips.
+Tab-map marker tooltips appear automatically whenever hovered, including during combat, without consuming mouse input. On the full paused map, general area information appears in a fixed upper-left glass panel: district name, biome, level range (or Sanctuary) and hovered world coordinates. It updates only over discovered terrain, including beneath discovered icons, and hides over unknown terrain, outside the chart, during dragging/recentering and when the map closes. POI and Journey icon details still follow the cursor and remain clamped inside the chart. Both displays pass pointer input through to the map; the held-Tab overlay retains only icon tooltips.
 
 While holding Tab, the mouse wheel zooms the chart around the player; clicks continue to reach gameplay.
 
 While the Tab overlay is held, Journey discovery and arrival progress continue, and the configured loot-reveal key remains usable. The dungeon player marker stays fully opaque above the translucent floor.
+
+## Map legend — local September 15, 2026
+
+The full map has a Legend side panel using the same procedural icon art as the chart. The top Legend button toggles the panel and shows a brass border, underline and soft glow while open; there is no separate close button inside the sidebar. Categories separate NPCs/services, towns/travel, encounters/dungeons, shrines/landmarks, character/Journey markers, dungeon interiors and nearby enemies. Each row explains the icon. Category headers collapse independently of visibility; individual, category and Show all checkboxes support mixed selections. Dungeon maps expose the relevant navigation, dungeon and enemy categories. Journey filters also hide their offscreen direction arrows; ranked enemy dots have their own entries.
+
+NPC rows represent service types, with one **Ping nearest** button each. The target is the closest visited, discovered service of that type measured from the character, independent of camera position and current filters. Unvisited sightings do not qualify; unavailable buttons are disabled. Arrival uses the existing player-centering pan and two gold rings, preserving zoom. The target temporarily bypasses hidden filters, overview service suppression and icon overlap so the arrival remains readable, then returns to normal visibility. Pings never reveal terrain, create discoveries, move the character or modify saves.
+
+Visibility is shared by the current game's world, dungeon, held-Tab, minimap and Thor projection surfaces. It lasts for that game session, including character changes, and resets when the app/page restarts. Collapsed categories and panel visibility stay local to their map panel. No save schema change or progress reset.
+
+Desktop uses a 334px side panel, leaving the chart in its own measured viewport. At widths up to 900px or heights up to 560px, the legend starts closed and opens as a scrollable drawer. Ping nearest closes that compact drawer before centering, so its arrival remains visible. Native checkboxes and buttons support keyboard/controller navigation; closing the drawer returns any focus inside it to the Legend toggle before hiding it. Touch actions have larger targets. The held-Tab overlay remains free of legend chrome. The dungeon canvas now follows the available CSS dimensions at native display density, keeping hover, drag and pinch coordinates aligned when the side panel opens. Wheel, pinch and zoom buttons share limits that keep the fitted dungeon overview reachable on compact screens; resizing cannot turn a zoom-out action into zoom-in.
+
+The existing atlas study includes the runtime Legend control and remains save-free. Browser and physical Android visual acceptance are still user-tested.

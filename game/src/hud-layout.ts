@@ -30,6 +30,12 @@ export interface HUDRect { x: number; y: number; width: number; height: number; 
 export interface HUDShortcut extends HUDRect { id: string; label: string; key: string; }
 export interface HUDLayout extends HUDRect { scale: number; shortcuts: HUDShortcut[]; }
 
+export function potionHUDRect(layout: Pick<HUDLayout, 'x' | 'y' | 'scale'>): HUDRect {
+  const u = HUD_ART.utility;
+  return { x: layout.x + (u.left - 2) * layout.scale, y: layout.y + (u.y - 2) * layout.scale,
+    width: (u.width + 4) * layout.scale, height: (u.height + 4) * layout.scale };
+}
+
 /** Art and native menu targets use the same responsive transform. */
 export function getHUDLayout(width: number, height: number): HUDLayout {
   const scale = Math.max(0, Math.min(HUD_ART.maxScale,

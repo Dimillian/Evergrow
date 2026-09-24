@@ -85,7 +85,9 @@ export interface CharacterPose {
   frozen?: number;
   stunned?: number;
   slow?: number;
+  chill?: number;
   burning?: number;
+  fracture?: number;
   /** Slots can be replaced or set to null independently, without altering the rig. */
   outfit?: Partial<CharacterOutfit>;
   /** Remaining bright-hit timer in seconds (0.16 seconds at impact). */

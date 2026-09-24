@@ -5,7 +5,7 @@ import { TIER_COLORS } from './items.ts';
 import { hoveredGroundLoot, type GroundLootLabel } from './ground-loot-hover.ts';
 import type { GroundItem } from './character-types.ts';
 import type { Player } from './model.ts';
-import { itemHoverCards } from './item-ui.ts';
+import { groundLootCards, GroundComparisonInput } from './ground-loot-tooltip.ts';
 import './item-ui.css';
 import './tooltip-material.css';
 
@@ -19,11 +19,13 @@ export class GroundLootHighlight {
   private retainUntil = 0;
   private readonly life = new AbortController();
   private readonly comparison: ItemComparisonInput;
+  private readonly detail: GroundComparisonInput;
   private cursor: string;
   private canvas: HTMLCanvasElement;
   constructor(mount: HTMLElement, canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.comparison = new ItemComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal);
+    this.comparison = new ItemComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal, () => false);
+    this.detail = new GroundComparisonInput(window, () => { this.inspectedStats = null; }, this.life.signal);
     this.cursor = canvas.style.cursor;
     this.affordance.className = 'ground-loot-affordance';
     this.affordance.hidden = true;
@@ -61,7 +63,7 @@ export class GroundLootHighlight {
     // Selected walking targets retain their highlight, but only actual mouse hover inspects.
     if (hovered || held) {
       if (this.inspected !== drop.item || this.inspectedLevel !== player.level || this.inspectedStats !== player.stats) {
-        const cards = itemHoverCards(drop.item, { sheet: player.character, level: player.level, compactComparison: true, targetSlot: comparisonSlot(player.character, drop.item, this.comparison.alternate) });
+        const cards = groundLootCards(drop.item, { sheet: player.character, level: player.level, targetSlot: comparisonSlot(player.character, drop.item, this.comparison.alternate) }, this.detail.expanded);
         this.tooltip.innerHTML = cards.join('');
         this.tooltip.style.setProperty('--tooltip-columns', String(cards.length));
         this.inspected = drop.item;
