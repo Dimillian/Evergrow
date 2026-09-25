@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_APPEARANCE, HAIR_STYLES, HAIR_PALETTES } from '../src/appearance-content.ts';
+import { DEFAULT_APPEARANCE, HAIR_STYLES, HAIR_PALETTES, SKIN_PALETTES } from '../src/appearance-content.ts';
 import { appearanceHeadShapes } from '../src/appearance-shapes.ts';
 import { profileHairShapes, backHairShapes } from '../src/appearance-hair-directions.ts';
 import { hairShapes } from '../src/appearance-hair-shapes.ts';
@@ -14,6 +14,18 @@ function inside(point:Point,polygon:readonly Point[]):boolean {
   }
   return hit;
 }
+
+test('shaved front and diagonal scalps are skin through the crown and temples',()=>{
+  for(const skin of SKIN_PALETTES)for(const angle of [Math.PI/4,Math.PI/2,Math.PI*3/4]) {
+    const look={...DEFAULT_APPEARANCE,skin:skin.id,hair:'bald' as const,facialHair:'none' as const,accessory:'none' as const};
+    const shapes=appearanceHeadShapes(look,angle,false);
+    for(const point of [[0,-3.7],[-2.4,-2.8],[2.3,-2.7],[-3.2,0],[3.3,.5]] as Point[]) {
+      const visible=shapes.filter(s=>s.fill&&inside(point,s.points)).at(-1)?.fill;
+      assert.ok(visible===skin.base||visible===skin.shadow||visible===skin.light,`${skin.id}: scalp at ${point} must be skin, got ${visible}`);
+    }
+    for(const hairColor of HAIR_PALETTES)assert.deepEqual(appearanceHeadShapes({...look,hairColor:hairColor.id},angle,false),shapes,'shaved scalp is independent of hair color');
+  }
+});
 
 test('all profile hairstyles leave the visible eye, nose and mouth clear',()=>{
   for(const {id}of HAIR_STYLES) {
@@ -50,5 +62,34 @@ test('every hairstyle and palette stays bounded, mirrors in profile and disappea
       assert.ok(points.every(([x,y])=>Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x)<9&&y> -10&&y<13),hair.id);
       assert.deepEqual(appearanceHeadShapes(look,angle,true),appearanceHeadShapes({...look,hair:'bald'},angle,true),'covered styles never leak hair through the helmet');
     }
+  }
+});
+
+test('long front hairstyles frame an open neck instead of painting a beard below the chin',()=>{
+  for(const style of ['bob','long','waves','locs','halfup','longside'] as const) {
+    for(const angle of [Math.PI/4,Math.PI/2,Math.PI*3/4]) {
+      const layers=hairShapes(style,HAIR_PALETTES[0],angle);
+      for(const point of [[-1,5.8],[0,6.4],[1,5.8],[0,8]] as Point[]) {
+        assert.ok(![...layers.rear,...layers.front].some(shape=>shape.fill&&inside(point,shape.points)),`${style} covers the neck at ${point}`);
+      }
+    }
+  }
+});
+
+test('all front hairstyles preserve the eyes and mouth across front diagonals',()=>{
+  for(const {id}of HAIR_STYLES)for(const angle of [Math.PI/4,Math.PI/2,Math.PI*3/4]) {
+    const look=Math.cos(angle)*.8,layers=hairShapes(id,HAIR_PALETTES[0],angle);
+    for(const point of [[-1.6+look,1.25],[1.6+look,1.25],[look,3.2]] as Point[]) {
+      assert.ok(!layers.front.some(shape=>shape.fill&&inside(point,shape.points)),`${id} obscures facial feature ${point}`);
+    }
+  }
+});
+
+test('topknot temples remain shaved and locs form a continuous rear layer above their loose ends',()=>{
+  const topknot=hairShapes('topknot',HAIR_PALETTES[0],Math.PI/2);
+  for(const point of [[-3.3,.5],[3.7,.5]] as Point[])assert.ok(!topknot.front.some(s=>s.fill&&inside(point,s.points)),'topknot keeps its shaved temple');
+  const locs=backHairShapes('locs',HAIR_PALETTES[0]);
+  for(let x=-2.5;x<=2.5;x+=.1)for(const y of [3,4,5,6,7]) {
+    assert.ok(locs.front.some(s=>s.fill&&inside([x,y],s.points)),`rear locs expose a gap through the nape at ${x},${y}`);
   }
 });

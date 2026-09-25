@@ -56,6 +56,10 @@ class ArtContext implements DrawingState {
   lineTo(...values: number[]) { this.record(...values); }
   clearRect(...values: number[]) { this.record(...values); }
   ellipse(...values: number[]) { this.record(...values); }
+  arc(x: number, y: number, radius: number, start: number, end: number) {
+    assert.ok(radius >= 0, 'round joints need a nonnegative radius');
+    this.record(x, y, radius, start, end);
+  }
   fillRect(...values: number[]) { this.fillColors.add(this.fillStyle); this.record(...values); }
   fill() { this.fillColors.add(this.fillStyle); this.fillOrder.push(this.fillStyle); this.record(); }
   stroke() { this.record(this.lineWidth); }

@@ -8,6 +8,8 @@ export interface ArmRig {
   forearmLength: number;
 }
 export const ARM_DEPTH_SCALE = .45;
+/** One anatomy for every loadout; equipment changes the pose, not the bones. */
+export const PLAYER_ARM_LENGTHS = { upper: 9, forearm: 8.1 } as const;
 
 export function projectArmPoint(point: RigPoint): readonly [number, number] {
   return [point[0], point[1] * ARM_DEPTH_SCALE - point[2]];
@@ -19,12 +21,13 @@ export function armShoulder(facing: number, side: number, gaitSway: number): Rig
 }
 
 /** A stable body-relative elbow pole gives real foreshortening without shrinking bones. */
-export function solveArm(shoulder: RigPoint, hand: RigPoint, facing: number, side: number, tuck = 0, grip = 0, proportion = 1): ArmRig {
+export function solveArm(shoulder: RigPoint, hand: RigPoint, facing: number, side: number, tuck = 0, grip = 0): ArmRig {
   const delta = hand.map((value, index) => value - shoulder[index]);
   const distance = Math.max(.001, Math.hypot(...delta));
   const axis = delta.map(value => value / distance);
-  const stretch = Math.max(1, distance / (19.7 * proportion));
-  const upperLength = 9.1 * proportion * stretch, forearmLength = 10.8 * proportion * stretch;
+  const reach = PLAYER_ARM_LENGTHS.upper + PLAYER_ARM_LENGTHS.forearm;
+  const stretch = Math.max(1, distance / (reach - .15));
+  const upperLength = PLAYER_ARM_LENGTHS.upper * stretch, forearmLength = PLAYER_ARM_LENGTHS.forearm * stretch;
   const along = Math.max(-upperLength, Math.min(upperLength,
     (upperLength ** 2 - forearmLength ** 2 + distance ** 2) / (2 * distance)));
   const radius = Math.sqrt(Math.max(0, upperLength ** 2 - along ** 2));
