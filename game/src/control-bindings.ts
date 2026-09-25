@@ -33,6 +33,7 @@ export function isMovementAction(action: ControlAction | undefined): boolean {
 export type ControlMap = Record<ControlAction, readonly [string | null, string | null]>;
 export const SKILL_ACTIONS = ['skill0', 'skill1', 'skill2', 'skill3', 'skill4'] as const;
 export const CONTROL_STORAGE_KEY = 'evergrow-controls-v1';
+export const CONTROL_FILE_LIMIT = 16_384;
 export interface ControlStorage { getItem(key: string): string | null; setItem(key: string, value: string): void; }
 export function defaultControls(): ControlMap {
   return Object.fromEntries(CONTROL_ACTIONS.map(a => [a.id, [...a.defaults]])) as unknown as ControlMap;
@@ -47,35 +48,35 @@ export function controlLabel(code: string | null | undefined): string {
 
   return CONTROL_LABELS[code] ?? code.replace(/^Key|^Digit/, '').replace(/^Numpad/, 'Num ');
 }
+/** Stored layouts may predate loot reveal; portable imports require every action. */
+function validatedControls(saved: unknown, stored = false): ControlMap | null {
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return null;
+  const map = saved as Record<string, unknown>, seen = new Set<string>();
+  if (!stored && Object.keys(map).length !== CONTROL_ACTIONS.length) return null;
+  const parsed = {} as Record<ControlAction, [string | null, string | null]>;
+  for (const { id } of CONTROL_ACTIONS) {
+    const pair = map[id];
+    if (pair === undefined && stored && id === 'revealLoot') continue;
+    if (!Array.isArray(pair) || pair.length !== 2) return null;
+    for (const code of pair) {
+      if (code === null) continue;
+      if (!validControl(code) || seen.has(code)) return null;
+      seen.add(code);
+    }
+    parsed[id] = [...pair] as [string | null, string | null];
+  }
+  for (const { id, defaults } of CONTROL_ACTIONS) {
+    if (parsed[id]) continue;
+    parsed[id] = defaults.map(code => {
+      if (code === null || seen.has(code)) return null;
+      seen.add(code); return code;
+    }) as [string | null, string | null];
+  }
+  return parsed;
+}
 export function parseControls(raw: string | null): ControlMap {
-  try {
-    const saved: unknown = JSON.parse(raw ?? 'null');
-    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return defaultControls();
-    const map = saved as Record<string, unknown>, seen = new Set<string>();
-    const parsed = {} as Record<ControlAction, [string | null, string | null]>;
-    for (const { id } of CONTROL_ACTIONS) {
-      const pair = map[id];
-      if (pair === undefined) {
-        if (id === 'revealLoot') continue;
-        return defaultControls();
-      }
-      if (!Array.isArray(pair) || pair.length !== 2) return defaultControls();
-      for (const code of pair) {
-        if (code === null) continue;
-        if (!validControl(code) || seen.has(code)) return defaultControls();
-        seen.add(code);
-      }
-      parsed[id] = [...pair] as [string | null, string | null];
-    }
-    for (const { id, defaults } of CONTROL_ACTIONS) {
-      if (parsed[id]) continue;
-      parsed[id] = defaults.map(code => {
-        if (code === null || seen.has(code)) return null;
-        seen.add(code); return code;
-      }) as [string | null, string | null];
-    }
-    return parsed;
-  } catch { return defaultControls(); }
+  try { return validatedControls(JSON.parse(raw ?? 'null'), true) ?? defaultControls(); }
+  catch { return defaultControls(); }
 }
 export class ControlBindings {
   private map: ControlMap;
@@ -101,6 +102,22 @@ export class ControlBindings {
     return this.commit();
   }
   reset(): 'saved' | 'session' { this.map = defaultControls(); return this.commit(); }
+  exportConfiguration(): string {
+    return JSON.stringify({ format: 'evergrow-keybindings', version: 1, bindings: this.map }, null, 2);
+  }
+  /** Validate the entire portable layout before replacing any live assignments. */
+  importConfiguration(raw: string): 'saved' | 'session' | 'invalid' {
+    if (raw.length > CONTROL_FILE_LIMIT) return 'invalid';
+    let map: ControlMap | null;
+    try {
+      const file = JSON.parse(raw);
+      if (!file || file.format !== 'evergrow-keybindings' || file.version !== 1) return 'invalid';
+      map = validatedControls(file.bindings);
+    } catch { return 'invalid'; }
+    if (!map) return 'invalid';
+    this.map = map;
+    return this.commit();
+  }
   private commit(): 'saved' | 'session' {
     let result: 'saved' | 'session' = 'session';
     try { if (this.storage) { this.storage.setItem(CONTROL_STORAGE_KEY, JSON.stringify(this.map)); result = 'saved'; } } catch { /* Session controls remain usable. */ }
