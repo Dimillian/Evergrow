@@ -1,0 +1,26 @@
+/* Rank effects have no JS clock: the browser owns visibility and animation lifecycle. */
+.item-temper-motion { pointer-events:none; }
+.item-temper-heat { animation:temper-heat var(--temper-period) var(--temper-delay,0s) ease-in-out infinite; }
+.item-temper-sheen { opacity:.85; animation:temper-sheen var(--temper-period) var(--temper-delay,0s) linear infinite; }
+.item-temper-mote { opacity:0; animation:temper-rise var(--temper-period) var(--temper-delay,0s) linear infinite; }
+.item-temper-trail { opacity:.7; animation:temper-thread var(--temper-period) var(--temper-delay,0s) linear infinite; }
+.item-temper-glint { opacity:0; transform-box:fill-box; transform-origin:center; animation:temper-flare var(--temper-period) var(--temper-delay,0s) ease-in-out infinite; }
+@keyframes temper-heat { 0%,100% { flood-opacity:calc(var(--temper-power) * .65); } 50% { flood-opacity:var(--temper-power); } }
+@keyframes temper-sheen { from { transform:translateY(var(--temper-travel)); } to { transform:translateY(0); } }
+@keyframes temper-rise {
+  0% { opacity:0; transform:translate(var(--mote-x),var(--mote-y)) scale(.5); }
+  25% { opacity:.8; }
+  50% { opacity:.95; transform:translate(calc(var(--mote-x) + var(--mote-drift)),calc(var(--mote-y) - var(--mote-rise) * .5)) scale(1); }
+  80% { opacity:.5; }
+  100% { opacity:0; transform:translate(var(--mote-x),calc(var(--mote-y) - var(--mote-rise))) scale(.25); }
+}
+@keyframes temper-thread { from { stroke-dashoffset:100; } to { stroke-dashoffset:0; } }
+@keyframes temper-flare { 0%,30%,70%,100% { opacity:0; transform:scale(.3) rotate(-15deg); } 50% { opacity:.95; transform:scale(1.15) rotate(15deg); } }
+/* The forge charge owns its own particle show; the earned finish resumes at the result. */
+[data-forge-state=charging] .service-detail .item-temper-motion,
+[data-forge-state=saving] .service-detail .item-temper-motion { visibility:hidden; }
+@media(prefers-reduced-motion:reduce) {
+  .item-temper-heat,.item-temper-sheen,.item-temper-mote,.item-temper-trail,.item-temper-glint { animation:none; }
+  .item-temper-motion { display:none; }
+}
+@media(forced-colors:active) { .item-temper-motion { display:none; } }

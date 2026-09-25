@@ -1,3 +1,4 @@
+import { enhancementIconSVG, weaponEnhancementRank } from './enhancement-art.ts';
 import { riftKeyShapes } from './rift-key-art.ts';
 import { charmShapes } from './charm-shapes.ts';
 import { armorAccessoryShapes } from './armor-accessory-shapes.ts';
@@ -126,7 +127,7 @@ export function itemIconSVG(item: Item, size = 48): string {
       break;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${pixels}" height="${pixels}" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><title>${escape(item.name)}</title>
-    <ellipse cx="24" cy="42" rx="15" ry="3" fill="#05090e" opacity=".45"/>${shape}</svg>`;
+    <ellipse cx="24" cy="42" rx="15" ry="3" fill="#05090e" opacity=".45"/>${enhancementIconSVG(shape,weaponEnhancementRank(item),prefix,48,48,item.seed)}</svg>`;
 }
 
 /** Upright, aspect-correct art for rectangular pack footprints. */
@@ -140,7 +141,8 @@ export function itemPackIconSVG(item: Item, width: number, height: number): stri
   const w = width * 40, h = height * 40;
   const scale = Math.min((w - 16) / Math.max(1, maxX - minX), (h - 18) / Math.max(1, maxY - minY));
   const prefix = iconPrefix('pack');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><g transform="translate(${w / 2} ${h / 2}) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2})">${gearShapesSVG(shapes, true, prefix)}</g></svg>`;
+  const shape = `<g transform="translate(${w / 2} ${h / 2}) scale(${scale}) translate(${-(minX + maxX) / 2} ${-(minY + maxY) / 2})">${gearShapesSVG(shapes, true, prefix)}</g>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false">${enhancementIconSVG(shape,weaponEnhancementRank(item),prefix,w,h,item.seed)}</svg>`;
 }
 
 function armor(item: Item | null): ArmorPiece | null {

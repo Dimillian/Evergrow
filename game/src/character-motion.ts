@@ -27,9 +27,12 @@ function meleeGuardAngle(kind: WeaponVisual['kind'], facing: number, twoHanded: 
 }
 
 
-const gripAt = (mount: RigPoint, angle: number, offset: number): RigPoint => [
-  mount[0] + Math.cos(angle) * offset, mount[1] + Math.sin(angle) * offset,
-  mount[2] + (ARM_DEPTH_SCALE - 1) * Math.sin(angle) * offset,
+// Upright carry axes lie in the screen's vertical plane: a lower grip is
+// lower in height, not farther away across the ground. Both decompositions
+// project to the identical weapon contact point.
+const gripAt = (mount: RigPoint, angle: number, offset: number, upright = 0): RigPoint => [
+  mount[0] + Math.cos(angle) * offset, mount[1] + ((1 - upright) * Math.sin(angle) * offset),
+  mount[2] + (ARM_DEPTH_SCALE - 1 - upright * ARM_DEPTH_SCALE) * Math.sin(angle) * offset,
 ];
 
 /** The weapon and its renderer-owned trail share exactly the same sweep. */
@@ -137,6 +140,7 @@ export function playerMotion(pose: CharacterPose) {
     weaponAngle = carry + Math.atan2(Math.sin(pose.angle - carry), Math.cos(pose.angle - carry)) * wandCharge
       + (Math.cos(pose.angle) >= 0 ? 1 : -1) * wandFlick * (1 - cast);
   }
+  const carryWeaponAngle = weaponAngle;
   if (pose.gesture === 'thrust') weaponAngle += (pose.angle - weaponAngle) * cast;
   if (pose.gesture === 'slam') weaponAngle += cast * .9;
   let activeWeaponAngle = weaponAngle;
@@ -159,8 +163,8 @@ export function playerMotion(pose: CharacterPose) {
   // The grip cuts across the front of the chest, independently of blade pitch.
   // Recovery retracts from the end of that cut rather than orbiting the torso.
   const sweep = smooth(active);
-  const sweepSide = -3 + sweep * 10;
-  const reach = 13 + Math.sin(sweep * Math.PI) * 1.5;
+  const sweepSide = -3 + sweep * (unarmed ? 7 : 10);
+  const reach = (unarmed ? 10 : 13) + Math.sin(sweep * Math.PI) * 1.5;
   const swingDepth = Math.sin(pose.attackAngle) * reach + Math.cos(pose.attackAngle) * sweepSide;
   const swingHand: Point = [Math.cos(pose.attackAngle) * reach - Math.sin(pose.attackAngle) * sweepSide,
     swingDepth * ARM_DEPTH_SCALE - (19 - sweep * 2)];
@@ -183,23 +187,39 @@ export function playerMotion(pose: CharacterPose) {
     hand = projectArmPoint(weaponHand);
   }
   if (pose.weapon?.kind === 'staff') {
-    const reach = 6 + staffCharge * 10 + basicImpulse * 2.8, shoulderSide = 9 * (1 - staffCharge);
-    const palm: RigPoint = [Math.cos(pose.angle) * reach - Math.sin(pose.angle) * shoulderSide,
-      Math.sin(pose.angle) * reach + Math.cos(pose.angle) * shoulderSide,
+    const supported = pose.weapon.element !== 'fire';
+    const reach = 6 + staffCharge * (supported ? 4.6 : 8.6) + basicImpulse * 2.8;
+    // A supported staff sits just outside the shoulder so the opposite palm
+    // can reach the lower grip without lengthening that arm.
+    const shoulderSide = (supported ? 6.8 * (1 - staffCharge) : 9) * (1 - staffCharge);
+    // During a supported cast, aim the midpoint between the palms. Aiming
+    // only the lead hand sends the lower grip outside the opposite arm's reach.
+    const palm: RigPoint = [Math.cos(pose.angle) * reach - Math.sin(pose.angle) * shoulderSide + (supported ? Math.cos(weaponAngle) * 4 : 0),
+      Math.sin(pose.angle) * reach + Math.cos(pose.angle) * shoulderSide + (supported ? staffCharge * Math.sin(weaponAngle) * 4 : 0),
       26 - staffCharge * 4.5 + basicImpulse * 7.5];
-    weaponHand = gripAt(palm, weaponAngle, -staffPalmOffset);
+    weaponHand = gripAt(palm, weaponAngle, -staffPalmOffset, 1 - staffCharge);
     hand = projectArmPoint(weaponHand);
   }
   if (pose.weapon?.kind === 'wand') {
-    const reach = 7 + wandCharge * 9 + basicImpulse * 4.2, side = 9 * (1 - wandCharge);
+    const reach = 7 + wandCharge * 7.6 + basicImpulse * 4.2, side = 9 * (1 - wandCharge);
     weaponHand = [Math.cos(pose.angle) * reach - Math.sin(pose.angle) * side,
       Math.sin(pose.angle) * reach + Math.cos(pose.angle) * side, 23 - wandCharge * 1.5 + basicImpulse * 2.8];
   }
   if (pose.gesture === 'thrust' || pose.gesture === 'slam') {
-    const reach = 10 + cast * (pose.gesture === 'thrust' ? 12 : 5);
-    const gestureHand: RigPoint = [Math.cos(pose.angle) * reach, Math.sin(pose.angle) * reach, 20 - (pose.gesture === 'slam' ? cast * 9 : 0)];
+    const reach = 8 + cast * (pose.gesture === 'thrust' ? 2.5 : .5);
+    const gestureHand: RigPoint = [Math.cos(pose.angle) * reach, Math.sin(pose.angle) * reach, 23 - (pose.gesture === 'slam' ? cast : 0)];
     weaponHand = [weaponHand[0] * (1 - cast) + gestureHand[0] * cast,
       weaponHand[1] * (1 - cast) + gestureHand[1] * cast, weaponHand[2] * (1 - cast) + gestureHand[2] * cast];
+    if (pose.grip !== 'one-handed' && guardedMelee) {
+      // Aim the middle of a two-hand grip; the lower palm must remain reachable
+      // as a thrust or slam rotates the shaft through screen vertical.
+      const halfGrip = getSupportGripOffset(pose.weapon) * .5;
+      const carryHalf = gripAt([0, 0, 0], carryWeaponAngle, halfGrip, 1);
+      const gestureHalf = gripAt([0, 0, 0], weaponAngle, halfGrip, 1);
+      weaponHand = [weaponHand[0] + carryHalf[0] * (1 - cast) - gestureHalf[0],
+        weaponHand[1] + carryHalf[1] * (1 - cast) - gestureHalf[1],
+        weaponHand[2] + carryHalf[2] * (1 - cast) - gestureHalf[2]];
+    }
   }
   const bow = pose.weapon?.kind === 'bow', staff = pose.weapon?.kind === 'staff';
   const restingStaffArm = staff && pose.weapon?.element === 'fire';
@@ -209,8 +229,8 @@ export function playerMotion(pose: CharacterPose) {
   const rightX = -Math.sin(bodyAngle), rightDepth = Math.cos(bodyAngle);
   // Empty arms hang just outside the hips, with a shallow elbow bend and a
   // small opposing swing in travel. Keep these mounts body-relative at every facing.
-  const relaxedWidth = unarmed ? 7.8 : 9;
-  const relaxedHeight = unarmed ? 10.5 : 8;
+  const relaxedWidth = 7.8;
+  const relaxedHeight = 10.5;
   const relaxedHand = (side: number): RigPoint => [
     rightX * side * relaxedWidth + Math.cos(bodyAngle) + side * step * moveX * .5,
     rightDepth * side * relaxedWidth + Math.sin(bodyAngle) + side * step * moveY * .5, relaxedHeight,
@@ -228,18 +248,16 @@ export function playerMotion(pose: CharacterPose) {
     20 + (pose.guard ?? 0) * 2,
   ];
   const supportOffset = bow ? bowStringOffset(rangedDraw) : staff ? staffPalmOffset - 8 : getSupportGripOffset(pose.weapon);
-  const supportGrip: RigPoint = [weaponHand[0] + Math.cos(weaponAngle) * supportOffset,
-    weaponHand[1] + Math.sin(weaponAngle) * supportOffset,
-    weaponHand[2] + (ARM_DEPTH_SCALE - 1) * Math.sin(weaponAngle) * supportOffset];
+  const supportGrip = gripAt(weaponHand, weaponAngle, supportOffset, staff ? 1 - staffCharge : bow ? 0 : 1);
   const offGuard = guardHand(-1);
   // Lower the free palm beside the upper thigh for a loose, shallow elbow bend.
   const restOffHand: RigPoint = restingStaffArm || (unarmed && !pose.offHand && pose.gesture !== 'bash')
     ? relaxedHand(-1)
     : pose.gesture === 'bash'
-    ? [offGuard[0] * (1 - cast) + (Math.cos(pose.angle) * 23 - rightX * 4) * cast,
-      offGuard[1] * (1 - cast) + (Math.sin(pose.angle) * 23 - rightDepth * 4) * cast, offGuard[2] + cast * 2]
+    ? [offGuard[0] * (1 - cast) + (Math.cos(pose.angle) * 14.5 - rightX * 4) * cast,
+      offGuard[1] * (1 - cast) + (Math.sin(pose.angle) * 14.5 - rightDepth * 4) * cast, offGuard[2] + cast * 2]
     : independent ? offGuard : supportGrip;
-  const castHand: RigPoint = [Math.cos(pose.angle) * 15, Math.sin(pose.angle) * 15, 20];
+  const castHand: RigPoint = [Math.cos(pose.angle) * 14.2, Math.sin(pose.angle) * 14.2, 20];
   const release = bow || staff || pose.offHand || pose.gesture ? 0 : cast;
   let offHand3: RigPoint = offAttacking ? [
     offGuard[0] * (1 - offBlend) + weaponHand[0] * offBlend,
@@ -251,8 +269,8 @@ export function playerMotion(pose: CharacterPose) {
     restOffHand[2] * (1 - release) + castHand[2] * release,
   ];
   if (offWandCast > 0) offHand3 = [
-    offHand3[0] * (1 - offWandCast) + (Math.cos(pose.angle) * 16 + Math.sin(pose.angle) * 3) * offWandCast,
-    offHand3[1] * (1 - offWandCast) + (Math.sin(pose.angle) * 16 - Math.cos(pose.angle) * 3) * offWandCast,
+    offHand3[0] * (1 - offWandCast) + (Math.cos(pose.angle) * 14.6 + Math.sin(pose.angle) * 3) * offWandCast,
+    offHand3[1] * (1 - offWandCast) + (Math.sin(pose.angle) * 14.6 - Math.cos(pose.angle) * 3) * offWandCast,
     offHand3[2] + offWandCast * 3,
   ];
   if (offBasicImpulse > 0) offHand3 = [offHand3[0] + Math.cos(pose.angle) * offBasicImpulse * 4.2,
@@ -263,7 +281,7 @@ export function playerMotion(pose: CharacterPose) {
   const mainGrip = staff ? staffPalmOffset : hilted && independent ? -getGripLength(pose.weapon) * .58 : 0;
   const offGrip = pose.offHand?.kind === 'weapon' && (pose.offHand.visual.kind === 'sword' || pose.offHand.visual.kind === 'dagger')
     ? -getGripLength(pose.offHand.visual) * .58 : 0;
-  let mainPalm = gripAt(mainHand3, weaponAngle, mainGrip);
+  let mainPalm = gripAt(mainHand3, weaponAngle, mainGrip, staff ? 1 - staffCharge : 0);
   let offPalm = gripAt(offHand3, offWeaponAngle, offGrip);
   let weaponScale = 1, offWeaponScale = 1, activeWeaponYaw = pose.attackAngle;
   const strokeVisual = offAttacking && offVisual ? offVisual : pose.weapon ?? STARTING_SWORD.visual;
@@ -289,10 +307,10 @@ export function playerMotion(pose: CharacterPose) {
     activeWeaponAngle = stroke.angle; activeWeaponYaw = stroke.yaw;
   }
   const weaponBehind = (staff || pose.weapon?.kind === 'wand') ? back : guardedMelee ? mainHand3[1] < -.5 : Math.sin(weaponAngle) < -0.18;
-  // Relaxed unarmed limbs use a shorter anatomical span. Held equipment keeps
-  // its existing reach; action targets still extend continuously when needed.
-  const weaponArm = solveArm(armShoulder(bodyAngle, 1, shoulderSway), mainPalm, bodyAngle, 1, elbowTuck, diagonal && independent && !offAttacking ? .55 * attackBlend : gripAmount, unarmed ? .86 : 1);
-  const offArm = solveArm(armShoulder(bodyAngle, -1, shoulderSway), offPalm, bodyAngle, -1, offAttacking ? elbowTuck : 0, restingStaffArm ? 0 : diagonal && offAttacking ? .55 * offBlend : gripAmount, unarmed && !pose.offHand ? .86 : 1);
+  // The same anatomical lengths serve every loadout. Existing hand targets
+  // still own weapon contact; only extreme action reaches extend the solver.
+  const weaponArm = solveArm(armShoulder(bodyAngle, 1, shoulderSway), mainPalm, bodyAngle, 1, elbowTuck, diagonal && independent && !offAttacking ? .55 * attackBlend : gripAmount);
+  const offArm = solveArm(armShoulder(bodyAngle, -1, shoulderSway), offPalm, bodyAngle, -1, offAttacking ? elbowTuck : 0, restingStaffArm ? 0 : diagonal && offAttacking ? .55 * offBlend : gripAmount);
   hand = projectArmPoint(mainHand3);
   const offWeaponActive = pose.attackHand === 'off' && pose.offHand?.kind === 'weapon';
   const offWeaponOrigin = projectArmPoint(offHand3);

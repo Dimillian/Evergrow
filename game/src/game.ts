@@ -57,7 +57,7 @@ import { portalActionMode, portalDestinations } from './portal-destination.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import { ServicePanel } from './service-panel.ts';
 import { buildingNPC, focusNPC, canInteractNPC, type TownNPC } from './npcs.ts';
-import type { ServiceQuote } from './commerce.ts';
+import type { ServiceQuote, ServiceResult } from './commerce.ts';
 import { ChroniclePanel } from './chronicle-panel.ts';
 import { metric } from './chronicle.ts';
 import { trackCommerce } from './chronicle-tracking.ts';
@@ -277,6 +277,7 @@ export class Game {
       }));
       this.servicePanel = this.lifetime.own(new ServicePanel(this.shell.panelMount, {
         close: () => this.resume(), trade: quote => this.trade(quote),
+        enhancementSound: cue => this.audio.enhancement(cue),
         sort: (target,tab) => this.characterAction(target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}),
       }));
       this.riftPanel=this.lifetime.own(new RiftPanel(this.shell.panelMount,{close:()=>this.resume(),enter:async action=>{const ok=await this.switchDungeon(action);if(ok)this.resume();return ok;}}));
@@ -1124,7 +1125,7 @@ export class Game {
       : getZoneAt(this.sim.player.x, this.sim.player.y, this.world.seed);
   }
 
-  private async trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> {
+  private async trade(quote: ServiceQuote): Promise<ServiceResult> {
     return this.durable(async () => {
     const npc = this.activeNPC, p = this.sim.player;
     if (this.phase !== 'service' || !npc || !this.session.active || !canInteractNPC(npc, p, this.world))
@@ -1139,7 +1140,7 @@ export class Game {
     });
     if (result.ok) { p.chronicle=progress; this.saveError = ''; this.shell.setSaveStatus();
       if(quote.request.type==='sell'||quote.request.type==='sellMany')this.audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0});
-      else this.notify(result.message);
+      else if (!(quote.request.type === 'improve' && quote.request.operation === 'enhance')) this.notify(result.message);
     }
     return result;
     }, { ok: false, message: 'Saving the previous action…' });

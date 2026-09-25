@@ -78,6 +78,8 @@ export interface CharacterPose {
   /** Casting release/regrip strength. Zero means the support hand holds the weapon. */
   cast?: number;
   weapon?: WeaponVisual;
+  weaponEnhancement?: number;
+  offHandEnhancement?: number;
   grip?: WeaponGrip;
   offHand?: { kind: 'weapon'; visual: WeaponVisual } | { kind: 'shield'; visual: ShieldDefinition['visual'] } | { kind: 'focus'; visual: FocusDefinition['visual'] } | null;
   guard?: number;

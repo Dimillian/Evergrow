@@ -24,13 +24,13 @@ Click a nearby NPC or press **E** on the focused NPC to open its service. Initia
 
 ## Shop experience
 
-Reuse the compact shared window, item cells, rarity treatment, animated tooltips and complete equipment comparisons. Every service shows the same 12-column, six-row spatial bag as the character window, with item footprints, saved positions and four reserved charm rows. Shop stock, buyback and equipped gear also use item-sized spatial trays; they do not rearrange the carried bag. Prices appear in item tooltips and the purchase footer. All merchants share the same header with their role, wallet and close control. No subtitle or flavor paragraph.
+Reuse the compact shared window, item cells, rarity treatment, animated tooltips and complete equipment comparisons. Every service shows the same 12-column, six-row spatial bag as the character window, with item footprints, saved positions and four reserved charm rows. Shop stock and buyback also use item-sized spatial trays; they do not rearrange the carried bag. Equipped gear uses the shared character layout. Prices appear in item tooltips and the purchase action area. All merchants share the same header with their role, wallet and close control. No subtitle or flavor paragraph.
 
-Shop layout: stock on the left, the player's spatial bag on the right. Shops, buyback, gambling, storage and upgrade services inspect item stats through hover/focus tooltips; they never pin a duplicate item-stat card into the window. Selected names and prices stay in the footer. Gambling reveals a compact item icon/name with the same tooltip. The blacksmith workbench showcases the selected item and its exact current → upgraded values and gains. Only changed item bonuses appear; character caps remain authoritative. Enchanter panels retain affix selection, costs, odds and concise rarity/level outcomes. Item selection no longer scrolls the grid toward a details panel. Hover shows the ordinary item tooltip, price and effective equip changes. Selecting a shop item exposes one clear **Buy · 285 gold** action. Buying puts it in the bag; it never equips automatically. Shift-click may buy/sell directly, using exactly the same validated command. Ordinary inventory retains hover-only inspection; the service selection exists only to identify the transaction target.
+Shop layout: stock on the left, the player's spatial bag on the right. Shops, buyback, gambling, storage and upgrade services inspect item stats through hover/focus tooltips; they never pin a duplicate item-stat card into the window. Selected names and prices stay beside the primary action. Gambling reveals a compact item icon/name with the same tooltip. The blacksmith workbench showcases the selected item and its exact current → upgraded values and gains. Only changed item bonuses appear; character caps remain authoritative. Enchanter panels retain affix selection, costs, odds and concise rarity/level outcomes. Item selection no longer scrolls the grid toward a details panel. Hover shows the ordinary item tooltip, price and effective equip changes. Selecting a shop item exposes one clear **Buy · 285 gold** action. Buying puts it in the bag; it never equips automatically. Shift-click may buy/sell directly, using exactly the same validated command. Ordinary inventory retains hover-only inspection; the service selection exists only to identify the transaction target.
 
-Enhance and Enchant show a separate **Equipped** spatial tray above the bag. Click worn gear to improve it in place. Shop dedicates the right pane to the carried inventory. Empty bags preserve their visible grid. Equipment never needs to be moved into the bag for enhancement or enchanting, except when releveling would exceed the wearer’s level requirement.
+Blacksmith and jeweler tabs share equal panes: offers and a fixed action area on the left, equipped gear above **Inventory / Charms** on the right. Sell filters stay with the sale receipt. Clicking worn gear inspects it outside Enhance and selects it for improvement inside Enhance. Enchant keeps equipped gear above the bag. Empty stock and Buyback messages stay inside their trays; empty bags preserve their grids. Equipment never needs to be moved into the bag for enhancement or enchanting, except when releveling would exceed the wearer’s level requirement. See the [merchant layout audit](service-layout-audit.md).
 
-Selling transfers the exact item and credits gold. Equipped items must first be unequipped. Keep a shared **Buyback** list of the last 12 sales per character, available at every blacksmith, jeweler, enchanter and gambler, at the original sale price. Buyback preserves the item, its enhancement and its reroll history. Display that limit; the thirteenth sale retires the oldest entry. **Sell** opens the same dedicated multi-select view at all four merchants, including the gambler and enchanter. It mirrors the carried spatial inventory and includes the shared rarity selectors, receipt and gold animation. Click bag items to toggle them, or use Common / Magic / Rare / Epic / Legendary chips to select or deselect an entire rarity. The receipt lists exact items, count and total gold; its Sell button commits the selection once. Clear removes the selection. Equipped items never enter this view. Batches over 12 explicitly note the buyback limit before payment.
+Selling transfers the exact item and credits gold. Equipped items must first be unequipped. Keep a shared **Buyback** list of the last 12 sales per character, available at every blacksmith, jeweler, enchanter and gambler, at the original sale price. Buyback preserves the item, its enhancement and its reroll history. Display that limit; the thirteenth sale retires the oldest entry. **Sell** opens the same dedicated multi-select view at all four merchants, including the gambler and enchanter. It mirrors the carried spatial inventory and includes the shared rarity selectors, receipt and gold animation. Click bag items to toggle them, or use Common / Magic / Rare / Epic / Legendary chips to select or deselect an entire rarity. The receipt lists exact items, count and total gold; its Sell button commits the selection once. Clear removes the selection. Equipped items stay visible for inspection and cannot enter the sale selection. Batches over 12 explicitly note the buyback limit before payment.
 
 Blacksmith stock guarantees a sword, bow, staff, wand and shield, with the other seven entries covering armor and randomly selected equipment. All supported weapon profiles can appear. Jewelry stock is generated equipment with fully visible stats, not a blind purchase.
 
@@ -59,13 +59,13 @@ All improvements preserve the item's instance ID, base/profile, visual seed and 
 
 ### Blacksmith enhancement
 
-Every equippable item, including jewelry and starter gear, can be enhanced one step at a time, up to **+10**. Success is guaranteed. No destruction, downgrade or additional materials.
+Every equippable item, including jewelry, starter gear, charms and Uniques, can be enhanced to **+10**, with every upgrade guaranteed. Rounded-away ranks skip for free; each purchase charges one current-rank fee and advances to the next useful rank. There are no enhancement rolls, failure penalties or additional materials.
 
 Initial effect: `enhancementMultiplier = 1 + 0.05 × enhancement`. Thus +5 gives ×1.25 and +10 gives ×1.50 to weapon base damage, armor, stat-bearing implicits and all affix values. Shield base block chance and blocked-damage reduction also receive this multiplier, subject to existing final character caps. Weapon family, handedness, attack geometry, base cadence and range stay intrinsic to the profile; attack/cast-speed affixes do improve.
 
 Derive from the unenhanced recipe, then apply enhancement and round once using the stat's existing precision. Never multiply an already enhanced or rounded item. Percentage budgets still use the existing bounded growth curves, and final character caps remain authoritative. The character's detailed stats and item-comparison tooltips expose effective bonuses and caps.
 
-UI: a legible +N badge separate from rarity, restrained metal highlights on enhanced borders, more intricate trim at +5 and +10. A brief forge pulse traces the item icon when the transaction succeeds. The tooltip shows `Enhancement +4 / 10` while the workbench shows the next-step comparison. Avoid continuous glitter on every bag cell; reduced motion uses static details. Ground labels and equipment slots use the same +N treatment.
+UI: a legible +N badge separate from rarity, restrained metal highlights on enhanced borders, more intricate trim at +5 and +10. For weapons from +6, each rank earns a more elaborate animated warm-gold finish: moving sheen, then rising embers and travelling light filaments, culminating in white-gold star flares at +10. Weapon inventory/workbench art, ground weapons and held weapons share the rank progression. A brief forge pulse traces the item icon when the transaction succeeds. The tooltip shows `Enhancement +4 / 10` while the workbench shows the next-step comparison. Only +6–+10 weapons receive these continuous effects; reduced motion uses still details. Ground labels and equipment slots use the same +N treatment.
 
 ### Enchanter: raise rarity
 
@@ -101,15 +101,17 @@ Let `B(L) = 30 × (1 + 0.1 × (L - 1))`, rarity factor `R = 1 / 2 / 5 / 12 / 30`
 | Buy equipment | `B(L) × R` |
 | Buy jewelry | `2.5 × B(L) × R` |
 | Sell | `0.15 × B(L) × R` (also for jewelry) |
-| Enhance to step n | `3 × B(L) × R × 1.65^(n - 1)` |
+| Enhance from current rank e | `3 × B(L) × R × 1.65^e` |
 | Raise rarity | `8 × B(L) × targetR × H` |
 | Reroll one | `15 × B(L) × R × H × 1.25^targetedCount` |
 | Reroll all | `5 × B(L) × R × H × 1.20^fullCount` |
 | Relevel from L to Z | `3 × R × H × sum(B(k), k = L + 1 … Z)` |
 
+Enhancement prices retain the material service multiplier (1× ordinary, 1.2× silver, 1.5× gold, 2× crystal). The original 65%-per-rank price growth applies throughout +1–+10. Free skips are priced from the current rank, without charging for intermediate steps. Every paid enhancement succeeds once its save commits.
+
 Compute the relevel sum analytically, not by looping through potentially a million levels. All costs and resulting balances must be finite safe integers. Stop escalating prices at the numeric boundary by disabling the operation; never overflow or silently reduce its price.
 
-Example for a **level-10 Rare +0 item**:
+Example for a **level-10 Rare iron +0 item**, with a useful stat gain at every rank:
 
 | Action | Gold |
 | --- | ---: |
@@ -117,12 +119,12 @@ Example for a **level-10 Rare +0 item**:
 | Sell | 42 |
 | Enhance +0 → +1 | 855 |
 | Enhance +9 → +10 | 77,504 |
-| Total +0 → +10 at this level/rarity | 195,428 |
+| Total +0 → +10 | 195,428 |
 | Upgrade to Epic | 5,472 |
 | First single / full reroll | 4,275 / 1,425 |
 | Relevel 10 → 15 | 4,950 |
 
-This intentionally makes +10 a long-term investment, not an early expectation. Current level-one normal enemies average 3.85 gold per kill before equipment sales; a 30-gold common purchase takes roughly eight normal kills on average. Gold drops and the base shop budget share the same linear level factor, while enhancement steps escalate sharply. Actual affordability must be tuned from the player's sessions.
+This makes +10 a long-term investment, not an early expectation. Current level-one normal enemies average 3.85 gold per kill before equipment sales; a 30-gold common purchase takes roughly eight normal kills on average. Gold drops and the base shop budget share the same linear level factor, while enhancement uses the restored exponential rank curve. Actual affordability must be tuned from the player's sessions.
 
 Enhancing/rerolling does not raise sale proceeds; these are investments, not refundable gold storage. Rarity/relevel changes may raise proceeds, but always less than the service cost. Buyback returns only the original sale price. Verify that no buy/sell/improve sequence creates profit. Improving earlier at a lower level/rarity is intentionally cheaper; the resulting stats at the same final recipe are independent of operation order.
 
@@ -172,7 +174,7 @@ Gambling retains the selected equipment category after each purchase and when re
 
 Locked items cannot be sold, including manually or in a bulk quote. Rarity shortcuts omit active charms unless explicitly included; deliberate individual selections can still sell them. See [charm and inventory hardening](charms.md#local-inventory-hardening-after-030).
 
-An enhancement purchase advances to the next +N that changes real item bonuses, skipping rounded-away ranks at no extra cost. If no change exists by +10, it cannot be purchased. Rarity upgrades likewise skip ineffective tiers, using the destination tier's normal upgrade price. Releveling with no actual stat change is unavailable. Previews use the same destination and quote as the committed transaction. Charm enchanting keeps the first affix within its theme; a targeted reroll can retain that stat and reroll its strength when no alternative fits.
+An enhancement purchase advances to the next +N that changes real item bonuses, skipping rounded-away ranks at no extra cost. If no change exists by +10, it cannot be purchased. Rarity upgrades likewise skip ineffective tiers, using the destination tier's normal upgrade price. Releveling with no actual stat change is unavailable. The paid action uses the same effective destination and quote as the committed transaction; rank previews can also inspect any other enhancement level without purchasing it. Charm enchanting keeps the first affix within its theme; a targeted reroll can retain that stat and reroll its strength when no alternative fits.
 
 ## Skill reset
 
@@ -185,7 +187,9 @@ Local September 11: Respec → Attributes also offers one free full assigned-att
 
 Weapons / Armor / Accessories tabs filter the merchant’s 12-column physical tray. Shields belong to Armor; rings, amulets and caster foci belong to Accessories. Category counts show available pieces. Sold spaces stay empty until restock rather than shifting neighboring items. Buyback uses the same footprints and its original sale prices. Actual inventory layout and dedicated charm rows stay intact, with an independent Auto-sort button. Every tray shrinks its cells to fit, allowing vertical scrolling but no horizontal overflow.
 
-The enhancement showcase uses the shared item art, +N → +N progression and ten-step track. Its current/after/gain rows compare the actual derived weapon damage, implicit/affix totals and shield block stats. Unchanged integer bonuses are omitted, and rounded-away enhancement steps keep the existing free skip rule. Maximum/unsupported upgrades retain the selected item and a disabled purchase action. Successful upgrades keep the item selected for another step.
+The enhancement showcase uses the shared item art, a fixed Current → Next comparison and a +0 through +10 progress rail. Rank tooltips show only that step’s gains against the preceding rank, and never change the selected upgrade. Its current/after/gain rows compare the actual derived weapon damage, implicit/affix totals and shield block stats. Unchanged integer bonuses are omitted, and rounded-away enhancement steps keep the existing free skip rule. Maximum/unsupported upgrades retain the selected item and a disabled purchase action. Successful upgrades keep the item selected for another step.
+
+Local September 22: the blacksmith’s cost, remaining balance and **Enhance to +N** action sit directly under the next-upgrade gains. The current rank stays prominent. Any rank’s incremental gains can be inspected in a tooltip without changing the main comparison, cost or button; each purchase advances to the next useful rank, retaining free skips over empty steps. Equipped slots share the inventory’s head/left/right layout with the animated avatar in the middle on every merchant tab, above **Inventory / Charms** tabs. A 1.6-second forge charge fills the bar while gold/jade embers gather around the item. **Cancel** or closing during the charge leaves gear and gold untouched. The final animation tick starts the durable transaction, and only a successful save reveals the gold impact and actual stat gains. A submitted save cannot be cancelled; rejection shows an unchanged-item/gold error. **Skip animation** persists on the device, and reduced motion removes the charge and effects. Reviews keep the preference in memory. Blacksmith enhancements are guaranteed through +10. The item, gold and commerce revision persist atomically; cancelled charges spend nothing. Enchanting rerolls have random stats but no success/failure chance. See [design research and behavior](enhancement-workbench.md).
 
 Paid restocks are regular durable commerce commands: validate merchant/epoch/revision/price, debit the wallet and increment the merchant generation atomically. Stock IDs include the paid generation; previously purchased items retain their identity. Optional `commerce.refreshes` stores counts only for known entries in the bounded sold-mask ledger. Natural restock clears both. Unsafe prices, stale offers, insufficient funds and failed persistence change nothing. Existing saves without counts start at zero; no progress reset.
 

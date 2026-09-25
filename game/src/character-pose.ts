@@ -1,3 +1,4 @@
+import { weaponEnhancementRank } from './enhancement-art.ts';
 import { weaponGlowColor } from './radiant-content.ts';
 import { UNIQUE_RULES } from './unique-content.ts';
 import { tintedOutfit } from './appearance-armor.ts';
@@ -31,6 +32,8 @@ export function playerPose(player: Player, time: number,
     attackAngle: attack?.angle ?? player.angle,
     attackKind: attack?.kind ?? (drawing?'ranged':undefined), attackHand: attack?.hand ?? (castingWeapon && castingWeapon === (off?.kind === 'weapon' ? off.weapon : null) ? 'off' : 'main'), gesture,
     weapon: attack?.hand === 'main' ? attack.weapon.visual : player.equipment.mainHand.visual,
+    weaponEnhancement: weaponEnhancementRank(player.character.equipped.weapon),
+    offHandEnhancement: weaponEnhancementRank(player.character.equipped.offhand),
     offHand, guard: Math.min(1, Math.max(player.guardTime,player.skillEffects?.brace?.remaining??0,player.skillEffects?.rallyOfIron?.remaining??0) / .2),
     castColor: player.activeSkill ? SKILL_DEFINITIONS[player.activeSkill].color : weaponGlowColor(player.equipment.mainHand.visual) ?? '#c0acf0',
     grip: getWeaponGrip(player.equipment),

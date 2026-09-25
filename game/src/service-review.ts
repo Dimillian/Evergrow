@@ -19,6 +19,8 @@ import { planService } from './commerce.ts';
 import { refreshCharacter } from './character.ts';
 import { GameAudio } from './audio.ts';
 import { Lifetime } from './lifetime.ts';
+import { EnhancementPreference } from './enhancement-feedback.ts';
+import type { EnhancementStudy } from './tools/enhancement-study.ts';
 
 // Frozen review: no simulation updates, persistence, input or live character access.
 if (!import.meta.env.DEV) throw new Error('Local review only.');
@@ -36,6 +38,10 @@ for (let i = 0; i < (params.has('empty') ? 0 : 18); i++) {
     (['common', 'magic', 'rare', 'epic'] as const)[i % 4]);
   item.recipe.enhancement = [0, 5, 10][i % 3]; p.character.inventory[i] = deriveItem(item);
 }
+if (!params.has('empty')) {
+  for (let i=0;i<4;i++) p.character.inventory[18+i]=generateItem(9180+i,12,'charm',
+    (['jade-monolith','ember-shard','astral-tablet','storm-pebble'] as const)[i],i===3?'epic':'rare');
+}
 if (role === 'stash') {
   // Enough disposable gold to review every unlock without touching playable saves.
   p.character.gold = 1_200_000;
@@ -46,12 +52,14 @@ if (role === 'stash') {
 refreshCharacter(p);
 const shell = life.own(new GameShell(document.querySelector('#app')!, { play() {}, returnToTitle() {}, openMap() {}, openCharacter() {}, openInventory() {}, openSkills() {} }));
 const audio=life.own(new GameAudio());
+let study: EnhancementStudy | undefined;
 const panel = life.own(new ServicePanel(shell.panelMount, { close: () => panel.close(), sort: (target,tab) => { executeCharacterCommand(p, target === 'storage' ? {type:'sortStorage',tab} : {type:'sortInventory',mode:'compact'}); }, trade: async quote => {
-  if(params.has('sound'))await audio.unlock();
+  if (study?.rejectSave) return {ok:false,message:'Simulated save failure. Item and gold unchanged.'};
+  if (!study && params.has('sound')) await audio.unlock();
   const plan = planService(p.character, npc, p.level, quote);
   if (plan.ok) { p.character = plan.character; refreshCharacter(p); if(params.has('sound')&&(quote.request.type==='sell'||quote.request.type==='sellMany'))audio.play({type:'gold',x:p.x,y:p.y,amount:quote.price,balance:p.character.gold??0}); }
   return { ok: plan.ok, message: plan.message };
-} }));
+}, enhancementPreference: new EnhancementPreference(), enhancementSound: cue => { if(study?.sound ?? params.has('sound')) { void audio.unlock().then(() => audio.enhancement(cue)); } } }));
 const renderer = new Renderer(), fx = life.own(new PostFX(shell.canvas));
 renderer.cameraX = p.x; renderer.cameraY = p.y - 40;
 function draw() {
@@ -66,6 +74,14 @@ if (params.get('view') !== 'town') {
   if(params.has('sell'))panel.selectSales('common');
   const operation = params.get('operation');
   if (operation) panel.inspect(params.has('empty') ? { equipped: 'weapon' } : { bag: Number(params.get('item') ?? 1) }, operation as Improvement);
+}
+if (params.get('operation')==='enhance' && params.has('study') && role==='blacksmith') {
+  const {EnhancementStudy}=await import('./tools/enhancement-study.ts');
+  study=life.own(new EnhancementStudy(panel,p,npc,params));
+}
+if (params.has('layout') && role==='blacksmith' && !study) {
+  const {ServiceLayoutStudy}=await import('./tools/service-layout-study.ts');
+  life.own(new ServiceLayoutStudy(panel,p,npc,params));
 }
 window.addEventListener('resize', draw);
 life.defer(() => window.removeEventListener('resize', draw));

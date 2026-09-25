@@ -76,6 +76,22 @@ export class GameAudio {
     this.tone(open ? 125 : 105, 65, .085, .07, 1, 'sine', open ? .025 : .07, .008);
   }
   private goldSoundAt = -Infinity;
+  /** Short forge cues use the normal master/SFX mix and bounded voice pool. */
+  enhancement(cue: 'charge' | 'success' | 'error') {
+    if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || this.ctx.state !== 'running' || this.disposed) return;
+    if (cue === 'charge') {
+      this.hiss({ duration: .24, frequency: 500, endFrequency: 2200, volume: .12, attack: .05, type: 'bandpass' }, 2);
+      this.tone(150, 380, .22, .08, 2, 'sine');
+    } else if (cue === 'success') {
+      this.hiss({ duration: .12, frequency: 4200, endFrequency: 900, volume: .18, body: true }, 2);
+      this.tone(130, 55, .22, .20, 2, 'sine');
+      this.tone(660, 650, .48, .12, 2, 'sine', .015);
+      this.tone(990, 980, .6, .07, 2, 'sine', .055);
+      this.tone(1320, 1310, .7, .04, 2, 'sine', .09);
+    } else {
+      this.tone(150, 95, .14, .08, 2, 'sine');
+    }
+  }
   private xpSoundAt = -Infinity;
   private levelSoundAt = -Infinity;
   private goldPhrase = 0;

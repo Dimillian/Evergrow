@@ -25,6 +25,7 @@ export function itemPrice(item: Item, mode: 'buy' | 'sell'): number {
 export function improvementPrice(item: Item, operation: Improvement, zoneLevel: number): number {
   const r = item.recipe, base = budget(item.itemLevel) * RARITY_COST[item.tier] * itemMaterialService(item), h = 1 + .1 * r.enhancement;
   switch (operation) {
+    // Price from the owned rank so rounded-away ranks still skip at no extra charge.
     case 'enhance': return Math.ceil(3 * base * 1.65 ** r.enhancement);
     case 'rarity': { const tier=nextRarityTier(item); return Math.ceil(8 * budget(item.itemLevel) * itemMaterialService(item) * (tier?RARITY_COST[tier]:Infinity) * h); }
     case 'rerollOne': return Math.ceil(15 * base * h * 1.25 ** r.targetedRolls);
@@ -79,6 +80,8 @@ export type ServiceRequest = {type:'refreshStock'} | {type:'resetAttributes'} | 
   | { type: 'sellMany'; items: SaleItem[]; includeActiveCharms?: boolean }
   | { type: 'buyback'; id: string } | { type: 'improve'; source: ItemSource; operation: Improvement; affix?: number; focus?:AffixFocus };
 export interface ServiceQuote { npcId: string; revision: number; epoch: number; itemId: string; itemRevision: number; price: number; request: ServiceRequest; }
+/** Success is reported only after the transaction commits. */
+export interface ServiceResult { ok: boolean; message: string; }
 export type QuoteResult = { ok: false; message: string } | { ok: true; quote: ServiceQuote; item: Item | null };
 export function sourceItem(sheet: CharacterSheet, source: ItemSource): Item | null {
   return 'bag' in source ? Number.isInteger(source.bag) ? sheet.inventory[source.bag] ?? null : null : sheet.equipped[source.equipped] ?? null;

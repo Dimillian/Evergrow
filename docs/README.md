@@ -59,7 +59,7 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 
 ## Town economy
 
-[NPCs and vendors](npcs-and-vendors.md) documents implemented blacksmith trading/+10 enhancement, jeweler stock and enchanting. Prices, stock weights and enhancement strength are initial playtest defaults. [Service captures](captures/2026-09-05/town-services/README.md) show the shared panels and NPC art.
+[NPCs and vendors](npcs-and-vendors.md) documents implemented blacksmith trading/+10 enhancement, jeweler stock and enchanting. Prices, stock weights and enhancement strength are initial playtest defaults. [Service captures](captures/2026-09-05/town-services/README.md) show the historical shared panels and NPC art. The current [merchant layout audit](service-layout-audit.md) records the unified tabs, action placement and empty states.
 
 ## Next iteration specifications
 

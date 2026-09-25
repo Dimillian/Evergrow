@@ -1,5 +1,28 @@
 # Evergrow changelog
 
+## v0.7.1 — 2026-09-25T02:10:00Z
+
+### New
+
+- A redesigned enhancement workbench shows your selected item, exact upgrade gains, gold cost and remaining balance together.
+- Enhancing gear has a forge charge, sparks and sound, with cancellation before purchase and a saved Skip animation option.
+- Weapons enhanced to +6 through +10 gain increasingly vivid gold glow, embers and light trails in your inventory, on the ground and while equipped.
+- Hover enhancement ranks to inspect the stat gains for each step toward +10.
+- The potion tooltip shows your current charges, life and mana restoration, cooldown and recharge rules.
+
+### Tweaks
+
+- Merchant equipment panels show your character between equipped slots, with separate Inventory and Charms tabs below.
+- Event and dungeon entry dialogs explain objectives, wave counts, time limits and rewards before you begin.
+- Refreshed potion and dodge icons improve readability, with clearer potion charge indicators.
+- Refined character proportions, directional hairstyles and weapon grips across movement, attacks and casting.
+
+### Fixes
+
+- Closing difficulty settings opened from the minimap returns directly to the game.
+- Potion tooltip keyboard input no longer triggers unrelated game actions.
+- Improved shaved scalp rendering, neck silhouettes and hand placement with two-handed weapons and staves.
+
 ## v0.7.0 — 2026-09-20T07:53:00Z
 
 ### New

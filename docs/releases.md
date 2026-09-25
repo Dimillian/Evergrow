@@ -37,6 +37,17 @@ The user approved the next major prototype milestone, **0.7.0**, on 2026-09-20 f
 
 ## Last verified publication
 
+- Game v0.7.1 / Sites version 63, publicly deployed on 2026-09-25 at 02:13:40 UTC.
+- Published source: `b5df1a5dc8104c4b40824f10bd9a1878bacddcc6`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_7742d5c6c7c081919d710528a7661781`.
+- Deployment: `appgdep_6ab5d8bd057c8191a88bfa8fefd22b29`; Sites returned `succeeded`.
+- Includes PRs #72–76: difficulty dismissal, clearer event and dungeon entry dialogs, potion/dodge artwork and potion tooltip, refined character rig and hairstyles, and the enhancement workbench with earned weapon glow.
+- All 1,770 code tests passed, alongside application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run.
+- No character reset or required player action. Development tools remain excluded.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.7.0 / Sites version 62, publicly deployed on 2026-09-20 at 07:56:55 UTC.
 - Published source: `5628012e1b41c5f2a845866312762452cc735802`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_7818cb4e8fac819190c1336fb3125ec5`.

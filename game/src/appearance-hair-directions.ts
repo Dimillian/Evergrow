@@ -18,9 +18,9 @@ function bun(out:GearShape[],p:AppearancePalette,x:number,y:number,r:number):voi
 }
 function braid(out:GearShape[],p:AppearancePalette,x:number,y:number,count:number):void {
   for(let i=0;i<count;i++) {
-    const yy=y+i*1.35,xx=x+Math.sin(i*.65)*.25;
-    out.push(fill([[xx-.85,yy],[xx,yy-.3],[xx+.9,yy+.45],[xx+.2,yy+1.5],[xx-.8,yy+1]],i%2?p.shadow:p.base),
-      line([[xx-.45,yy+.2],[xx+.4,yy+.85]],p.light,.3));
+    const yy=y+i*1.35,xx=x+Math.sin(i*.65)*.18,w=.85-i*.055;
+    out.push(fill([[xx-w,yy],[xx,yy-.3],[xx+w,yy+.45],[xx+.2,yy+1.5],[xx-w,yy+1]],i%2?mixColor(p.base,p.shadow,.4):p.base),
+      line([[xx-.4,yy+.2],[xx+.3,yy+.85]],mixColor(p.base,p.light,.55),.3));
   }
   out.push(line([[x-.6,y+count*1.35],[x+.7,y+count*1.35]],'#c6ad76',.55));
 }
@@ -42,9 +42,9 @@ export function profileHairShapes(style:Hair,p:AppearancePalette):Layers {
     if(style==='locs') {
       front.length=0;
       for(let i=0;i<4;i++) {
-        const x=-4+i*.95, end=8.4+(i%2)*1.1;
-        front.push(fill([[x-.5,-2.9],[x+.5,-3.3],[x+.7,2],[x+.55,end],[x-.1,end+.5],[x-.55,end-.2],[x-.7,2]],i%2?p.shadow:p.base),
-          line([[x,-1.8],[x+.15,3],[x,end-.6]],p.light,.3));
+        const x=-4+i*.95, end=8.1+(i%2)*1.1,bend=(i%2?1:-1)*.25;
+        front.push(fill([[x-.5,-2.9],[x+.5,-3.3],[x+.6,2],[x+.5+bend,5],[x+.35+bend,end],[x-.1+bend,end+.4],[x-.4+bend,end],[x-.6+bend,5],[x-.6,2]],i%2?mixColor(p.base,p.shadow,.3):p.base),
+          line([[x,-1.8],[x+bend,4],[x+bend,end-.6]],mixColor(p.base,p.light,.55),.3));
       }
     }
   }
@@ -53,7 +53,7 @@ export function profileHairShapes(style:Hair,p:AppearancePalette):Layers {
     fill([[-4.4,-1.8],[-5,1],[-4.7,4],[-4,8.1],[-4.1,2],[-3.6,-1]],p.base),
     line([[-4.6,-1],[-4.8,2],[-4.3,6.3]],p.light));
   if(style==='braid')braid(rear,p,-3.7,1.1,6);
-  if(style==='twinbraids')braid(rear,p,-2.5,2.5,5);
+  if(style==='twinbraids')braid(rear,p,-3.4,1.9,5);
   if(style==='lowbun')bun(rear,p,-4.1,2.3,2.15);
   if(style==='doublebun')bun(rear,p,-2.7,-4.5,1.8);
   const pulled:readonly Point[]=[[-3.7,2.1],[-4.3,-.9],[-3.5,-3.7],[-1.5,-5.2],[1.2,-5],[3.1,-3.3],[3.35,-1.2],[2.3,-1.8],[1.1,-2.4],[-.2,-1.4],[-1.3,-.6],[-2.1,2.3]];
@@ -77,7 +77,7 @@ export function profileHairShapes(style:Hair,p:AppearancePalette):Layers {
     for(const [x,y]of [[-4,-2],[-3.2,-4.7],[-1.4,-5.7],[.7,-5.3],[2.4,-3.5]])front.push(line([[x-.4,y+.2],[x-.2,y-.4],[x+.5,y-.35],[x+.65,y]],p.light,.45));
   } else {
     front.push(fill(caps[style],p.base));
-    front.push(line(style==='mohawk'?[[-3.2,-3.1],[-2.5,-5.5],[-.5,-6.8],[1.2,-6]]:[[-3.3,-1.5],[-2.6,-3.5],[-.7,-4.3],[1.4,-3.9]],p.light,.5));
+    front.push(line(style==='mohawk'?[[-3.2,-3.1],[-2.5,-5.5],[-.5,-6.8],[1.2,-6]]:style==='undercut'||style==='topknot'?[[-2.8,-3.5],[-1.2,-4.5],[.5,-4.1],[1.8,-3.3]]:[[-3.3,-1.5],[-2.6,-3.5],[-.7,-4.3],[1.4,-3.9]],p.light,.5));
     if(style==='sidepart')front.push(line([[.6,-4.7],[.8,-3.4],[2,-2.1]],p.shadow,.6));
     if(style==='quiff')front.push(line([[-1.2,-4.5],[1.2,-5.8],[2.6,-5.4]],p.light,.55));
   }
@@ -85,7 +85,6 @@ export function profileHairShapes(style:Hair,p:AppearancePalette):Layers {
   if(style==='halfup')bun(front,p,-3,-3.7,1.8);
   if(style==='topknot')bun(front,p,-1.4,-6,1.65);
   if(style==='doublebun')bun(front,p,-1.9,-4.2,2.1);
-  if(style==='twinbraids')braid(front,p,-2.8,2,5);
   return {rear,front};
 }
 
@@ -96,7 +95,7 @@ export function backHairShapes(style:Hair,p:AppearancePalette):Layers {
   if(style==='bald')return {rear,front};
   const length=longLengths[style];
   const shaved=style==='undercut'||style==='topknot';
-  const bottom=style==='locs'?2.4:length??(shaved?-.6:style==='crop'?3.1:style==='pixie'?3.5:4.2);
+  const bottom=style==='locs'?7.8:length??(shaved?-.6:style==='crop'?3.1:style==='pixie'?3.5:4.2);
   const sheen=mixColor(p.base,p.light,.3);
   if(style==='mohawk') {
     front.push(fill([[-1.1,3.6],[-1.5,-3.8],[-1.4,-7.4],[0,-8.8],[1.4,-7.3],[1.6,-3.7],[1,3.6],[0,4.1]],p.base),line([[0,-7.1],[.3,-2.5],[0,2.6]],p.light));
@@ -117,10 +116,10 @@ export function backHairShapes(style:Hair,p:AppearancePalette):Layers {
   if(style==='pixie')front.push(fill([[-3.9,.5],[-4.3,2.6],[-3,2.1],[-2.7,3.7],[-1.4,3.2],[-.5,4.1],[1.1,3.1],[2.6,3.6],[3.2,2.1],[4.1,1.6],[3.7,.1]],p.base));
   if(style==='waves')for(const x of [-3.2,0,3.2])front.push(line([[x,-2.8],[x+.5,.3],[x-.35,3],[x+.5,6],[x,8.7]],x===0?mixColor(p.base,p.shadow,.45):sheen,.5));
   if(style==='locs')for(let i=0;i<6;i++) {
-    const x=-3.4+i*1.35,end=8.2+(i%3)*.6;
-    front.push(fill([[x-.65,-2.9],[x+.4,-3.5],[x+.7,-.5],[x+.55,end],[x-.05,end+.6],[x-.65,end]],i%2?p.base:p.shadow),line([[x,-2],[x+.1,3],[x,end-.4]],sheen,.4));
+    const x=-3.4+i*1.35,end=8+(i%3)*.65,bend=Math.sin(i*1.7)*.35;
+    front.push(fill([[x-.65,-2.9],[x+.4,-3.5],[x+.6,-.5],[x+.5+bend,4],[x+.35+bend,end],[x-.05+bend,end+.45],[x-.45+bend,end],[x-.6+bend,4]],i%2?p.base:mixColor(p.base,p.shadow,.3)),line([[x,-2],[x+bend,3.5],[x+bend,end-.4]],sheen,.3));
   }
-  if(style==='ponytail')front.push(fill([[-1.5,-.8],[.1,-1.5],[1.6,-.4],[2.2,3.4],[1.5,8.2],[.2,10.5],[-1.2,8.6],[-1.8,3]],p.shadow),fill([[-.7,-.3],[.5,-.4],[1.2,3],[.8,7.8],[0,9],[-.5,5]],p.base),line([[-.2,.4],[.5,3.5],[.1,7.5]],p.light));
+  if(style==='ponytail')front.push(fill([[-1.5,-.8],[.1,-1.5],[1.6,-.4],[2.2,3.4],[1.5,8.2],[.2,10.5],[-1.2,8.6],[-1.8,3]],p.shadow),fill([[-1,-.4],[.6,-.7],[1.25,.2],[1.6,3.4],[1,7.7],[.2,9.3],[-.8,7.7],[-1.15,3]],p.base),line([[-.35,.5],[.45,3.5],[.1,7.8]],sheen,.4),line([[-1.1,.1],[1.1,.1]],'#bca073',.45));
   if(style==='braid')braid(front,p,0,2.2,5);
   if(style==='twinbraids'){braid(front,p,-3.2,2,5);braid(front,p,3.2,2,5);}
   if(style==='bun')bun(front,p,0,-5.8,2.4);
