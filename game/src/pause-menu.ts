@@ -9,6 +9,7 @@ import type { GamepadInput } from './gamepad-input.ts';
 
 export interface PauseActions extends SystemWindowActions {
   openChronicle?(): void;
+  openLootLog?(): void;
   openCharacter?(): void; openSkills?(): void; openAppearance?(): void;
   openMap?(): void; openJourneys?(): void;
   save?(): Promise<boolean>;
@@ -29,7 +30,7 @@ export class PauseMenu {
     this.navigation = navigation;
     this.windows = new PauseSystemWindows(root, actions, () => { this.controller.clear(); this.restoreFocus(); });
     const links = { character: actions.openCharacter, skills: actions.openSkills, appearance: actions.openAppearance,
-      map: actions.openMap, journeys: actions.openJourneys, chronicle: actions.openChronicle };
+      map: actions.openMap, journeys: actions.openJourneys, chronicle: actions.openChronicle, lootLog: actions.openLootLog };
     for (const [id, action] of Object.entries(links))
       root.querySelector<HTMLButtonElement>(`[data-pause-destination="${id}"]`)!.disabled = !action;
     root.addEventListener('click', event => {
@@ -94,6 +95,7 @@ export class PauseMenu {
       case 'map': this.actions.openMap?.(); return;
       case 'journeys': this.actions.openJourneys?.(); return;
       case 'chronicle': this.actions.openChronicle?.(); return;
+      case 'lootLog': this.actions.openLootLog?.(); return;
       case 'difficulty': case 'options': case 'controls': case 'leaderboard': case 'changelog': this.windows.open(destination); return;
     }
   }

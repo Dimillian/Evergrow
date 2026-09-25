@@ -138,6 +138,7 @@ html.touch-mode, .touch-mode :where(#app,#app *) { touch-action: manipulation; }
 .touch-phone-landscape .touch-menu > .touch-button.is-held::before { background:#355360; }
 .touch-phone-landscape .journey-mini { display: none; }
 .touch-phone-landscape .notification-feed { left: 50%; transform: translateX(-50%); top: calc(max(8px,env(safe-area-inset-top)) + 132px); bottom: auto; width: min(230px,32vw); }
+.touch-phone-landscape .notification-anchor.has-loot-log .notification-feed { top:calc(100% + 7px); bottom:auto; }
 .touch-phone-landscape .notification-card { min-height: 26px; padding: 3px 6px; background: #0b151e99; }
 .touch-phone-landscape .notification-card:not(:last-child), .touch-phone-landscape .notification-icon, .touch-phone-landscape .notification-copy > span { display: none; }
 .touch-phone-landscape .notification-copy strong { font-size: 11px; }

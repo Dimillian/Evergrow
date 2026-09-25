@@ -1,5 +1,7 @@
 # Current system status
 
+Local loot log: the latest 100 successful pickups persist per character with original item details and current inventory/equipped/storage/ground/sold location. The inventory toolbar button, character drawer and pause menu open a shared paused reader. Existing saves retain progress and begin with empty history. See [Loot log](loot-log.md).
+
 Local September 19 Area journal: explicit unlimited Accept/Accept all, reversible Dismiss to Nearby, independent pins, retained known/completed activities and area browsing. Show on Map returns to selected quest details on close. Existing saves keep progress; old suppression IDs are ignored and previously trimmed completion details recover when encountered. See [Journeys](journeys.md).
 
 Local September 19 Light & Open HUD: independent right-aligned map and Journey list, a clear gap, compact map metadata, lighter framing and a gold row only for an explicitly pinned quest. The old portal row is replaced by a small lower-left minimap Home icon, visible whenever the player is outside town, including during movement; existing portal shortcuts and touch/companion actions remain. Shared surface/dungeon map chrome and input bounds. Collapsed Journeys omits its divider. No save reset. See [interface kit](ui-kit.md).

@@ -5,8 +5,9 @@ import { TIER_COLORS, TIER_NAMES } from './items.ts';
 import { POI_DEFINITIONS } from './world-pois.ts';
 import { escapeUI, uiIcon } from './ui-components.ts';
 import './notifications.css';
+import { notificationAnchor } from './notification-layout.ts';
 
-/** Native-resolution passive notices. Never intercepts input or changes game state. */
+/** Native-resolution passive notices; never mutates game state. */
 export class GameNotifications {
   private element: HTMLElement;
   private feed = new NotificationQueue(2);
@@ -17,11 +18,30 @@ export class GameNotifications {
   private autoAdvance: boolean;
   private announcements = new Map<number, string>();
   private announceScheduled = false;
+  private readonly resizeObserver: ResizeObserver;
+  private viewport = { width: 0, height: 0 };
+  private phoneLandscape = false;
+  private safeTop = 0;
   constructor(mount: HTMLElement, options: { autoAdvance?: boolean } = {}) {
     this.autoAdvance = options.autoAdvance ?? true;
     this.element = document.createElement('div'); this.element.className = 'game-notifications';
-    this.element.innerHTML = '<div class="notification-feed"></div><div class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>';
+    this.element.innerHTML = `<div class="notification-anchor"><div class="notification-feed"></div></div><div class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>`;
     mount.append(this.element);
+    this.resizeObserver = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect; this.viewport = { width, height };
+      this.placeAnchor();
+    });
+    this.resizeObserver.observe(this.element);
+  }
+  setTouchLayout(phoneLandscape: boolean, safeTop: number): void {
+    if (phoneLandscape === this.phoneLandscape && safeTop === this.safeTop) return;
+    this.phoneLandscape = phoneLandscape; this.safeTop = safeTop; this.placeAnchor();
+  }
+  private placeAnchor(): void {
+    const { width, height } = this.viewport;
+    const rect = notificationAnchor(width, height, this.phoneLandscape, this.safeTop);
+    const anchor = this.element.querySelector<HTMLElement>('.notification-anchor')!;
+    anchor.style.left = `${rect.x}px`; anchor.style.bottom = `${Math.max(0, height - rect.y - rect.height)}px`; anchor.style.width = `${rect.width}px`;
   }
   push(notice: GameNotice): void {
     if (this.disposed) return;
@@ -41,7 +61,7 @@ export class GameNotifications {
     this.feed.clear(); this.render();
     this.element.querySelector('[role="status"]')!.textContent = '';
   }
-  dispose(): void { this.clear(); this.disposed = true; this.element.remove(); }
+  dispose(): void { this.clear(); this.disposed = true; this.resizeObserver.disconnect(); this.element.remove(); }
   private tick = (now: number): void => {
     const dt = Math.min(.1, Math.max(0, (now - this.last) / 1000)); this.last = now;
     this.feed.advance(dt); this.render();

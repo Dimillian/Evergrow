@@ -1,5 +1,7 @@
 # Local development tools
 
+Interface → **Loot log** (`/notifications.html?view=loot-log`) stages the production reader with disposable pickup snapshots and inventory, equipped, stored and sold states. It shares the existing notification workspace and real item renderers, without simulation ticks or playable saves.
+
 Interface → HUD states (`/hud.html`) uses the finalized Silver vial potion and Phantom step dodge artwork directly from the runtime renderer. Healthy, damaged and depleted fixtures show two, one and zero available charges through bright half-rings, with muted progress in the next empty half. Animate recharge (`?motion`) stages illustrative potion kills every 0.8 seconds and the real base dodge cadence, briefly holding each completed charge before replaying; these are authored presentation loops, not gameplay. Freeze study returns to fixed snapshots. Hidden tabs stop advancing and reduced motion keeps the study frozen. Hover/focus each staged potion to inspect the shared explanation of recovery, kill refills, charges and restoration bonuses. Save PNG exports the complete HUD study. No simulation advances or playable saves are accessed.
 
 Local Unique studies: `/character.html?uniques`, `/loot.html?uniques` and `/chronicle.html?uniques` stage the six designs and collection states. The skill playground has a matching Unique selector for each supported skill. All use runtime generators/renderers/combat with disposable state; see [Unique items](unique-items.md).

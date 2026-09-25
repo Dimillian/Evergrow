@@ -122,6 +122,7 @@ export class GameShell {
       if (id === 'character' || id === 'inventory') actions.openCharacter();
       else if (id === 'skilltree') actions.openSkills();
       else if (id === 'map') actions.openMap();
+      else if (id === 'lootLog') actions.openLootLog?.();
       else actions.openJourneys?.();
     }, () => actions.shortcutMenuChanged?.());
     this.refreshBindings();
@@ -198,7 +199,7 @@ export class GameShell {
     const playing = phase === 'playing';
     if (playing || phase === 'ready' || phase === 'dead') this.pauseNavigation.focus = null;
     if (phase === 'ready') this.pauseNavigation.category = 'character';
-    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
+    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle' || phase === 'lootLog';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
     if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); this.potionTooltip.dismiss(); }

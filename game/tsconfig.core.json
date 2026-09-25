@@ -5,6 +5,7 @@
     "types": []
   },
   "include": [
+    "src/loot-log.ts", "src/notification-layout.ts",
     "src/world-difficulty.ts", "src/area-banner.ts", "src/player-movement.ts",
     "src/enemy-neighbors.ts", "src/dungeon-map-enemies.ts", "src/dungeon-locations.ts",
     "src/world-landscape.ts", "src/natural-landscape.ts", "src/dungeon-entrances.ts", "src/settlement-walls.ts", "src/settlement-services.ts", "src/ground-material.ts",

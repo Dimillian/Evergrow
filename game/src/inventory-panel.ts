@@ -37,6 +37,7 @@ export interface InventoryPanelActions {
   hudOptions?(): HUDOptions;
   editAppearance?():void;
   openChronicle?():void;
+  openLootLog?():void;
   equip(index: number, slot?: EquipmentSlot): void;
   unequip(slot: EquipmentSlot, index?: number): void;
   move(from: number, to: number): void;
@@ -129,7 +130,7 @@ export class InventoryPanel {
             ${actions.lock ? `<button type="button" class="ui-button ui-button--quiet ui-button--icon character-tool-icon" data-lock-mode aria-pressed="false" aria-label="Lock items" data-tooltip="Lock items: click a piece to protect it from selling or dropping. L on a focused item also toggles its lock." data-tooltip-placement="below">${ITEM_LOCK_ICON}</button>` : ''}
             ${actions.drop ? `<span class="character-ground-drop" data-ground-drop role="img" tabindex="0" aria-label="Drag an item here to drop it on the ground" data-tooltip="Drag an item here to drop it on the ground." data-tooltip-placement="below">${uiIcon('dropItem')}</span>` : ''}
           </div><div class="character-inventory-counts"><span class="character-gold" data-gold></span></div></div>
-          <div class="character-pack-toolbar"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sortFilter')} Auto-sort</button><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
+          <div class="character-pack-toolbar"><div class="character-pack-actions"><button type="button" class="ui-button character-auto-sort" data-sort="compact">${uiIcon('sortFilter')} Auto-sort</button>${actions.openLootLog ? `<button type="button" class="ui-button character-loot-log" data-loot-log>${uiIcon('lootBag')} Loot log</button>` : ''}</div><div class="character-sort-options" role="group" aria-label="Sort inventory">${(['type', 'rarity', 'recent'] as const).map(mode => `<button type="button" class="ui-button ui-button--quiet" data-sort="${mode}">${mode === 'type' ? 'Type' : mode === 'rarity' ? 'Rarity' : 'Recent'}</button>`).join('')}</div></div>
           <div class="character-grid-scroll ui-item-grid-scroll">
             <div class="character-bag character-tetris" role="group" aria-label="Inventory, ${PACK_COLUMNS} columns by ${PACK_ROWS} rows">
               ${Array.from({ length: PACK_CELLS }, (_, cell) => `<button type="button" class="character-grid-cell" data-cell="${cell}" data-location="cell-${cell}" style="grid-column:${cell % PACK_COLUMNS + 1};grid-row:${Math.floor(cell / PACK_COLUMNS) + 1}" aria-label="Pack row ${Math.floor(cell / PACK_COLUMNS) + 1}, column ${cell % PACK_COLUMNS + 1}"></button>`).join('')}
@@ -527,6 +528,7 @@ export class InventoryPanel {
       if (target.closest('[data-close]')) { this.actions.close(); return; }
       if (target === this.popupLayer || target.closest('[data-popup-close]')) { this.dismissPopup(); return; }
       if (target.closest('[data-sort-filter]')) { this.openPopup('sort', target.closest<HTMLElement>('[data-sort-filter]')!); return; }
+      if (target.closest('[data-loot-log]')) { this.actions.openLootLog?.(); return; }
       if (target.closest('[data-equip-best]')) { this.requestEquipBest(); return; }
       const choice = target.closest<HTMLElement>('[data-best-choice]')?.dataset.bestChoice as EquipBestChoice | undefined;
       if (choice) { this.dismissPopup(); this.actions.equipBest(choice); return; }
