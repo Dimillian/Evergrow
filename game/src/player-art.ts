@@ -29,8 +29,9 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
     const trailY = -moveY * moving * 3 + Math.cos(pose.attackAngle) * torsoTurn * 1.6;
     const hemX = wind + lag + trailX;
     const hemY = -5.2 + trailY + Math.sin(pose.time * 4.7 - 0.4) * 0.5;
-    fabric([[-6, -27], [6, -27], [8 + hemX, hemY - 2],
-      [3 + hemX * 0.9, hemY + 1], [-1 + hemX * 0.7, hemY - 0.5], [-7 + hemX * 0.6, hemY - 2]], '#281f2b');
+    const outline:Point[]=[[-6, -27], [6, -27], [8 + hemX, hemY - 2],
+      [3 + hemX * 0.9, hemY + 1], [-1 + hemX * 0.7, hemY - 0.5], [-7 + hemX * 0.6, hemY - 2]];
+    fabric(outline,'#281f2b');
     fabric([[-5, -26], [5, -26], [6.5 + hemX, hemY - 3],
       [2 + hemX * 0.9, hemY - 0.5], [-5.7 + hemX * 0.6, hemY - 3]], cloth.base);
     fabric([[-4, -25], [-0.5, -25], [hemX * 0.82, hemY - 2],
@@ -81,9 +82,9 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
       gauntlet(ctx, hand, outfit.hands, color, -Math.atan2(hand[0] - elbow[0], hand[1] - elbow[1]), pose.attack > 0);
       return;
     }
-    heldWeapon(ctx, weaponOrigin, weaponAngle, color, pose.weapon, rangedDraw, pose.effectTime ?? pose.time, pose.attackHand === 'off' ? 0 : weaponCharge, weaponScale);
-    gauntlet(ctx, hand, outfit.hands, color, weaponAngle);
-    if (supportHolding) gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color, weaponAngle);
+    heldWeapon(ctx, weaponOrigin, weaponAngle, color, pose.weapon, rangedDraw, pose.effectTime ?? pose.time, pose.attackHand === 'off' ? 0 : weaponCharge, weaponScale, pose.weaponEnhancement);
+    gauntlet(ctx, hand, outfit.hands, color, weaponAngle,true);
+    if (supportHolding) gauntlet(ctx, projectArmPoint(offArm.hand), outfit.hands, color, weaponAngle,true);
     // Fingers cross the grip, keeping the weapon seated in the animated gauntlet.
     ctx.save(); ctx.translate(hand[0], hand[1]); ctx.rotate(weaponAngle);
     line(ctx, [[-0.6, -1.2], [-0.6, 1.3]], color(outfit.hands?.material.edge ?? '#baa078'), 0.7);
@@ -103,8 +104,8 @@ export function player(ctx: CanvasRenderingContext2D, pose: CharacterPose, color
     }
     if (pose.offHand?.kind === 'shield') heldShield(ctx, offHand, pose.angle, pose.offHand.visual, color, pose.guard);
     if (pose.offHand?.kind === 'weapon') {
-      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual, 0, pose.effectTime ?? pose.time, pose.attackHand === 'off' ? weaponCharge : 0, offWeaponScale);
-      gauntlet(ctx, offHand, outfit.hands, color, offWeaponAngle);
+      heldWeapon(ctx, offWeaponOrigin, offWeaponAngle, color, pose.offHand.visual, 0, pose.effectTime ?? pose.time, pose.attackHand === 'off' ? weaponCharge : 0, offWeaponScale, pose.offHandEnhancement);
+      gauntlet(ctx, offHand, outfit.hands, color, offWeaponAngle,true);
     }
   };
   const armLayers = [weaponArm, offArm].flatMap(arm => [

@@ -1,4 +1,5 @@
 import { emptySlotIcon } from './equipment-slot-art.ts';
+import { SLOT_NAMES, LEFT_SLOTS, RIGHT_SLOTS } from './equipment-layout.ts';
 import { UITooltipStack } from './ui-tooltip-stack.ts';
 import type { HUDOptions } from './hud.ts';
 import { InventoryHUD } from './inventory-hud.ts';
@@ -54,12 +55,6 @@ const ATTRIBUTE_DESCRIPTIONS: Record<Attribute, string> = {
   strength: 'Physical attack damage', dexterity: 'Attack speed and critical chance',
   intelligence: 'Spell & elemental damage, mana', vitality: 'Maximum life',
 };
-const SLOT_NAMES: Record<EquipmentSlot, string> = {
-  weapon: 'Main hand', offhand: 'Off hand', head: 'Head', chest: 'Chest', gloves: 'Gloves', legs: 'Legs', boots: 'Boots',
-  cloak: 'Cloak', amulet: 'Amulet', ring1: 'Ring I', ring2: 'Ring II',
-};
-const LEFT_SLOTS: EquipmentSlot[] = ['chest', 'gloves', 'legs', 'boots', 'cloak'];
-const RIGHT_SLOTS: EquipmentSlot[] = ['weapon', 'offhand', 'amulet', 'ring1', 'ring2'];
 const number = (value: number, decimals = 0) => Number.isFinite(value) ? value.toLocaleString('en-US', { maximumFractionDigits: decimals }) : '—';
 const locationKey = (location: ItemLocation) => location.type === 'bag' ? location.index < 0 ? `cell-${location.cell}` : `bag-${location.index}` : `equipment-${location.slot}`;
 

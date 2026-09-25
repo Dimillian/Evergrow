@@ -1,0 +1,9 @@
+.service-layout-study { --service-layout-top:66px; }
+.service-layout-study .service-panel { top:var(--service-layout-top); bottom:48px; max-height:calc(100dvh - var(--service-layout-top) - 48px); }
+.service-layout-controls { position:fixed; inset:0 0 auto; z-index:200; display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; padding:10px 18px; border-bottom:1px solid #667b8255; background:#101d26; color:#cbd9d9; font:13px var(--ui-font); }
+.service-layout-controls strong { color:#e8d6ac; font-size:17px; font-weight:400; }
+.service-layout-controls label { display:flex; align-items:center; gap:8px; }
+.service-layout-controls select,.service-layout-controls button { min-height:32px; padding:6px 9px; border:1px solid #6c87905c; border-radius:0; background:#1b2b35; color:#d8e2df; font:inherit; }
+.service-layout-controls button { cursor:pointer; }
+.service-layout-controls span { color:#8fa6ac; font-size:11px; }
+.service-layout-controls :focus-visible { outline:2px solid #e3c995; outline-offset:2px; }

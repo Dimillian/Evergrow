@@ -124,6 +124,11 @@ function render() {
 async function boot() {
   await loadGameFont();
   if (abort.signal.aborted) return;
+  if (new URLSearchParams(location.search).get('view') === 'economy') {
+    const { mountEconomyReview } = await import('./tools/economy-review.ts');
+    if (!abort.signal.aborted) mountEconomyReview(root, abort.signal);
+    return;
+  }
   if (new URLSearchParams(location.search).get('view') === 'difficulty') {
     const { mountDifficultyReview } = await import('./world-difficulty-review.ts');
     if (!abort.signal.aborted) mountDifficultyReview(root, abort.signal);
@@ -135,7 +140,7 @@ async function boot() {
     return;
   }
   root.innerHTML = `<header class="study-heading"><div><p class="ui-kicker">Evergrow · Local design study</p><h1>Beyond the first clearing</h1><p>Explore how geography, enemies, experience and equipment grow together.</p></div>
-    <div class="study-heading-tools"><span class="ui-badge">Live rule values</span><nav aria-label="Study sections"><a class="ui-button ui-button--quiet" href="#loot-table">Loot table</a><a class="ui-button ui-button--quiet" href="#level-curve">Level curve</a></nav></div></header>
+    <div class="study-heading-tools"><span class="ui-badge">Live rule values</span><nav aria-label="Study sections"><a class="ui-button ui-button--quiet" href="/progression.html?view=economy">Economy</a><a class="ui-button ui-button--quiet" href="#loot-table">Loot table</a><a class="ui-button ui-button--quiet" href="#level-curve">Level curve</a></nav></div></header>
     <form class="ui-window study-controls" aria-label="Progression parameters">
       <label>Character level<input class="ui-well" id="study-player" type="number" min="1" max="${MAX_CONTENT_LEVEL}" step="1" value="${initialPlayer}"></label>
       <label>Area level<input class="ui-well" id="study-area" type="number" min="1" max="${MAX_CONTENT_LEVEL}" step="1" value="${initialArea}"></label>

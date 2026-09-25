@@ -1,5 +1,5 @@
 import { isGreaterAffix, GREATER_AFFIX_SYMBOL } from './item-roll-content.ts';
-import { STOCK_CATEGORIES, STOCK_CATEGORY_NAMES, stockCategory, enhancementGains, type StockCategory } from './service-presentation.ts';
+import { STOCK_CATEGORIES, STOCK_CATEGORY_NAMES, stockCategory, enhancementGains, enhancementStepGains, type StockCategory } from './service-presentation.ts';
 import { storageTabCount, storageTabItems, hasStorageTab, MAX_STORAGE_TABS, nextStorageTabPrice } from './storage-content.ts';
 import { itemAffixCount } from './items.ts';
 import { bulkSaleItems, ITEM_LOCK_ICON } from './item-protection.ts';
@@ -10,15 +10,22 @@ import type { Player } from './model.ts';
 import type { Item, ItemKind, ItemTier, EquipmentSlot } from './character-types.ts';
 import { NPC_NAMES, NPC_COLORS, type TownNPC } from './npcs.ts';
 import { npcEmblem } from './npc-art.ts';
-import { RESPEC_GOLD_PER_POINT, respecPoints, attributeResetPoints, GAMBLE_KINDS, gambleOdds, vendorRefreshPrice, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
-import { improveItem, rerollPool, affixCategory, AFFIX_FOCUSES, type AffixFocus, type Improvement } from './item-improvement.ts';
+import { RESPEC_GOLD_PER_POINT, respecPoints, attributeResetPoints, GAMBLE_KINDS, gambleOdds, vendorRefreshPrice, gamblePrice, STASH_CAPACITY, vendorStock, vendorStockLevel, quoteService, sourceItem, itemPrice, stockEpoch, type ServiceResult, type ServiceQuote, type ServiceRequest, type ItemSource, type SaleItem } from './commerce.ts';
+import { improveItem, nextEnhancementLevel, rerollPool, affixCategory, AFFIX_FOCUSES, type AffixFocus, type Improvement } from './item-improvement.ts';
 import { updateItemSlot } from './item-ui.ts';
+import { SLOT_NAMES, LEFT_SLOTS, RIGHT_SLOTS } from './equipment-layout.ts';
+import { drawCharacterPortrait } from './character-portrait.ts';
+import { emptySlotIcon } from './equipment-slot-art.ts';
 import { ItemTooltip } from './item-tooltip.ts';
+import { UITooltipStack } from './ui-tooltip-stack.ts';
 import { itemIconSVG, itemPackIconSVG } from './item-art.ts';
-import { generateItem, EQUIPMENT_SLOTS, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemAffixPool, itemDisplayName, formatStatValue } from './items.ts';
+import { generateItem, TIER_COLORS, TIER_NAMES, STAT_LABELS, itemAffixPool, itemDisplayName, formatStatValue } from './items.ts';
 import { goldBalance } from './wallet.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
 import { ServiceGoldFeedback } from './service-gold-feedback.ts';
+import { forgeFrameSVG, forgeCoinSVG, forgeMotesMarkup } from './forge-art.ts';
+import { enhancementPreference } from './control-preferences.ts';
+import { ENHANCEMENT_CHARGE_MS, EnhancementSequence, type EnhancementPreference, type EnhancementPhase } from './enhancement-feedback.ts';
 import './service-panel.css';
 
 const ENCHANT_OPERATIONS = ['rarity', 'rerollOne', 'rerollAll', 'relevel'] as const;
@@ -40,20 +47,62 @@ export class ServicePanel {
   private quote: ServiceQuote | null = null;
   private sales = new Map<string, SaleItem>();
   private goldFeedback: ServiceGoldFeedback;
+  private portrait: HTMLCanvasElement | null = null;
+  private portraitFrame = 0;
+  private portraitVisible = false;
+  private portraitResize: ResizeObserver;
+  private portraitIntersection: IntersectionObserver;
   private saving = false;
+  private sessionVersion = 0;
+  private enhancement: EnhancementSequence;
+  private rankTips: UITooltipStack;
+  private bagTab: 'equipment' | 'charms' = 'equipment';
+  private renderedOffer = '';
+  private offerScrollPositions = new Map<string, number>();
+  private get merchantLayout(): boolean { return this.npc.role === 'blacksmith' || this.npc.role === 'jeweler'; }
+  private enhancementPreference: EnhancementPreference;
   private tradeDrag: { id:string; quote:ServiceQuote|null; target:'.service-offer'|'.service-bag'; problem:string; message:string } | null = null;
   private ignoreClickUntil = 0;
   private gambleKind: ItemKind | null = null;
   private revealed:Item|null=null;
   private abort = new AbortController();
   private focus: { dispose(): void } | null = null;
-  private actions: { close(): void; sort(target: 'storage' | 'inventory', tab?: number): void; trade(quote: ServiceQuote): Promise<{ ok: boolean; message: string }> };
+  private actions: { close(): void; sort(target: 'storage' | 'inventory', tab?: number): void; trade(quote: ServiceQuote): Promise<ServiceResult>; enhancementSound?(cue: 'charge' | 'success' | 'error'): void; enhancementPreference?: EnhancementPreference };
   constructor(mount: HTMLElement, actions: ServicePanel['actions']) {
     this.actions = actions;
+    this.portraitResize = new ResizeObserver(() => this.drawPortrait());
+    this.portraitIntersection = new IntersectionObserver(entries => {
+      const current = entries.find(entry => entry.target === this.portrait);
+      if (current) { this.portraitVisible = current.isIntersecting; this.drawPortrait(); }
+    });
+    this.enhancementPreference = actions.enhancementPreference ?? enhancementPreference;
     this.element = document.createElement('section'); this.element.className = 'service-panel ui-window'; this.element.hidden = true;
+    this.enhancement = new EnhancementSequence((done, duration) => {
+      const bar = this.element.querySelector<HTMLElement>('.forge-channel > span')!;
+      // The visible animation's final frame, not a parallel wall-clock timer, releases the purchase.
+      const frames = [{ transform: 'scaleX(0)' }, { transform: 'scaleX(.96)' }];
+      const animation = bar.animate(frames,
+        { duration, easing: 'cubic-bezier(.3,.1,.65,1)', fill: 'forwards' });
+      void animation.finished.then(done, () => {});
+      return () => animation.cancel();
+    });
     this.element.setAttribute('role', 'dialog'); this.element.setAttribute('aria-modal', 'true'); this.element.setAttribute('aria-labelledby', 'service-title');
     mount.append(this.element); this.goldFeedback = new ServiceGoldFeedback(this.element); this.tooltip = new ItemTooltip(this.element, 'service-tooltip');
+    this.rankTips = new UITooltipStack(this.element, term => this.rankTooltipMarkup(term), this.element, () => !this.saving && this.tab==='improve' && this.operation==='enhance');
     this.element.addEventListener('click', e => this.click(e), { signal: this.abort.signal });
+    this.element.addEventListener('keydown', e => {
+      if (this.saving || !(e.target instanceof HTMLElement)) return;
+      const selector = e.target.matches('[data-enhance-rank]') ? '[data-enhance-rank]' : e.target.matches('[data-bag-tab]') ? '[data-bag-tab]' : null;
+      if (!selector || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+      e.preventDefault(); e.stopPropagation();
+      const buttons = [...this.element.querySelectorAll<HTMLButtonElement>(selector)];
+      const index = buttons.indexOf(e.target as HTMLButtonElement);
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1 : (index + (e.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+      if (selector === '[data-enhance-rank]') {
+        for (const button of buttons) button.tabIndex = -1;
+        buttons[next].tabIndex = 0; buttons[next].focus();
+      } else buttons[next]?.click();
+    }, { signal: this.abort.signal });
     this.installTradeDrag();
     this.element.addEventListener('pointerover', e => this.hover(e.target), { signal: this.abort.signal });
     this.element.addEventListener('focusin', e => this.hover(e.target), { signal: this.abort.signal });
@@ -62,9 +111,18 @@ export class ServicePanel {
       if (cell && (!(e.relatedTarget instanceof Node) || !cell.contains(e.relatedTarget))) this.tooltip.defer();
     }, { signal: this.abort.signal });
     this.element.addEventListener('focusout', () => this.tooltip.defer(), { signal: this.abort.signal });
-    this.element.addEventListener('scroll', event => { if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.tooltip.hide(); }, { signal: this.abort.signal, capture: true });
+    this.element.addEventListener('scroll', event => { if (!(event.target instanceof Element) || !event.target.closest('.ui-tooltip')) this.hideTooltips(); }, { signal: this.abort.signal, capture: true });
+    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', event => {
+      if (event.matches) { this.element.classList.add('forge-instant'); this.enhancement.skip(); }
+      this.drawPortrait();
+    }, { signal: this.abort.signal });
+    document.addEventListener('visibilitychange', () => this.drawPortrait(), { signal: this.abort.signal });
   }
   open(player: Player, npc: TownNPC): void {
+    this.stopPortrait();
+    this.sessionVersion++; this.enhancement.dispose(); this.saving = false;
+    this.bagTab = 'equipment';
+    this.renderedOffer = ''; this.offerScrollPositions.clear();
     this.stockCache=null;
     this.shopCategory = npc.role === 'jeweler' ? 'accessories' : 'weapons';
     this.storageTab = 0; this.player = player; this.npc = npc; this.tab = npc.role === 'enchanter' ? 'improve' : 'shop';
@@ -75,11 +133,13 @@ export class ServicePanel {
   }
   inspect(source: ItemSource, operation?: Improvement): void {
     if (operation) { this.tab = 'improve'; this.operation = operation; }
+    const item = sourceItem(this.player.character, source);
+    if (this.tab === 'improve') this.bagTab = item?.kind === 'charm' ? 'charms' : 'equipment';
     this.selected = this.tab === 'improve' ? { type: 'improve', source, operation: this.operation, affix: 0 } : { type: 'sell', source };
     this.render();
   }
-  close(): void { this.clearTradeDrag(); this.includeActiveCharms=false; this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.tooltip.hide(); this.element.hidden = true; this.selected = null; this.quote = null; }
-  dispose(): void { this.close(); this.abort.abort(); this.tooltip.dispose(); this.element.remove(); }
+  close(): void { this.stopPortrait(); this.sessionVersion++; this.enhancement.dispose(); this.saving = false; this.clearTradeDrag(); this.includeActiveCharms=false; this.goldFeedback.stop(); this.sales.clear(); this.focus?.dispose(); this.focus = null; this.hideTooltips(); this.element.hidden = true; this.selected = null; this.quote = null; }
+  dispose(): void { this.close(); this.abort.abort(); this.tooltip.dispose(); this.rankTips.dispose(); this.element.remove(); }
   private updateSelection(): void {
     if (this.npc.role === 'gambler' && this.tab === 'shop') {
       this.selected = this.gambleKind ? { type: 'gamble', kind: this.gambleKind } : null;
@@ -96,7 +156,14 @@ export class ServicePanel {
     this.selected = null; this.render();
   }
   private render(): void {
+    if (!this.merchantLayout) this.stopPortrait();
     this.clearTradeDrag();
+    delete this.element.dataset.forgeState;
+    this.element.classList.remove('service-success', 'forge-instant');
+    const forge = this.tab === 'improve' && this.operation === 'enhance';
+    this.element.classList.toggle('is-forging', forge);
+    this.element.classList.toggle('is-merchant-layout', this.merchantLayout);
+    this.element.removeAttribute('aria-busy');
     this.element.classList.toggle('is-storage',this.npc.role==='stash');
     this.element.classList.toggle('is-enhancing',this.tab==='improve');
     this.element.classList.toggle('is-enchanting',this.tab==='improve'&&this.npc.role==='enchanter');
@@ -104,30 +171,49 @@ export class ServicePanel {
     if(this.npc.role==='stash'){this.renderStorage();return;}
     if(this.npc.role==='gambler'&&this.tab==='shop'){this.renderSpecial();return;}
     this.goldFeedback.stop();
-    this.tooltip.hide();
+    this.hideTooltips();
     this.element.classList.toggle('is-selling', this.tab === 'sell');
-    const offerScroll=this.element.querySelector('.service-offer')?.scrollTop??0;
+    const oldOffer=this.element.querySelector('.service-offer-content')??this.element.querySelector('.service-offer');
+    if(this.renderedOffer)this.offerScrollPositions.set(this.renderedOffer,oldOffer?.scrollTop??0);
+    this.renderedOffer=`${this.tab}:${this.tab==='shop'?this.shopCategory:''}`;
+    const offerScroll=this.offerScrollPositions.get(this.renderedOffer)??0;
     const bagScroll=this.element.querySelector('.service-bag')?.scrollTop??0;
     const focused = this.element.querySelector<HTMLElement>(':focus');
     const active = focused?.dataset.item;
     const control = focused?.hasAttribute('data-clear-sales') ? '[data-clear-sales]' : focused?.dataset.sellTier ? `[data-sell-tier="${focused.dataset.sellTier}"]` : focused?.dataset.operation ? `[data-operation="${focused.dataset.operation}"]` : focused?.dataset.tab ? `[data-tab="${focused.dataset.tab}"]`
       : focused?.hasAttribute('data-confirm') ? '[data-confirm]' : focused?.hasAttribute('data-close') ? '[data-close]' : null;
     this.element.style.setProperty('--service-color', NPC_COLORS[this.npc.role]);
-    this.element.innerHTML = `${this.headerMarkup()}
-      ${this.tabsMarkup()}
-      <div class="service-body"><section class="service-offer ui-scroll-area">${this.tab === 'sell' ? '<div class="service-section-heading"><h3>Selected items</h3><button class="ui-button ui-button--quiet" data-clear-sales>Clear</button></div>' : this.tab === 'improve' ? `${this.npc.role === 'enchanter' ? `<nav class="enchant-operations" aria-label="Enchantment">${ENCHANT_OPERATIONS.map(op=>`<button class="ui-button ui-button--quiet" data-operation="${op}" aria-pressed="${this.operation===op}">${ENCHANT_LABELS[op]}</button>`).join('')}</nav>` : '<div class="service-section-heading"><h3>The workbench</h3><span>Guaranteed enhancement</span></div>'}` : `<div class="service-section-heading"><h3>${this.tab === 'shop' ? `Stock · Lv ${vendorStockLevel(this.npc, this.player.level)}` : 'Buyback'}</h3><span>${this.tab === 'shop' ? `Restocks at level ${(stockEpoch(this.player.level) + 1) * 3 + 1}` : 'Last 12 sales'}</span></div>${this.tab==='shop'?'<div class="service-stock-controls"></div>':''}<div class="service-stock inventory-pack"></div>`}<div class="service-detail"></div></section>
-      <section class="service-bag ui-scroll-area">${this.tab === 'improve' ? '<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3><span>Upgrade in place</span></div><div class="service-equipment inventory-pack"></div></section>' : ''}<section aria-label="Inventory"><div class="service-section-heading"><h3>Inventory</h3></div>${this.sortMarkup('inventory')}${this.tab === 'sell' ? this.rarityControls() : ''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section></section></div>
-      <footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Choose an item</button></footer>`;
+    const merchant=this.merchantLayout;
+    const offerHeading=this.tab==='sell'
+      ? `<div class="service-section-heading"><h3>Sell items</h3><button class="ui-button ui-button--quiet" data-clear-sales>Clear</button></div>${merchant?this.rarityControls():''}`
+      : this.tab==='improve'
+        ? `${this.npc.role==='enchanter'?`<nav class="enchant-operations" aria-label="Enchantment">${ENCHANT_OPERATIONS.map(op=>`<button class="ui-button ui-button--quiet" data-operation="${op}" aria-pressed="${this.operation===op}">${ENCHANT_LABELS[op]}</button>`).join('')}</nav>`:'<div class="service-section-heading"><h3>Enhance</h3></div>'}`
+        : `<div class="service-section-heading"><h3>${this.tab==='shop'?`Stock · Lv ${vendorStockLevel(this.npc,this.player.level)}`:'Buyback'}</h3><span>${this.tab==='shop'?`Restocks at level ${(stockEpoch(this.player.level)+1)*3+1}`:'Last 12 sales'}</span></div>${this.tab==='shop'?'<div class="service-stock-controls"></div>':''}<div class="service-stock inventory-pack"></div>`;
+    const action=forge?this.enhancementActionMarkup():merchant?`<div class="service-action"><div class="service-purchase-summary" hidden></div><div class="service-action-channel" aria-hidden="true"></div><button class="ui-button ui-button--primary enhance-confirm" data-confirm disabled>Choose an item</button><div class="service-action-options" aria-hidden="true"></div><span class="service-message" role="status" aria-live="polite"></span></div>`:'';
+    const offerMarkup=`${merchant?'<div class="service-offer-content ui-scroll-area">':''}${offerHeading}<div class="service-detail"></div>${merchant?'</div>':''}${action}`;
+    const inventoryMarkup=`<section aria-label="Inventory">${merchant||this.tab==='improve'?this.bagTabsMarkup():`<div class="service-section-heading"><h3>Inventory</h3></div>${this.sortMarkup('inventory')}`}${this.tab==='sell'&&!merchant?this.rarityControls():''}<div class="ui-item-grid-scroll"><div class="service-grid inventory-pack"></div></div></section>`;
+    if (merchant && this.portrait?.isConnected) {
+      // Keep the equipped section, canvas pixels and observers mounted between tabs.
+      // Only the tab-dependent offers and inventory controls need new markup.
+      this.element.querySelector('.ui-window-header')!.outerHTML=this.headerMarkup();
+      this.element.querySelector('.service-tabs')!.outerHTML=this.tabsMarkup();
+      this.element.querySelector('.service-offer')!.innerHTML=offerMarkup;
+      const bag=this.element.querySelector<HTMLElement>('.service-bag')!;
+      bag.inert=false;
+      bag.querySelector(':scope > section[aria-label="Inventory"]')!.outerHTML=inventoryMarkup;
+    } else {
+      this.element.innerHTML = `${this.headerMarkup()}${this.tabsMarkup()}
+        <div class="service-body"><section class="service-offer ${merchant?'':'ui-scroll-area'}">${offerMarkup}</section>
+        <section class="service-bag ui-scroll-area">${merchant||this.tab==='improve'?'<section class="service-equipped-section" aria-label="Equipped gear"><div class="service-section-heading"><h3>Equipped</h3></div><div class="service-loadout"></div></section>':''}${inventoryMarkup}</section></div>
+        ${forge||merchant?'':'<footer class="ui-window-footer"><span class="service-message" role="status"></span><button class="ui-button ui-button--primary" data-confirm disabled>Choose an item</button></footer>'}`;
+    }
     this.renderInventoryPack();
-    const equipment = this.element.querySelector<HTMLElement>('.service-equipment');
-    if (equipment) this.renderSpatialItems(equipment, EQUIPMENT_SLOTS.flatMap(slot => {
-      const item=this.player.character.equipped[slot];
-      return item ? [{item,key:`equipped:${slot}`}] : [];
-    }), 3, 'Equipped gear');
+    this.renderEquipment();
     this.renderStock();
     this.renderDetail();
     this.element.querySelector('.service-bag')!.scrollTop=bagScroll;
-    this.element.querySelector('.service-offer')!.scrollTop=offerScroll;
+    (this.element.querySelector('.service-offer-content')??this.element.querySelector('.service-offer'))!.scrollTop=offerScroll;
+    this.drawPortrait();
     if (active) this.element.querySelector<HTMLElement>(`[data-item="${active}"]`)?.focus({ preventScroll: true });
     else if (control) this.element.querySelector<HTMLElement>(control)?.focus({ preventScroll: true });
   }
@@ -156,7 +242,10 @@ export class ServicePanel {
   private renderStock(): void {
     const root=this.element.querySelector<HTMLElement>('.service-stock');if(!root)return;
     if(this.tab==='buyback'){
-      this.renderSpatialItems(root,this.player.character.commerce.buyback.map((entry,index)=>({item:entry.item,key:`buyback:${index}`})),8,'Buyback items');return;
+      const entries=this.player.character.commerce.buyback.map((entry,index)=>({item:entry.item,key:`buyback:${index}`}));
+      this.renderSpatialItems(root,entries,8,'Buyback items');
+      if(!entries.length)this.renderStockEmpty(root,'No recent sales','Sold items appear here.');
+      return;
     }
     const stock=this.currentStock(true);
     const available=this.currentStock();
@@ -164,25 +253,124 @@ export class ServicePanel {
     const refresh=quoteService(this.player.character,this.npc,this.player.level,{type:'refreshStock'});
     const price=vendorRefreshPrice(this.player.character,this.npc,this.player.level);
     controls.innerHTML=`<nav class="service-categories" aria-label="Stock categories">${STOCK_CATEGORIES.map(category=>`<button class="ui-button ui-button--quiet" data-stock-category="${category}" aria-pressed="${this.shopCategory===category}">${STOCK_CATEGORY_NAMES[category]} <small>${available.filter(item=>item&&stockCategory(item)===category).length}</small></button>`).join('')}</nav>
-      <div class="service-refresh-row"><span>Merchant stock</span><button class="ui-button ui-button--quiet" data-refresh-stock ${!refresh.ok||price>goldBalance(this.player.character)?'disabled':''} title="Replace all stock. The fee doubles each time and resets at the next level restock."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 8M19 3v5h-5"/></svg> Refresh · ${Number.isSafeInteger(price)?price.toLocaleString()+' gold':'Unavailable'}</button></div>`;
+      <div class="service-refresh-row"><button class="ui-button ui-button--quiet" data-refresh-stock ${!refresh.ok||price>goldBalance(this.player.character)?'disabled':''} title="Replace all stock. The fee doubles each time and resets at the next level restock."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 8M19 3v5h-5"/></svg> Refresh · ${Number.isSafeInteger(price)?price.toLocaleString()+' gold':'Unavailable'}</button></div>`;
     this.renderSpatialItems(root,stock.flatMap((item,index)=>item&&stockCategory(item)===this.shopCategory?[{item,key:`stock:${index}`,sold:!available[index]}]:[]),8,`${STOCK_CATEGORY_NAMES[this.shopCategory]} for sale`);
-    if(!available.some(item=>item&&stockCategory(item)===this.shopCategory))root.insertAdjacentHTML('beforeend','<p class="service-stock-empty">No items in this category.</p>');
+    if(!available.some(item=>item&&stockCategory(item)===this.shopCategory)) {
+      const stocked=stock.some(item=>item&&stockCategory(item)===this.shopCategory);
+      this.renderStockEmpty(root,stocked?'Sold out':`No ${STOCK_CATEGORY_NAMES[this.shopCategory].toLowerCase()} in this stock`,stocked?'Refresh for new stock.':'');
+    }
   }
-  private renderEnhancement(detail:HTMLElement,item:Item|null,next:Item|null): void {
+  private renderStockEmpty(root: HTMLElement, title: string, hint: string): void {
+    // The actual tray owns its empty state, including when cell size reaches its cap.
+    root.querySelector('.character-bag')!.insertAdjacentHTML('beforeend',`<div class="service-stock-empty" role="status"><strong>${escapeUI(title)}</strong>${hint?`<span>${escapeUI(hint)}</span>`:''}</div>`);
+  }
+  private enhancementActionMarkup(): string {
+    return `<div class="enhance-action service-action">
+      <div class="forge-result" role="status" hidden></div>
+      <div class="enhance-receipt"><div><span data-cost-label>Cost</span><div class="enhance-price">${forgeCoinSVG()}<strong data-enhance-cost></strong></div></div><div><span data-balance-label>Remaining</span><b data-enhance-balance></b></div></div>
+      <div class="forge-channel" aria-hidden="true"><span></span></div>
+      <button class="ui-button ui-button--primary enhance-confirm" data-confirm disabled>Choose an item</button>
+      <div class="enhance-options"><label><input type="checkbox" data-skip-enhancement ${this.enhancementPreference.skip ? 'checked' : ''}> Skip animation</label><button class="ui-button ui-button--quiet" data-cancel-charge hidden>Cancel</button></div>
+      <span class="service-message" role="status" aria-live="polite"></span>
+    </div>`;
+  }
+  private renderEnhancement(detail:HTMLElement,item:Item|null,next:Item|null,problem=''): void {
     detail.hidden=false;
     const source=this.selected?.type==='improve'?this.selected.source:null;
     const key=source?('bag' in source?`bag:${source.bag}`:`equipped:${source.equipped}`):'';
+    const eligible=item && item.kind!=='riftKey';
     const gains=item&&next?enhancementGains(item,next):[];
-    detail.innerHTML=`<div class="enhance-showcase" style="--item-color:${item?TIER_COLORS[item.tier]:'#92a9b4'}">
-      <div class="enhance-halo" aria-hidden="true"></div>
-      ${item?`<button class="enhance-art" data-item="${key}" aria-label="Inspect ${escapeUI(itemDisplayName(item))}">${itemPackIconSVG(item,itemFootprint(item).width,itemFootprint(item).height)}</button>`:`<div class="enhance-empty-emblem">${npcEmblem('blacksmith')}</div>`}
-      <span class="enhance-kicker">${item?`${TIER_NAMES[item.tier]} · Item level ${item.itemLevel}`:'The forge awaits'}</span>
-      <h3>${item?escapeUI(itemDisplayName(item)):'Choose your equipment'}</h3>
-      ${item?`<div class="enhance-ranks"><span>+${item.recipe.enhancement}</span><i aria-hidden="true">→</i><strong>+${next?.recipe.enhancement??item.recipe.enhancement}</strong></div>`:'<p>Select an item from your equipment or inventory.</p>'}
-      <div class="enhance-progress" aria-label="Enhancement ${item?.recipe.enhancement??0} of 10">${Array.from({length:10},(_,i)=>`<span class="${i<(item?.recipe.enhancement??0)?'is-earned':i<(next?.recipe.enhancement??0)?'is-next':''}"></span>`).join('')}</div>
+    detail.innerHTML=`<div class="enhance-showcase forge-showcase ${item?'':'is-empty'}" style="--item-color:${item?TIER_COLORS[item.tier]:'#b6aa8c'}">
+      <div class="forge-stage">${forgeFrameSVG()}
+        ${item?`<button type="button" class="enhance-art" data-clear-enhance data-item="${key}" aria-label="Remove ${escapeUI(itemDisplayName(item))} from the workbench">${itemPackIconSVG(item,itemFootprint(item).width,itemFootprint(item).height)}</button>${forgeMotesMarkup()}`:`<div class="enhance-empty-emblem">${npcEmblem('blacksmith')}</div>`}
+        <div class="forge-burst" aria-hidden="true">${Array.from({length:12},(_,i)=>`<i style="--ray:${i * 30}deg"></i>`).join('')}</div>
+      </div>
+      <div class="forge-copy">${item?`<span class="enhance-kicker">${TIER_NAMES[item.tier]} · Lv ${item.itemLevel}</span>`:''}
+        <h3>${item?escapeUI(itemDisplayName(item)):'Choose an item'}</h3>
+        ${eligible?`<div class="enhance-ranks"><strong class="forge-current-rank"><small>Current</small>+${item.recipe.enhancement}</strong>${next?`<i aria-hidden="true">→</i><span class="forge-next-rank"><small>Next</small>+${next.recipe.enhancement}</span>`:''}</div>`:''}
+      </div>
     </div>
-    ${gains.length?`<div class="enhance-gains"><div class="enhance-gains-heading"><span>Item improvement</span><span>Current</span><span>After</span><span>Gain</span></div>${gains.map(row=>`<div><span>${escapeUI(row.label)}</span><span>${row.before}</span><strong>${row.after}</strong><em>${row.gain}</em></div>`).join('')}</div><p class="enhance-footnote">Only changed item stats shown. Character caps still apply.${next!.recipe.enhancement>item!.recipe.enhancement+1?' Empty steps skipped at no extra cost.':''}</p>`:item?'<p class="enhance-footnote">No further enhancement available.</p>':''}`;
+    ${eligible?`<div class="forge-rank-track" role="group" aria-label="Enhancement ranks">${Array.from({length:11},(_,rank)=>`<button type="button" data-enhance-rank="${rank}" data-ui-term="enhancement:${rank}" aria-label="Rank +${rank}${rank===item.recipe.enhancement?', current':rank===next?.recipe.enhancement?', next upgrade':''}: stat details" ${rank===item.recipe.enhancement?'aria-current="step"':''} tabindex="${rank===item.recipe.enhancement?0:-1}" class="${rank===item.recipe.enhancement?'is-current':rank<item.recipe.enhancement?'is-earned':rank===next?.recipe.enhancement?'is-next':''}"><span class="forge-rank-mark" aria-hidden="true"></span><span>+${rank}</span></button>`).join('')}</div>`:''}
+    ${gains.length?`<div class="enhance-gains" aria-label="Next upgrade"><div class="enhance-gains-heading"><span>Stats</span><span>Current</span><span>Next</span><span>Gain</span></div>${gains.map(row=>`<div><span>${escapeUI(row.label)}</span><span>${row.before}</span><strong>${row.after}</strong><em>${row.gain}</em></div>`).join('')}</div>`:''}`;
+    const button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
+    const price = this.quote?.price;
+    const balance = goldBalance(this.player.character);
+    const affordable = price !== undefined && balance >= price;
+    this.element.querySelector<HTMLElement>('.enhance-receipt')!.hidden = price === undefined;
+    this.element.querySelector('[data-cost-label]')!.textContent = 'Cost';
+    this.element.querySelector('[data-enhance-cost]')!.innerHTML = `${price?.toLocaleString() ?? '—'} <small>gold</small>`;
+    this.element.querySelector('[data-balance-label]')!.textContent = price !== undefined && !affordable ? 'Short by' : 'Remaining';
+    const remaining = this.element.querySelector<HTMLElement>('[data-enhance-balance]')!;
+    remaining.textContent = price === undefined ? '—' : `${Math.abs(balance - price).toLocaleString()} gold`;
+    remaining.classList.toggle('is-short', price !== undefined && !affordable);
+    button.textContent = next ? `Enhance to +${next.recipe.enhancement}` : item ? item.recipe.enhancement === 10 ? 'Fully enhanced · +10' : 'Cannot enhance' : 'Choose an item';
+    button.disabled = !next || !affordable;
+    this.element.querySelector('.service-message')!.textContent = item?.recipe.enhancement===10 ? '' : problem;
+    this.element.querySelector<HTMLElement>('.forge-result')!.hidden = true;
+    delete this.element.dataset.forgeState;
   }
+  private hideTooltips(): void { this.tooltip.hide(); this.rankTips.hide(); }
+  private rankTooltipMarkup(term: string): string | undefined {
+    if (!/^enhancement:(10|[0-9])$/.test(term) || this.selected?.type!=='improve') return;
+    const item=sourceItem(this.player.character,this.selected.source);
+    if (!item || item.kind==='riftKey') return;
+    const rank=Number(term.split(':')[1]), current=item.recipe.enhancement;
+    const gains=enhancementStepGains(item,rank);
+    const status=rank===current?'Current':rank===nextEnhancementLevel(item)?'Next upgrade':'';
+    return `<div class="forge-rank-tip"><header><h3>${rank?`<small>+${rank-1} →</small> `:''}+${rank}</h3><span>${status}</span></header>
+      ${rank===0?'<p class="forge-tip-empty">Base rank</p>':gains.length?`<dl>${gains.map(row=>`<div><dt>${escapeUI(row.label)}</dt><dd class="${row.gain.startsWith('-')?'is-negative':''}">${row.gain}</dd></div>`).join('')}</dl>`:'<p class="forge-tip-empty">No stat gain · skipped</p>'}
+    </div>`;
+  }
+  private bagTabsMarkup(): string {
+    return `<div class="service-bag-toolbar"><div class="service-bag-tabs" role="tablist" aria-label="Inventory category">${(['equipment','charms'] as const).map(tab=>`<button type="button" role="tab" id="service-bag-${tab}" data-bag-tab="${tab}" aria-controls="service-bag-items" aria-selected="${tab===this.bagTab}" tabindex="${tab===this.bagTab?0:-1}">${tab==='equipment'?'Inventory':'Charms'}</button>`).join('')}</div><button type="button" class="ui-button ui-button--quiet ui-button--icon" data-sort-pack="inventory" aria-label="Auto-sort inventory">${uiIcon('sortFilter')}</button></div>`;
+  }
+  private renderEquipment(): void {
+    const root=this.element.querySelector<HTMLElement>('.service-loadout');
+    if (!root) return;
+    const sheet=this.player.character;
+    if (this.merchantLayout && !this.portrait) {
+      const stage=document.createElement('div'); stage.className='service-portrait-stage';
+      stage.innerHTML='<div class="service-portrait-niche" aria-hidden="true"></div><canvas class="service-portrait" role="img" aria-label="Your character wearing the current equipment"></canvas>';
+      root.append(stage);
+      this.portrait=stage.querySelector('canvas')!;
+      this.portraitResize.observe(this.portrait);
+      this.portraitIntersection.observe(this.portrait);
+    }
+    const slots: {slot:EquipmentSlot;column:number;row:number}[]=[{slot:'head',column:2,row:1},
+      ...LEFT_SLOTS.map((slot,i)=>({slot,column:1,row:i+1})), ...RIGHT_SLOTS.map((slot,i)=>({slot,column:3,row:i+1}))];
+    for (const {slot,column,row} of slots) {
+      const item=sheet.equipped[slot];
+      const reserved=slot==='offhand'&&sheet.equipped.weapon?.weapon?.hands===2;
+      const cell: HTMLButtonElement=root.querySelector<HTMLButtonElement>(`[data-equipment-slot="${slot}"]`)??document.createElement('button');
+      cell.type='button'; cell.className='ui-slot service-equipped-slot'; cell.dataset.equipmentSlot=slot;
+      cell.removeAttribute('aria-pressed');
+      cell.dataset.item=`equipped:${reserved?'weapon':slot}`;
+      cell.style.gridColumn=String(column); cell.style.gridRow=String(row);
+      const label=reserved?'Off hand reserved by two-handed weapon':`${SLOT_NAMES[slot]}${item?`: ${itemDisplayName(item)}`:''}`;
+      updateItemSlot(cell,item,{level:this.player.level,draggable:false,label,
+        emptyMarkup:reserved?`<span class="service-reserved-glyph">${emptySlotIcon('weapon')}</span><span class="service-reserved-label">2H</span>`:emptySlotIcon(slot)});
+      cell.classList.toggle('is-twohand-reserved',reserved); cell.disabled=!item&&!reserved; cell.title=label;
+      if (cell.parentElement!==root) root.append(cell);
+    }
+  }
+  private stopPortrait(): void {
+    cancelAnimationFrame(this.portraitFrame); this.portraitFrame=0;
+    this.portraitResize.disconnect(); this.portraitIntersection.disconnect();
+    this.portrait=null; this.portraitVisible=false;
+  }
+  private drawPortrait = (): void => {
+    cancelAnimationFrame(this.portraitFrame); this.portraitFrame=0;
+    const canvas=this.portrait;
+    if (!canvas || !this.portraitVisible || this.element.hidden || document.hidden) return;
+    const density=Math.min(2,window.devicePixelRatio||1);
+    const width=Math.round(canvas.clientWidth*density), height=Math.round(canvas.clientHeight*density);
+    if (!width || !height) return;
+    if (canvas.width!==width || canvas.height!==height) { canvas.width=width; canvas.height=height; }
+    const ctx=canvas.getContext('2d'); if (!ctx) return;
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    drawCharacterPortrait(ctx,this.player,reduced?3:performance.now()/1000,Math.PI/2,width,height);
+    if (!reduced) this.portraitFrame=requestAnimationFrame(this.drawPortrait);
+  };
   private headerMarkup(): string {
     return `<header class="ui-window-header"><span class="ui-header-emblem">${npcEmblem(this.npc.role)}</span><h2 class="ui-title" id="service-title">${NPC_NAMES[this.npc.role]}</h2><span class="service-wallet"><b data-wallet-total>${goldBalance(this.player.character).toLocaleString()}</b> <small>gold</small></span><button class="ui-button ui-button--icon" data-close aria-label="Close service">×</button></header>`;
   }
@@ -192,11 +380,11 @@ export class ServicePanel {
       ? [['improve', 'Enchant'], ['respec', 'Respec']] : [['shop', this.npc.role === 'gambler' ? 'Gamble' : 'Shop']];
     if (this.npc.role === 'blacksmith') tabs.push(['improve', 'Enhance']);
     tabs.push(['sell', 'Sell'], ['buyback', `Buyback <small>${this.player.character.commerce.buyback.length}/12</small>`]);
-    return `<nav class="service-tabs" aria-label="Services">${tabs.map(([tab, label]) => `<button class="ui-button ui-button--quiet" data-tab="${tab}" aria-pressed="${this.tab === tab}">${label}</button>`).join('')}<span>${escapeUI(this.npc.name)}${this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>`;
+    return `<nav class="service-tabs" aria-label="Services">${tabs.map(([tab, label]) => `<button class="ui-button ui-button--quiet" data-tab="${tab}" aria-pressed="${this.tab === tab}">${label}</button>`).join('')}<span>${escapeUI(this.npc.name)}${this.merchantLayout||this.tab === 'improve' ? ` · Services Lv ${vendorLevel(this.npc, this.player.level)}` : ''}</span></nav>`;
   }
   showRespec(): void { if(this.npc.role!=='enchanter')return; this.tab='respec'; this.render(); }
   private renderRespec(): void {
-    this.goldFeedback.stop();this.tooltip.hide();this.element.classList.remove('is-selling');
+    this.goldFeedback.stop();this.hideTooltips();this.element.classList.remove('is-selling');
     const attributes = this.respecKind === 'attributes', sheet = this.player.character;
     const request: ServiceRequest = {type:attributes?'resetAttributes':'respec'};
     const points = attributes ? attributeResetPoints(sheet) : respecPoints(sheet);
@@ -213,7 +401,7 @@ export class ServicePanel {
   }
 
   private renderStorage(): void {
-    this.goldFeedback.stop(); this.tooltip.hide(); this.element.classList.remove('is-selling');
+    this.goldFeedback.stop(); this.hideTooltips(); this.element.classList.remove('is-selling');
     const sheet = this.player.character, count = storageTabCount(sheet), owned = hasStorageTab(sheet,this.storageTab);
     const storageScroll = this.element.dataset.storageView === String(this.storageTab)
       ? this.element.querySelector('.service-storage-pane')?.scrollTop ?? 0 : 0;
@@ -259,7 +447,7 @@ export class ServicePanel {
     message.textContent=full?storing?'Storage tab full.':packSpaceProblem(this.player.character,result.item):itemDisplayName(result.item);
   }
   private renderSpecial():void {
-    this.goldFeedback.stop(); this.tooltip.hide(); this.element.classList.remove('is-selling');
+    this.goldFeedback.stop(); this.hideTooltips(); this.element.classList.remove('is-selling');
     const active=document.activeElement as HTMLElement|null;
     const control=active?.dataset.tab?`[data-tab="${active.dataset.tab}"]`:active?.dataset.gamble?`[data-gamble="${active.dataset.gamble}"]`:active?.hasAttribute('data-confirm')?'[data-confirm]':active?.hasAttribute('data-close')?'[data-close]':null;
     this.element.style.setProperty('--service-color',NPC_COLORS[this.npc.role]);
@@ -305,14 +493,16 @@ export class ServicePanel {
   private renderInventoryPack(): void {
     const root = this.element.querySelector<HTMLElement>('.service-grid')!;
     root.style.setProperty('--pack-columns', String(PACK_COLUMNS));
+    const tabbed=this.merchantLayout||this.tab==='improve';
+    if (tabbed) { root.id='service-bag-items'; root.setAttribute('role','tabpanel'); root.setAttribute('aria-labelledby',`service-bag-${this.bagTab}`); }
     const sheet = this.player.character, layout = resolvePackLayout(sheet);
-    root.innerHTML = `<div class="character-bag character-tetris" role="group" aria-label="Inventory, ${PACK_COLUMNS} columns by ${PACK_ROWS} rows">
+    root.innerHTML = `<div class="character-bag character-tetris" ${tabbed&&this.bagTab==='charms'?'hidden':''} role="group" aria-label="Inventory, ${PACK_COLUMNS} columns by ${PACK_ROWS} rows">
       ${Array.from({length:PACK_CELLS},(_,cell)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${cell%PACK_COLUMNS+1};grid-row:${Math.floor(cell/PACK_COLUMNS)+1}"></span>`).join('')}</div>
-      <section class="character-charms" aria-label="Active charms"><header><span>${uiIcon('diamond')} Charms</span></header><div class="character-charm-grid character-tetris">${Array.from({length:PACK_COLUMNS*CHARM_ROWS},(_,i)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}"></span>`).join('')}</div></section>
+      <section class="character-charms" ${tabbed&&this.bagTab==='equipment'?'hidden':''} aria-label="Active charms">${tabbed?'':`<header><span>${uiIcon('diamond')} Charms</span></header>`}<div class="character-charm-grid character-tetris">${Array.from({length:PACK_COLUMNS*CHARM_ROWS},(_,i)=>`<span class="character-grid-cell" aria-hidden="true" style="grid-column:${i%PACK_COLUMNS+1};grid-row:${Math.floor(i/PACK_COLUMNS)+1}"></span>`).join('')}</div></section>
       <section class="character-overflow" hidden><header>Pack overflow <small>Make space to carry these items</small></header><div class="character-overflow-items"></div></section>`;
     const bag = root.querySelector<HTMLElement>('.character-bag')!, overflow = root.querySelector<HTMLElement>('.character-overflow-items')!;
     sheet.inventory.forEach((item,index)=>{
-      if (!item) return;
+      if (!item || tabbed && (item.kind==='charm') !== (this.bagTab==='charms')) return;
       const cell = this.cell(item, `bag:${index}`), position = layout[item.id], size = itemFootprint(item);
       cell.classList.add('character-bag-slot');
       cell.style.gridColumn = position === undefined ? `span ${size.width}` : `${position % PACK_COLUMNS + 1} / span ${size.width}`;
@@ -388,7 +578,7 @@ export class ServicePanel {
       if(!destination){event.preventDefault();return;}
       const message=this.element.querySelector('.service-message')!;
       this.tradeDrag={id:trade.item.id,quote:trade.quote,target,problem:trade.problem,message:message.textContent??''};
-      this.tooltip.hide();
+      this.hideTooltips();
       event.dataTransfer.setData('application/x-evergrow-trade',trade.item.id);
       event.dataTransfer.effectAllowed='move';
       cell!.classList.add('is-trade-source');this.element.classList.add('is-trade-dragging');
@@ -427,7 +617,7 @@ export class ServicePanel {
       const cell=event.target instanceof Element?event.target.closest<HTMLElement>('[data-item]'):null;
       if(!cell||! /^(stock|buyback):/.test(cell.dataset.item!))return;
       const trade=this.directTrade(cell.dataset.item!);if(!trade)return;
-      event.preventDefault();this.tooltip.hide();
+      event.preventDefault();this.hideTooltips();
       if(trade.problem){this.element.querySelector('.service-message')!.textContent=trade.problem;return;}
       this.selected=trade.quote!.request;this.quote=trade.quote;void this.confirm();
     },options);
@@ -447,9 +637,11 @@ export class ServicePanel {
   }
   private hover(target: EventTarget | null): void {
     if(this.tradeDrag||this.saving)return;
+    if (target instanceof Element && target.closest('[data-enhance-rank]')) { this.tooltip.hide(); return; }
     if(document.documentElement.classList.contains('touch-mode')) return;
     const cell = target instanceof HTMLElement ? target.closest<HTMLButtonElement>('[data-item]') : null;
     if (!cell) return;
+    this.rankTips.hide();
     const value = this.resolve(cell.dataset.item!); if (!value) return;
     this.tooltip.show(value.item, { sheet: this.player.character, level: this.player.level,
       sourceIndex: value.source && 'bag' in value.source ? value.source.bag : undefined,
@@ -457,8 +649,36 @@ export class ServicePanel {
       context: value.request.type === 'buyback' ? `Buy back · ${this.player.character.commerce.buyback.find(b=>b.item.id===value.item.id)?.price??0} gold` : value.request.type === 'buy' ? `Buy · ${itemPrice(value.item, 'buy')} gold` : undefined }, cell);
   }
   private click(e: MouseEvent): void {
+    const target = e.target instanceof Element ? e.target : null;
+    if (target?.closest('[data-skip-enhancement]')) {
+      const saved = this.enhancementPreference.setSkip((target as HTMLInputElement).checked);
+      if (this.enhancementPreference.skip) {
+        this.element.classList.add('forge-instant');
+        this.enhancement.skip();
+      }
+      if (!saved) this.element.querySelector('.service-message')!.textContent = 'Animation preference applies for this session.';
+      return;
+    }
+    if (target?.closest('[data-cancel-charge]')) { this.enhancement.cancel(); return; }
+    if (target?.closest('[data-close]')) { this.actions.close(); return; }
     if (this.saving || this.tradeDrag || Date.now()<this.ignoreClickUntil) return;
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button, input[data-include-charms]'); if (!button) return;
+    if (button.hasAttribute('data-clear-enhance') && this.tab==='improve' && this.operation==='enhance') {
+      // Don't let render restore pointer focus to an item and reopen its tooltip.
+      this.element.focus({preventScroll:true});
+      this.selected=null; this.quote=null;
+      this.render();
+      if (e.detail===0) {
+        // Keyboard activation keeps a useful navigation position, without inspecting.
+        this.element.querySelector<HTMLElement>(`.service-bag [data-item="${button.dataset.item}"]`)?.focus({preventScroll:true});
+      }
+      this.hideTooltips();
+      return;
+    }
+    if (button.dataset.bagTab==='equipment'||button.dataset.bagTab==='charms') {
+      this.bagTab=button.dataset.bagTab; this.render();
+      this.element.querySelector<HTMLElement>(`[data-bag-tab="${this.bagTab}"]`)?.focus({preventScroll:true}); return;
+    }
     if(button.dataset.operation && ENCHANT_OPERATIONS.includes(button.dataset.operation as typeof ENCHANT_OPERATIONS[number])) {
       this.operation=button.dataset.operation as Improvement; this.updateSelection(); this.render(); return;
     }
@@ -472,7 +692,6 @@ export class ServicePanel {
     }
     if(button.dataset.stockCategory&&STOCK_CATEGORIES.includes(button.dataset.stockCategory as StockCategory)){
       this.shopCategory=button.dataset.stockCategory as StockCategory;this.selected=null;this.render();
-      this.element.querySelector('.service-offer')!.scrollTop=0;
       this.element.querySelector<HTMLElement>(`[data-stock-category="${this.shopCategory}"]`)?.focus({preventScroll:true});return;
     }
     if(button.hasAttribute('data-refresh-stock')){
@@ -489,7 +708,7 @@ export class ServicePanel {
     }
     if (button.dataset.sortPack === 'storage' || button.dataset.sortPack === 'inventory') {
       const target = button.dataset.sortPack;
-      this.tooltip.hide();
+      this.hideTooltips();
       if (this.selected?.type !== 'gamble') this.selected = null;
       this.quote = null; this.sales.clear();
       this.actions.sort(target,this.storageTab);
@@ -518,6 +737,9 @@ export class ServicePanel {
       if(this.npc.role==='stash'&&!hasStorageTab(this.player.character,this.storageTab))return;
       const value = this.resolve(button.dataset.item); if (!value) return;
       if(this.npc.role==='gambler'&&this.tab==='shop')return;
+      if(this.merchantLayout&&this.tab!=='improve'&&value.source&&'equipped' in value.source) {
+        this.tooltip.show(value.item,{sheet:this.player.character,level:this.player.level,equipped:true},button);return;
+      }
       if(this.tab === 'sell' && value.item.locked){this.element.querySelector('.service-message')!.textContent='Unlock this item in your inventory before selling it.';return;}
       if(this.tab === 'sell' && value.source && 'bag' in value.source) {
         if(this.sales.has(value.item.id)) this.sales.delete(value.item.id);
@@ -534,12 +756,14 @@ export class ServicePanel {
     if (button.hasAttribute('data-confirm')) this.confirm();
   }
   private renderDetail(): void {
+    this.hideTooltips();
     if(this.tab==='respec'){this.renderRespec();return;}
     if(this.npc.role==='stash'){this.storageDetail();return;}
     if(this.npc.role==='gambler'&&this.tab==='shop'){this.specialDetail();return;}
     this.quote = null; const selected = this.selected;
     const detail = this.element.querySelector<HTMLElement>('.service-detail')!, button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
     const message = this.element.querySelector<HTMLElement>('.service-message')!; message.textContent = '';
+    const purchase=this.element.querySelector<HTMLElement>('.service-purchase-summary');if(purchase){purchase.hidden=true;purchase.replaceChildren();}
     detail.replaceChildren(); detail.hidden=this.tab!=='sell'&&this.tab!=='improve';
     button.disabled = true; button.textContent = 'Choose an item';
     if (this.tab === 'sell') { this.renderSales(detail, button, message); return; }
@@ -550,15 +774,22 @@ export class ServicePanel {
       cell.classList.toggle('is-selected', Boolean(entry && (entry.request.type==='improve'&&selected.type==='improve' ? JSON.stringify(entry.request.source)===JSON.stringify(selected.source) : JSON.stringify(entry.request)===JSON.stringify(selected))));
     }
     const result = quoteService(this.player.character, this.npc, this.player.level, selected);
-    if (!result.ok) { detail.hidden=true; message.textContent=result.message; if(selected.type==='improve'&&selected.operation==='enhance')this.renderEnhancement(detail,sourceItem(this.player.character,selected.source),null); else if(selected.type==='improve')this.renderEnchantment(detail,sourceItem(this.player.character,selected.source),false,result.message); return; }
+    if (!result.ok) { detail.hidden=true; message.textContent=result.message; if(selected.type==='improve'&&selected.operation==='enhance')this.renderEnhancement(detail,sourceItem(this.player.character,selected.source),null,result.message); else if(selected.type==='improve')this.renderEnchantment(detail,sourceItem(this.player.character,selected.source),false,result.message); return; }
     const { item, quote } = result; if(!item)return; this.quote = quote;
     const buying = selected.type === 'buy' || selected.type === 'buyback', improving = selected.type === 'improve';
     const label = improving ? OP_LABELS[selected.operation] : buying ? 'Buy' : 'Sell';
     button.textContent = `${label} · ${quote.price.toLocaleString()} gold`;
     button.disabled = selected.type !== 'sell' && goldBalance(this.player.character) < quote.price;
-    message.textContent = button.disabled ? 'Not enough gold.' : itemDisplayName(item);
+    message.textContent = button.disabled ? 'Not enough gold.' : purchase ? '' : itemDisplayName(item);
     if(buying&&!canPackItem(this.player.character,item)){button.disabled=true;message.textContent=packSpaceProblem(this.player.character,item);}
-    if (!improving) return;
+    if (!improving) {
+      if(purchase){
+        const balance=goldBalance(this.player.character)+(buying?-quote.price:quote.price);
+        purchase.hidden=false;
+        purchase.innerHTML=`<span style="color:${TIER_COLORS[item.tier]}">${escapeUI(itemDisplayName(item))}</span><span>${balance<0?'Short by':buying?'Remaining':'After sale'} <b class="${balance<0?'is-short':''}">${Math.abs(balance).toLocaleString()} gold</b></span>`;
+      }
+      return;
+    }
     const op = selected.operation;
     if(op==='enhance'){this.renderEnhancement(detail,item,improveItem(item,op,vendorLevel(this.npc,this.player.level),1));return;}
     this.renderEnchantment(detail,item,true);
@@ -613,7 +844,7 @@ export class ServicePanel {
       cell.classList.toggle('is-selected',selected);cell.setAttribute('aria-pressed',String(selected));
     }
     const clear=this.element.querySelector<HTMLButtonElement>('[data-clear-sales]');if(clear)clear.disabled=!items.length;
-    if(!items.length){detail.innerHTML='<p class="service-empty">Select items or a rarity.</p>';button.textContent='Select items';return;}
+    if(!items.length){detail.innerHTML='<div class="service-sale-empty"><strong>No items selected</strong><span>Select from your inventory or use a rarity filter.</span></div>';button.textContent='Select items';return;}
     const result=quoteService(this.player.character,this.npc,this.player.level,{type:'sellMany',items,includeActiveCharms:true});
     if(!result.ok){detail.innerHTML=`<p class="service-empty">${escapeUI(result.message)}</p>`;return;}
     this.quote=result.quote;
@@ -625,8 +856,64 @@ export class ServicePanel {
     message.textContent=items.length>12?'Only the last 12 items remain in Buyback.':'Items remain available in Buyback.';
   }
   private selectedAffix() { return this.selected?.type === 'improve' ? this.selected.affix ?? 0 : 0; }
+  private setForgePhase(phase: EnhancementPhase): void {
+    this.element.dataset.forgeState = phase;
+    const button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
+    button.disabled = true;
+    button.textContent = phase === 'charging' ? 'Enhancing…' : 'Finishing…';
+    const cancel=this.element.querySelector<HTMLButtonElement>('[data-cancel-charge]')!;
+    cancel.hidden=phase!=='charging';
+    if (phase==='charging') cancel.focus({preventScroll:true});
+    this.element.querySelector('.service-message')!.textContent='';
+  }
+  private async confirmEnhancement(quote: ServiceQuote): Promise<void> {
+    if (quote.request.type !== 'improve') return;
+    const before = sourceItem(this.player.character, quote.request.source);
+    if (!before || goldBalance(this.player.character) < quote.price) return;
+    const session = this.sessionVersion;
+    const source = quote.request.source;
+    const animate = !this.enhancementPreference.skip && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.renderDetail();
+    this.saving = true;
+    this.hideTooltips();
+    this.element.classList.toggle('forge-instant', !animate);
+    const duration = ENHANCEMENT_CHARGE_MS;
+    this.element.style.setProperty('--forge-duration', `${duration}ms`);
+    this.element.setAttribute('aria-busy', 'true');
+    for (const pane of this.element.querySelectorAll<HTMLElement>('.service-tabs, .service-bag, .service-detail')) pane.inert = true;
+    this.element.querySelector<HTMLElement>('.forge-result')!.hidden = true;
+    if (animate) this.actions.enhancementSound?.('charge');
+    const result = await this.enhancement.run(() => this.actions.trade(quote), animate, phase => this.setForgePhase(phase), duration);
+    if (session !== this.sessionVersion || this.element.hidden) return;
+    const instant = this.element.classList.contains('forge-instant');
+    this.saving = false;
+    this.render();
+    this.element.classList.toggle('forge-instant', instant);
+    if (!result) { this.element.querySelector<HTMLButtonElement>('[data-confirm]')?.focus({preventScroll:true}); return; }
+    const receipt = this.element.querySelector<HTMLElement>('.forge-result')!;
+    receipt.hidden = false;
+    receipt.tabIndex = -1;
+    if (result.ok) {
+      const after = sourceItem(this.player.character, source)!;
+      const gains = enhancementGains(before, after);
+      receipt.innerHTML = `<span class="forge-result-mark" aria-hidden="true">✦</span><div><strong>${after.recipe.enhancement === 10 ? 'Fully enhanced' : 'Enhancement complete'} <b>+${after.recipe.enhancement}</b></strong><p>${gains.map(row => `${escapeUI(row.label)} <b>${row.gain}</b>`).join(' · ')}</p></div>`;
+      this.element.dataset.forgeState = 'success';
+      this.element.querySelector('.service-message')!.textContent = '';
+      this.actions.enhancementSound?.('success');
+    } else {
+      receipt.innerHTML = '<span class="forge-result-mark" aria-hidden="true">!</span><div><strong>Enhancement not completed</strong><p>Your item and gold are unchanged.</p></div>';
+      this.element.dataset.forgeState = 'error';
+      this.element.querySelector('.service-message')!.textContent = result.message;
+      this.actions.enhancementSound?.('error');
+    }
+    const button = this.element.querySelector<HTMLButtonElement>('[data-confirm]')!;
+    (button.disabled ? receipt : button).focus({ preventScroll: true });
+  }
   private async confirm(): Promise<void> {
     if (this.saving || !this.quote) return;
+    if (this.quote.request.type === 'improve' && this.quote.request.operation === 'enhance') {
+      await this.confirmEnhancement(this.quote); return;
+    }
     const refreshing=this.quote.request.type==='refreshStock';
     const gamble=this.quote.request.type==='gamble',revealedId=this.quote.itemId;
     const sale = this.quote.request.type === 'sell' || this.quote.request.type === 'sellMany';
@@ -641,7 +928,7 @@ export class ServicePanel {
     catch { result = { ok: false, message: 'Could not complete the save. No purchase was committed.' }; }
     finally { this.saving = false; }
     if (this.element.hidden) return;
-    this.tooltip.hide();
+    this.hideTooltips();
     if (result.ok) {
       if(gamble)this.revealed=this.player.character.inventory.find(i=>i?.id===revealedId)??null;
       this.sales.clear(); const keep = gamble || this.selected?.type === 'improve'; if (!keep) this.selected = null;
