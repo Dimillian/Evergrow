@@ -936,7 +936,7 @@ export class Simulation {
     if(!this.groundPickup.ready(this.player,drop,this.world))return;
     if(drop.flight&&this.time<drop.flight.at+drop.flight.delay+TREASURE_FLIGHT_DURATION)return;
     this.groundPickup.cancel();
-    if(!addInventoryItem(this.player.character,drop.item)) {
+    if(!addInventoryItem(this.player.character,{ ...drop.item, newPickup: true })) {
       this.emit({type:'notice',x:drop.x,y:drop.y,message:`${packSpaceProblem(this.player.character,drop.item)} Item left on the ground.`});return;
     }
     if (drop.item.kind === 'charm') refreshCharacter(this.player);

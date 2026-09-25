@@ -5,12 +5,13 @@ export { executeAppearanceChange, executeSavedAppearanceChange } from './appeara
 import { upgradeSkill, configureSkill, OVERLOAD_NODE } from './skill-progression.ts';
 import type { Player } from './model.ts';
 import type { ActionResult, Attribute, EquipmentSlot, SkillId } from './character-types.ts';
-import { equipItem, unequipItem, moveInventoryItem, allocateAttribute } from './inventory.ts';
+import { equipItem, unequipItem, moveInventoryItem, allocateAttribute, inspectInventoryItem } from './inventory.ts';
 import { allocateSkillRoute } from './skill-tree-routes.ts';
 import { assignSkill, refreshCharacter } from './character.ts';
 import { equipBest, sortInventory, sortStorage, type InventorySort, type EquipBestChoice } from './inventory-tools.ts';
 
 export type CharacterCommand =
+  | { type: 'inspectItem'; id: string }
   | { type: 'respecSkills'; points: number }
   | { type: 'refundNode'; id: string; chain?: SkillChainRefund }
   | { type: 'chooseDoctrine'; id: string }
@@ -34,6 +35,7 @@ export type CharacterCommand =
 export function executeCharacterCommand(player: Player, command: CharacterCommand): ActionResult {
   let result: ActionResult;
   switch (command.type) {
+    case 'inspectItem': return inspectInventoryItem(player.character, command.id);
     case 'refundNode':
       result = refundSkillPoint(player.character, command.id, command.chain);
       if (result.ok) {

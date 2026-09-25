@@ -136,6 +136,14 @@ export function addInventoryItem(sheet: CharacterSheet, item: Item): boolean {
   return true;
 }
 
+/** Inspection changes only pickup presentation; acquisition order and stats stay intact. */
+export function inspectInventoryItem(sheet: CharacterSheet, id: string): ActionResult {
+  const item = [...sheet.inventory, ...Object.values(sheet.equipped)].find(item => item?.id === id);
+  if (!item) return fail('That item has changed.');
+  delete item.newPickup;
+  return success();
+}
+
 export function allocateAttribute(sheet: CharacterSheet, attribute: Attribute): ActionResult {
   if (!['strength', 'dexterity', 'intelligence', 'vitality'].includes(attribute)) return fail('Unknown attribute.');
   if (!Number.isSafeInteger(sheet.statPoints) || sheet.statPoints < 1) return fail('No attribute points available.');

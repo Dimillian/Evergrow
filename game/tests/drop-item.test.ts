@@ -28,7 +28,7 @@ test('dropping transfers exactly one item only after storage succeeds, and permi
   assert.equal((await executeDropItem(sim,source,saved)).ok,false);assert.equal(sim.groundItems.length,1);
   const drop=sim.groundItems[0];sim.time+=2;sim.player.x=drop.x;sim.player.y=drop.y;
   assert.equal(sim.requestGroundItem(drop.id),null);sim.update(FIXED_STEP,idle);
-  assert.equal(sim.groundItems.length,0);assert.deepEqual(sim.player.character.inventory.find(i=>i?.id===item.id),item);
+  assert.equal(sim.groundItems.length,0);assert.deepEqual(sim.player.character.inventory.find(i=>i?.id===item.id),{...item,newPickup:true});
 });
 
 test('failed and throwing saves preserve the item, ground pile, identity and character projection',async()=>{

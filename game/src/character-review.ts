@@ -126,6 +126,19 @@ if(auraReview){
  for(const id of AURA_IDS)executeCharacterCommand(p,{type:'allocateNode',id:`skill:${id}`});
  p.character.skillSlots=['ironroot','bloodOath',null,null,null];
 }
+if (new URLSearchParams(location.search).has('pickups')) {
+  p.character.inventory.fill(null); p.character.inventoryLayout = {};
+  // Matched seen/new pairs across small and large footprints, in disposable memory.
+  for (const [index, kind] of (['ring', 'gloves', 'weapon', 'charm'] as const).entries()) {
+    const profile = kind === 'weapon' ? 'ember-staff' : kind === 'charm' ? 'jade-pebble' : undefined;
+    for (let pair = 0; pair < 2; pair++) {
+      const item = generateItem(9400 + index, p.level, kind, profile, 'common');
+      item.id += `:pickup-review-${pair}`;
+      if (pair === 1) item.newPickup = true;
+      addInventoryItem(p.character, item);
+    }
+  }
+}
 refreshCharacter(p); p.hp = p.maxHp; p.mana = manaCapacity(p);
 if(auraReview&&p.auras)p.auras.blood={target:1,stacks:3,remaining:2.2};
 const root = document.querySelector<HTMLElement>('#app')!;
@@ -141,6 +154,7 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   unequip: (slot, i) => result(unequipItem(p.character, slot, i)),
   move: (from, to) => result(moveInventoryItem(p.character, from, to)),
   lock: (id,locked) => result(executeCharacterCommand(p,{type:'lockItem',id,locked})),
+  inspect: id => result(executeCharacterCommand(p, { type: 'inspectItem', id })),
   drop: source => { void executeDropItem(sim, source, async () => ({ok:true})).then(result); },
   equipBest: choice => result(executeCharacterCommand(p, { type: 'equipBest', choice })),
   sort: mode => result(executeCharacterCommand(p, { type: 'sortInventory', mode })),

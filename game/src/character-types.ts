@@ -33,6 +33,8 @@ export interface CommerceState {
 }
 export interface Item {
   locked?: boolean;
+  /** Ground pickup awaiting its first inventory inspection. */
+  newPickup?: true;
   recipe: ItemRecipe;
   id: string; seed: number; name: string; baseName: string; kind: ItemKind; tier: ItemTier;
   itemLevel: number; requiredLevel: number; power: number;
