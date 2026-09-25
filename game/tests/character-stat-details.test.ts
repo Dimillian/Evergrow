@@ -8,6 +8,8 @@ import { deriveAttackStats } from '../src/equipment.ts';
 import { effectiveArmor } from '../src/affix-combat.ts';
 import { armorReduction } from '../src/progression-content.ts';
 import { SKILL_TREE } from '../src/skill-tree.ts';
+import { PACK_CELLS } from '../src/inventory-grid.ts';
+import { characterStatTooltip } from '../src/character-stat-tooltip.ts';
 const world = { blocked: () => false, move: (x:number,y:number,dx:number,dy:number) => ({ x:x+dx,y:y+dy }) };
 const player = () => new Simulation(world, { spawn: false }).player;
 const rows = (p: ReturnType<typeof player>) => new Map(characterStatDetails(p).flatMap(group => group.rows).map(row => [row.id, row]));
@@ -22,7 +24,7 @@ test('every starter shows actual weapon output and every derived stat has a deta
     assert.equal(all.get('maxHp')!.amount, p.maxHp);
     assert.equal(all.get('maxMana')!.amount, p.maxMana);
     for (const id of Object.values(DERIVED_STAT_DETAILS)) if (!['attributes','skills','resistances'].includes(id)) assert.ok(all.has(id), id);
-    for (const row of all.values()) { assert.ok(Number.isFinite(row.amount)); assert.ok(row.description && row.calculation); }
+    for (const row of all.values()) { assert.ok(Number.isFinite(row.amount)); assert.ok(row.description); }
     assert.equal(JSON.stringify(p), before, 'inspection cannot mutate the character');
   }
 });
@@ -58,13 +60,40 @@ test('source explanations include equipment attributes, allocated tree and live 
   assert.equal(speed.amount, p.derived.attackSpeedMultiplier - 1);
   assert.match(speed.calculation,/\+3\.75% Dexterity/);
   assert.match(rows(p).get('dexterity')!.description,/\+0\.25% attack speed and \+0\.075% critical chance/);
-  assert.ok(speed.sources.some(s => s.label.includes(ring.name)));
-  assert.ok(speed.sources.some(s => s.label === 'Skill tree'));
-  assert.ok(speed.sources.some(s => s.label === 'Haste blessing'));
-  assert.ok(speed.sources.some(s => s.label.includes('starting + assigned') && s.value === '20'));
+  assert.ok(speed.sources.some(s => s.label.includes(ring.name) && s.category === 'equipment'));
+  assert.ok(speed.sources.some(s => s.label === 'Skill tree' && s.category === 'skills'));
+  assert.ok(speed.sources.some(s => s.label === 'Haste blessing' && s.category === 'effects'));
+  assert.ok(speed.sources.some(s => s.category === 'base' && s.label === 'Dexterity · starting' && s.value === '10'));
+  assert.ok(speed.sources.some(s => s.category === 'base' && s.label === 'Dexterity · assigned' && s.value === '+10'));
   assert.ok(!speed.sources.some(s => s.label.includes('Bag-only')));
   p.character.blessing.remaining = 0; refreshCharacter(p);
   assert.ok(!rows(p).get('attackSpeed')!.sources.some(s => s.label.includes('Haste')));
+});
+
+test('attribute tooltips separate allocated points, equipment and eligible charms without a formula banner', () => {
+  const p = player(); p.character.attributes.vitality = 14;
+  const ring = generateItem(771, 1, 'ring');
+  ring.name = '<Equipment & vitality>'; ring.implicit = { vitality: 3 }; ring.affixes = [];
+  p.character.equipped.ring1 = ring;
+  const charm = generateItem(772, 1, 'charm', 'jade-pebble', 'rare');
+  charm.implicit = { vitality: 2 }; charm.affixes = [];
+  p.character.inventory[0] = charm; p.character.inventoryLayout = { [charm.id]: PACK_CELLS };
+  refreshCharacter(p);
+  const detail = rows(p).get('vitality')!;
+  assert.equal(detail.amount, 19);
+  assert.deepEqual(detail.sources.filter(s => s.category === 'base').map(s => [s.label, s.value]), [['Starting points', '10'], ['Assigned points', '+4']]);
+  assert.ok(detail.sources.some(s => s.category === 'equipment' && s.label.includes(ring.name) && s.slot === 'ring1'));
+  assert.ok(detail.sources.some(s => s.category === 'charms' && s.label.includes(charm.name)));
+  const html = characterStatTooltip(detail);
+  assert.ok(html.includes('stat-source-group--base') && html.includes('stat-source-group--equipment') && html.includes('stat-source-group--charms'));
+  assert.ok(!html.includes('stat-source-group--effects') && !html.includes('stat-source-group--skills'));
+  assert.ok(!html.includes('stat-calculation') && !html.includes('Starting + assigned'));
+  assert.ok(!html.includes(ring.name) && html.includes('&lt;Equipment &amp; vitality&gt;'));
+  assert.ok(html.includes('class="stat-source-slot" role="img" aria-label="Ring I"'));
+  assert.ok(html.includes('<svg width="22" height="22" viewBox="0 0 42 42"'), 'slot icons retain compact intrinsic dimensions before styles load');
+  assert.ok(!html.includes('(ring I)'), 'slot names are represented by icons, with accessible labels');
+  charm.requiredLevel = p.level + 1; refreshCharacter(p);
+  assert.ok(!rows(p).get('vitality')!.sources.some(s => s.category === 'charms'), 'inactive charms do not appear as contributing sources');
 });
 
 test('offhand magic uses casting cadence and weapon-local elemental damage remains separate', () => {
@@ -76,6 +105,8 @@ test('offhand magic uses casting cadence and weapon-local elemental damage remai
   assert.equal(all.get('off-damage')!.amount, deriveAttackStats(p.stats, off.weapon).damage);
   assert.ok(all.get('damage')!.sources.some(s => s.label.includes('enchantment')));
   assert.ok(!all.get('off-damage')!.sources.some(s => s.label.includes('enchantment')));
+  assert.ok(all.get('damage')!.sources.some(s => s.slot === 'weapon'));
+  assert.ok(all.get('off-damage')!.sources.some(s => s.slot === 'offhand'));
 });
 
 test('caps, missing shields and skill-rank bonuses match the gameplay projection', () => {

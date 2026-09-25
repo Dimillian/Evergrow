@@ -1,0 +1,52 @@
+/* Small, unframed glyphs beside the chart; only spendable points animate. */
+.hud-control.hud-progression {
+  --progression-accent:#e6c783;
+  display:grid; place-items:center; isolation:isolate;
+  color:#a4b5be; border:0; background:transparent;
+  transition:color .18s;
+}
+.hud-control.hud-progression--skills { --progression-accent:#c5acef; }
+.hud-control.hud-progression[hidden] { display:none; }
+.hud-progression > .ui-icon {
+  width:16px; height:16px; stroke-width:1.55;
+  filter:drop-shadow(0 2px 2px #02070b);
+}
+.hud-control.hud-progression:not(:disabled):hover,
+.hud-control.hud-progression:focus-visible { color:#eef5f1; background:transparent; border:0; }
+.hud-control.hud-progression:focus-visible { outline:1px solid #d2e4ed; outline-offset:2px; }
+.hud-progression.has-points { color:var(--progression-accent); }
+.hud-progression.has-points::before {
+  content:''; position:absolute; inset:6px; z-index:-1; pointer-events:none;
+  border:1px solid currentColor; border-radius:50%;
+  background:radial-gradient(ellipse,#ffffff10,transparent 70%);
+  animation:hud-progression-ring 2.8s ease-out infinite;
+}
+.hud-progression.has-points > .ui-icon { animation:hud-progression-glow 2.8s ease-in-out infinite; }
+.hud-progression-count {
+  position:absolute; top:0; right:0; min-width:12px; height:12px;
+  display:grid; place-items:center; padding:0 3px;
+  color:#0b141b; background:var(--progression-accent); border-radius:8px;
+  font:500 9px/1 "Evergrow Numerals",system-ui,sans-serif;
+  box-shadow:0 1px 4px #0009; pointer-events:none;
+}
+.hud-progression-count[hidden] { display:none; }
+@keyframes hud-progression-ring {
+  0% { transform:scale(.7); opacity:0; }
+  25% { opacity:.4; }
+  85%,100% { transform:scale(1.08); opacity:0; }
+}
+@keyframes hud-progression-glow {
+  0%,100% { filter:drop-shadow(0 0 2px var(--progression-accent)); }
+  50% { filter:drop-shadow(0 0 7px var(--progression-accent)); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .hud-control.hud-progression { transition:none; }
+  .hud-progression.has-points::before { animation:none; opacity:.35; }
+  .hud-progression.has-points > .ui-icon { animation:none; filter:drop-shadow(0 0 3px var(--progression-accent)); }
+}
+@media(forced-colors:active) {
+  .hud-control.hud-progression { color:ButtonText; }
+  .hud-progression.has-points::before { animation:none; opacity:1; border-color:Highlight; }
+  .hud-progression.has-points > .ui-icon { animation:none; filter:none; }
+  .hud-progression-count { color:HighlightText; background:Highlight; }
+}

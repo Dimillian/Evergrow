@@ -603,7 +603,7 @@ export class Renderer {
     this.navigation(c, sim, world);
     drawGoldBalance(c, this.rewards);
     c.restore();
-    if (settings.phase !== 'character') drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
+    if (settings.phase !== 'inventory') drawFloatingHUD(c, p, this.width, this.height, this.visualTime, {
       reducedMotion: settings.reducedMotion, healthTrail: this.playerHealthTrail / Math.max(1, p.maxHp),
       hitPulse: p.dead ? Math.min(1, this.hurt) : Math.min(1, p.hitFlash / COMBAT_TIMING.hitFlashDuration),
       experience: this.experienceDisplay, groundEffects: sim.groundEffects, potionRecharge: sim.potionRecharge,

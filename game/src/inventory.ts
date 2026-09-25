@@ -136,11 +136,13 @@ export function addInventoryItem(sheet: CharacterSheet, item: Item): boolean {
   return true;
 }
 
-export function allocateAttribute(sheet: CharacterSheet, attribute: Attribute): ActionResult {
+export function allocateAttribute(sheet: CharacterSheet, attribute: Attribute, amount = 1): ActionResult {
   if (!['strength', 'dexterity', 'intelligence', 'vitality'].includes(attribute)) return fail('Unknown attribute.');
+  if (!Number.isSafeInteger(amount) || amount < 1 || amount > 10) return fail('Choose between 1 and 10 attribute points.');
   if (!Number.isSafeInteger(sheet.statPoints) || sheet.statPoints < 1) return fail('No attribute points available.');
   if (!Number.isSafeInteger(sheet.attributes[attribute]) || sheet.attributes[attribute] >= Number.MAX_SAFE_INTEGER) return fail('This attribute cannot increase further.');
-  sheet.attributes[attribute]++;
-  sheet.statPoints--;
+  const spent = Math.min(amount, sheet.statPoints, Number.MAX_SAFE_INTEGER - sheet.attributes[attribute]);
+  sheet.attributes[attribute] += spent;
+  sheet.statPoints -= spent;
   return success();
 }

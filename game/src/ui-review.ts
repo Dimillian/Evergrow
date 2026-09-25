@@ -163,7 +163,7 @@ function embeddedReview() {
     muted: () => muted, sound: () => { muted = !muted; }, zoom: () => {},
     save: async () => { shell.setSaveStatus('Preview · no save written'); return true; },
     play: () => shell.notifications.info('Static preview · no simulation is running'),
-    returnToTitle: () => selectView('ready'), openCharacter: () => {}, openSkills: () => {}, openMap: () => selectView('map'),
+    returnToTitle: () => selectView('ready'), openInventory: () => {}, openCharacter: () => {}, openSkills: () => {}, openMap: () => selectView('map'),
   }));
   const title = lifetime.own(new TitleScreen(shell.titleMount, { create: () => shell.notifications.info('Static preview · no character is saved'),
     continue: () => {}, remove: () => {} }));

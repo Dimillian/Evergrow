@@ -24,6 +24,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'equipment',group:'equipment',name:'Equipment gallery',path:'/equipment.html',description:'Browse all equipment silhouettes and materials under movable light.'},
   {id:'charms',group:'equipment',name:'Charms',path:'/character.html?charms',description:'Arrange six sizes of magic stones and inspect their active bonuses.'},
   {id:'hud-menu',group:'interface',name:'HUD & active buffs',path:'/character.html?panel=hud&loadout=shield&buffs',description:'Frozen HUD, active-effect icons, nested explanations and shortcut list. No gameplay or saves.'},
+  {id:'character-stats',group:'characters',name:'Character stats',path:'/character.html?panel=character',description:'Inspect attributes, progression and grouped combat stats in the separate Character window.'},
   {id:'inventory',group:'equipment',name:'Inventory & comparisons',path:'/character.html',description:'Equip staged gear, compare stats and organize a character’s bag.'},
   {id:'enchanting-workbench',group:'equipment',name:'Enchanting workbench',path:'/services.html?role=enchanter&tier=city&operation=rerollOne&item=3',description:'Choose affixes directly, inspect rarity upgrades and favor city rerolls.'},
   {id:'merchant-stock',group:'equipment',name:'Merchant layout',path:'/services.html?tier=city&layout=stock',description:'Compare Shop, Enhance, Sell and Buyback with shared panes, empty categories, sold-out stock and sale fixtures.',tags:'blacksmith shop stock accessories empty layout inventory charms buyback'},

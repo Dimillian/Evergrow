@@ -86,7 +86,7 @@ test('Items inspected while the character window is open can use its equip comma
 
 
 test('Browsing and inspecting never changes a manually chosen pause state', () => {
-  for (const phase of ['playing', 'paused', 'character'] as const) {
+  for (const phase of ['playing', 'paused', 'character', 'inventory'] as const) {
     const { host, commands, calls, id } = fixture();
     (host as { phase: string }).phase = phase;
     commands.command({ type: 'inspect', id, session: 'current' });

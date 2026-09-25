@@ -9,25 +9,28 @@ import { PLAYER_DEFAULTS } from './combat-content.ts';
 import { scaleTreeDefenses, BORROWED_FLAME } from './skill-tree-balance.ts';
 import { armorReduction } from './progression-content.ts';
 import { EQUIPMENT_SLOTS, itemModifiers, itemDisplayName } from './items.ts';
-import type { Attribute, CharacterSheet, DerivedCharacterStats, StatKey, StatModifiers } from './character-types.ts';
+import type { Attribute, CharacterSheet, DerivedCharacterStats, EquipmentSlot, StatKey, StatModifiers } from './character-types.ts';
 
 export const DEXTERITY_BONUSES = Object.freeze({ attackSpeedPercent: .25, critChance: .075 });
 
 export const ATTRIBUTES: readonly Attribute[] = Object.freeze(['strength', 'dexterity', 'intelligence', 'vitality']);
 const bounded = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Number.isNaN(value) ? min : value));
 
+export type ModifierSourceCategory = 'equipment' | 'charms' | 'skills' | 'effects';
+interface ModifierSource { category: ModifierSourceCategory; label: string; slot?: EquipmentSlot; modifiers: StatModifiers }
+
 /** Named sources shared by stat derivation and the character-sheet explanation. */
-export function characterModifierSources(sheet: CharacterSheet, treeBonuses: StatModifiers = {}, level = Infinity): Array<{ label: string; modifiers: StatModifiers }> {
-  const sources = EQUIPMENT_SLOTS.flatMap(slot => {
+export function characterModifierSources(sheet: CharacterSheet, treeBonuses: StatModifiers = {}, level = Infinity): ModifierSource[] {
+  const sources: ModifierSource[] = EQUIPMENT_SLOTS.flatMap(slot => {
     const item = sheet.equipped[slot];
-    return item ? [{ label: `${itemDisplayName(item)} (${slot === 'weapon' ? 'main hand' : slot === 'offhand' ? 'off hand' : slot === 'ring1' ? 'ring I' : slot === 'ring2' ? 'ring II' : slot})`, modifiers: itemModifiers(item) }] : [];
+    return item ? [{ category: 'equipment' as const, label: itemDisplayName(item), slot, modifiers: itemModifiers(item) }] : [];
   });
-  sources.push(...activeCharms(sheet,level).map(item=>({label:`${itemDisplayName(item)} (charm)`,modifiers:itemModifiers(item)})));
-  sources.push({ label: 'Skill tree', modifiers: scaleTreeDefenses(treeBonuses, Number.isFinite(level) ? level : 1) });
+  sources.push(...activeCharms(sheet,level).map(item=>({category: 'charms' as const, label:itemDisplayName(item),modifiers:itemModifiers(item)})));
+  sources.push({ category: 'skills', label: 'Skill tree', modifiers: scaleTreeDefenses(treeBonuses, Number.isFinite(level) ? level : 1) });
   const blessing = sheet.blessing?.remaining ? sheet.blessing.kind : null;
-  if (blessing === 'haste') sources.push({ label: 'Haste blessing', modifiers: { attackSpeedPercent: 15, castSpeedPercent: 15 } });
-  if (blessing === 'wellspring') sources.push({ label: 'Wellspring blessing', modifiers: { manaCostPercent: 20 } });
-  if (blessing === 'fleet') sources.push({ label: 'Fleet blessing', modifiers: { moveSpeedPercent: 15 } });
+  if (blessing === 'haste') sources.push({ category: 'effects', label: 'Haste blessing', modifiers: { attackSpeedPercent: 15, castSpeedPercent: 15 } });
+  if (blessing === 'wellspring') sources.push({ category: 'effects', label: 'Wellspring blessing', modifiers: { manaCostPercent: 20 } });
+  if (blessing === 'fleet') sources.push({ category: 'effects', label: 'Fleet blessing', modifiers: { moveSpeedPercent: 15 } });
   return sources;
 }
 

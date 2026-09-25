@@ -9,6 +9,7 @@ import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 import { TouchHUD } from './touch-hud.ts';
 import { drawEnemyPlate } from './enemy-plate.ts';
+import { CharacterPanel } from './character-panel.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { WorldMap } from './world-map.ts';
@@ -40,20 +41,23 @@ const exploration = new Exploration(world,{storage:null});
 exploration.reveal(player.x,player.y,1600);
 let panel = new URLSearchParams(location.search).get('panel') || 'world';
 const noop = () => {};
-const close = () => { panel='world'; inventory.close(); skills.close(); map.close(); shell.classList.add('playing'); };
-const inventory = life.own(new InventoryPanel(mount,{close,equip:noop,unequip:noop,move:noop,equipBest:noop,sort:noop,allocate:noop}));
-const skills = life.own(new SkillTreePanel(mount,{close,develop:noop,allocate:noop,assign:noop}));
+const close = () => { panel='world'; inventory.close(); character.close(); skills.close(); map.close(); shell.classList.add('playing'); };
+const inventory = life.own(new InventoryPanel(mount,{close,allocate:noop,openCharacter:()=>{inventory.close();panel='character';character.open(player,'Aeryn');},equip:noop,unequip:noop,move:noop,equipBest:noop,sort:noop}));
+const character = life.own(new CharacterPanel(mount,{close,allocate:noop,openInventory:()=>{character.close();panel='inventory';inventory.open(player);},openSkills:()=>{character.close();panel='skills';skills.open(player);}}));
+const skills = life.own(new SkillTreePanel(mount,{close,develop:noop,assign:noop,allocate:noop}));
 const map = life.own(new WorldMap(world,exploration,mount,close));
 const touch = life.own(new TouchHUD(shell,{activate:noop,clearAttack:noop,cancelCombat:noop,unlock:noop,notice:noop,
   menu: action => {
-    if(action==='character') {panel='inventory';inventory.open(player);}
+    if(action==='character') {panel='character';character.open(player,'Aeryn');}
+    else if(action==='inventory') {panel='inventory';inventory.open(player);}
     else if(action==='skills') {panel='skills';skills.open(player);}
     else if(action==='map') {panel='map';map.open(player);}
     shell.classList.toggle('playing',panel==='world');
   }}, {forceTouch:true}));
 touch.setActive(true);
 const presentation = presentationProfile({android:!!window.EvergrowAndroid,coarsePointer:true});
-if(panel==='inventory') inventory.open(player);
+if(panel==='character') character.open(player,'Aeryn');
+else if(panel==='inventory') inventory.open(player);
 else if(panel==='skills') skills.open(player);
 else if(panel==='map') map.open(player);
 shell.classList.toggle('playing',panel==='world');

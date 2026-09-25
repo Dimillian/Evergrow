@@ -1,6 +1,6 @@
 import type { EquipmentSlot } from './character-types.ts';
 
-export function emptySlotIcon(slot: EquipmentSlot): string {
+export function emptySlotIcon(slot: EquipmentSlot, size = 42): string {
   const glyphs: Record<EquipmentSlot, string> = {
     weapon: '<path d="m10 30 20-20 3-1-1 4-20 19m-4-8 9 9m-9-4-4 4 3 3 4-4"/>',
     offhand: '<path d="M21 7 34 12v11c0 8-7 13-13 16C15 36 8 31 8 23V12ZM21 13v19M14 21h14"/>',
@@ -14,5 +14,5 @@ export function emptySlotIcon(slot: EquipmentSlot): string {
     ring1: '<circle cx="21" cy="25" r="9"/><path d="m16 13 5-5 5 5-5 5Z"/>',
     ring2: '<circle cx="21" cy="25" r="9"/><path d="m16 13 5-5 5 5-5 5Z"/>',
   };
-  return `<svg viewBox="0 0 42 42" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">${glyphs[slot]}</svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 42 42" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true" focusable="false">${glyphs[slot]}</svg>`;
 }

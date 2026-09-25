@@ -56,7 +56,7 @@ export class ThorCommands {
                 return;
             }
             case 'equip': {
-                if (c.id !== this.selection.selected || (h.phase !== 'playing' && h.phase !== 'paused' && h.phase !== 'character'))
+                if (c.id !== this.selection.selected || (h.phase !== 'playing' && h.phase !== 'paused' && h.phase !== 'character' && h.phase !== 'inventory'))
                     return;
                 const index = h.sim.player.character.inventory.findIndex(item => item?.id === c.id);
                 if (index >= 0)

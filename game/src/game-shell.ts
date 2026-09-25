@@ -1,3 +1,4 @@
+import { controls } from './control-preferences.ts';
 import { worldDifficulty, type WorldDifficulty } from './world-difficulty.ts';
 import { difficultyBadgeSVG } from './world-difficulty-art.ts';
 import { BuffBar } from './buff-bar.ts';
@@ -6,19 +7,20 @@ import { PauseMenu, type PauseActions } from './pause-menu.ts';
 import type { PauseNavigation } from './pause-navigation.ts';
 import type { GamepadInput } from './gamepad-input.ts';
 import './travel-ui.css';
+import './hud-progression.css';
 import { GameNotifications } from './notifications.ts';
 import { getHUDLayout } from './hud.ts';
 import { potionHUDRect } from './hud-layout.ts';
 import { PotionTooltip } from './potion-tooltip.ts';
 import { HUDShortcutMenu } from './hud-shortcut-menu.ts';
 import type { HUDRect } from './hud.ts';
-import { getMinimapRect, getMinimapHomeRect, getMinimapDifficultyRect } from './map-view.ts';
+import { getMinimapRect, getMinimapHomeRect, getMinimapDifficultyRect, getProgressionShortcutRects } from './map-view.ts';
 import type { GamePhase } from './game-phase.ts';
 import { gameMenuMarkup } from './game-menu.ts';
 import { trapDialogFocus, uiIcon } from './ui-components.ts';
 import { PORTAL_RULES } from './travel.ts';
 
-interface ShellActions extends PauseActions { openDifficulty?(): void; lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; homePortal?(): void; play(): void; openMap(): void; openCharacter(): void; openSkills(): void; }
+interface ShellActions extends PauseActions { openDifficulty?(): void; lastSavedAt?(): number | undefined; saveLocation?(): 'Local' | 'Online'; shortcutMenuChanged?(): void; homePortal?(): void; play(): void; openMap(): void; openCharacter(): void; openInventory(): void; openSkills(): void; }
 
 /** Owns DOM presentation and its listeners; it never reads or mutates simulation state. */
 export class GameShell {
@@ -51,6 +53,8 @@ export class GameShell {
     }
   }
   setBuffs(buffs: readonly ActiveBuff[]): void { this.buffs.update(this.controls.hidden ? [] : buffs); }
+  private gamepadActive = false;
+  private progressionPoints: readonly [number, number] = [0, 0];
   private pauseMenu: PauseMenu | null = null;
   private saveMessage = '';
   private pauseNavigation: PauseNavigation = { category: 'character', focus: null };
@@ -68,10 +72,17 @@ export class GameShell {
   refreshOptions(): void { this.pauseMenu?.refresh(); }
   updatePauseGamepad(pad: GamepadInput, now: number): void { this.pauseMenu?.updateGamepad(pad, now); }
 
+  setGamepadActive(active: boolean): void {
+    if (active === this.gamepadActive) return;
+    this.gamepadActive = active;
+    this.refreshBindings();
+  }
+
   refreshBindings(): void {
     this.pauseMenu?.refresh();
     this.controls.querySelector('[data-hud="map"]')!.removeAttribute('aria-keyshortcuts');
     this.shortcutMenu.refreshBindings();
+    this.refreshProgressionShortcuts();
   }
 
   constructor(root: HTMLElement, actions: ShellActions) {
@@ -83,6 +94,8 @@ export class GameShell {
         <button type="button" class="hud-control" data-hud="menu" aria-haspopup="dialog" aria-label="Open character menus" data-tooltip="Character menus"></button>
         <button type="button" class="hud-control" data-hud="map" aria-label="World map" aria-keyshortcuts="M"
           aria-haspopup="dialog" data-tooltip="World map" data-tooltip-placement="left"></button>
+        <button type="button" class="hud-control hud-progression hud-progression--character" data-hud="character" aria-label="Character" aria-haspopup="dialog" data-tooltip-placement="left">${uiIcon('character')}<span class="hud-progression-count" aria-hidden="true" hidden></span></button>
+        <button type="button" class="hud-control hud-progression hud-progression--skills" data-hud="skills" aria-label="Skill atlas" aria-haspopup="dialog" data-tooltip-placement="left">${uiIcon('skilltree')}<span class="hud-progression-count" aria-hidden="true" hidden></span></button>
         <button type="button" class="hud-control minimap-home" data-hud="home" aria-label="Home · Open town portal"
           data-tooltip="Home · Open town portal · ${PORTAL_RULES.channel} second cast" data-tooltip-placement="left" hidden>${uiIcon('home')}</button>
         <button type="button" class="hud-control minimap-difficulty" data-hud="difficulty" aria-label="World difficulty" aria-haspopup="dialog" data-tooltip="World difficulty" data-tooltip-placement="left"></button>
@@ -112,6 +125,8 @@ export class GameShell {
     this.element.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     this.controls.querySelector('[data-hud="difficulty"]')!.addEventListener('click',()=>actions.openDifficulty?.(),{signal});
     this.controls.querySelector('[data-hud="map"]')!.addEventListener('click', actions.openMap, { signal });
+    this.controls.querySelector('[data-hud="character"]')!.addEventListener('click', actions.openCharacter, { signal });
+    this.controls.querySelector('[data-hud="skills"]')!.addEventListener('click', actions.openSkills, { signal });
     this.controls.querySelector('[data-hud="home"]')!.addEventListener('click', () => {
       if (this.homePortalVisible && this.navigationVisible) {
         this.canvas.focus({ preventScroll: true });
@@ -119,7 +134,8 @@ export class GameShell {
       }
     }, { signal });
     this.shortcutMenu = new HUDShortcutMenu(this.controls, this.controls.querySelector('[data-hud="menu"]')!, id => {
-      if (id === 'character' || id === 'inventory') actions.openCharacter();
+      if (id === 'character') actions.openCharacter();
+      else if (id === 'inventory') actions.openInventory();
       else if (id === 'skilltree') actions.openSkills();
       else if (id === 'map') actions.openMap();
       else actions.openJourneys?.();
@@ -138,9 +154,9 @@ export class GameShell {
   setNavigationVisible(visible: boolean): void {
     if (this.navigationVisible === visible) return;
     this.navigationVisible = visible;
-    this.controls.querySelector<HTMLElement>('[data-hud="map"]')!.hidden = !visible;
+    for (const id of ['map', 'character', 'skills', 'difficulty'])
+      this.controls.querySelector<HTMLElement>(`[data-hud="${id}"]`)!.hidden = !visible;
     this.setHomePortalVisible(this.homePortalVisible);
-    this.controls.querySelector<HTMLElement>('[data-hud="difficulty"]')!.hidden=!visible;
   }
 
   resizeControls(width: number, height: number): void {
@@ -155,8 +171,33 @@ export class GameShell {
     for (const shortcut of hud.shortcuts) place(shortcut.id, shortcut);
     place('map', getMinimapRect(width, height));
     place('home', getMinimapHomeRect(width, height));
-    place('difficulty', getMinimapDifficultyRect(width,height));
+    place('difficulty', getMinimapDifficultyRect(width, height));
+    for (const shortcut of getProgressionShortcutRects(width, height)) place(shortcut.id, shortcut);
     this.shortcutMenu.position();
+  }
+
+  setProgressionPoints(attributes: number, skills: number): void {
+    this.shortcutMenu.setPoints(attributes, skills);
+    if (this.progressionPoints[0] === attributes && this.progressionPoints[1] === skills) return;
+    this.progressionPoints = [attributes, skills];
+    this.refreshProgressionShortcuts();
+  }
+
+  private refreshProgressionShortcuts(): void {
+    for (const [index, id] of (['character', 'skills'] as const).entries()) {
+      const count = this.progressionPoints[index];
+      const button = this.controls.querySelector<HTMLButtonElement>(`[data-hud="${id}"]`)!;
+      const name = id === 'character' ? 'Character' : 'Skill atlas';
+      const kind = id === 'character' ? 'attribute' : 'skill';
+      const available = count > 0 ? ` · ${count.toLocaleString('en-US')} ${kind} ${count === 1 ? 'point' : 'points'} available` : '';
+      const binding = this.gamepadActive ? id === 'character' ? 'D-pad ←' : 'D-pad ↑' : controls.label(id);
+      button.classList.toggle('has-points', count > 0);
+      button.setAttribute('aria-label', `${name}${available}`);
+      button.dataset.tooltip = `${name} · ${binding}${available}`;
+      const badge = button.querySelector<HTMLElement>('.hud-progression-count')!;
+      badge.hidden = count <= 0;
+      badge.textContent = count > 99 ? '99+' : String(count);
+    }
   }
 
   portalTransition(): void {
@@ -198,7 +239,7 @@ export class GameShell {
     const playing = phase === 'playing';
     if (playing || phase === 'ready' || phase === 'dead') this.pauseNavigation.focus = null;
     if (phase === 'ready') this.pauseNavigation.category = 'character';
-    const panel = phase === 'map' || phase === 'character' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
+    const panel = phase === 'map' || phase === 'character' || phase === 'inventory' || phase === 'skills' || phase === 'service' || phase === 'event' || phase === 'journeys' || phase === 'chronicle';
     this.overlay.hidden = playing || panel || phase === 'ready';
     this.controls.hidden = !playing;
     if (!playing) { this.buffs.hide(); this.targetBuffs.hide(); this.potionTooltip.dismiss(); }

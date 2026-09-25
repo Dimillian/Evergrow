@@ -40,6 +40,17 @@ export function getMinimapRect(width: number, _height: number): MapRect {
     width: compact ? 150 : 196, height: compact ? 154 : 184 };
 }
 
+/** Direct progression shortcuts sit beside the map, clear of its chart and Journey list. */
+export function getProgressionShortcutRects(width: number, height: number): Array<MapRect & { id: 'character' | 'skills' }> {
+  const map = getMinimapRect(width, height), size = 32, gap = 2;
+  const stacked = width < 520;
+  return (['character', 'skills'] as const).map((id, index) => ({ id,
+    x: stacked ? map.x - size - 10 : map.x - size * 2 - gap - 10 + index * (size + gap),
+    y: stacked ? map.y + 40 + index * (size + gap) : map.y,
+    width: size, height: size,
+  }));
+}
+
 /** Surface and dungeon charts share one slim location header and metadata footer. */
 export function getMinimapChartRect(map: MapRect): MapRect {
   return { x: map.x + 1, y: map.y + 25, width: map.width - 2, height: map.height - 45 };

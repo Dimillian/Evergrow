@@ -94,7 +94,7 @@ test('Home restores canvas focus before starting or cancelling a portal action',
   const originals = new Map(['document', 'window', 'cancelAnimationFrame'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   // Only DOM ownership and event delivery; no browser, render loop or playable save.
   class Element extends EventTarget {
-    hidden = false; innerHTML = ''; textContent = ''; className = '';
+    hidden = false; innerHTML = ''; textContent = ''; className = ''; dataset: Record<string, string> = {};
     sections = new Map<string, Element>();
     classList = { add() {}, remove() {}, toggle() {} };
     append() {} remove() {} setAttribute() {} removeAttribute() {}
@@ -112,9 +112,12 @@ test('Home restores canvas focus before starting or cancelling a portal action',
     if (descriptor) Object.defineProperty(globalThis, key, descriptor); else Reflect.deleteProperty(globalThis, key);
   } });
   let calls = 0;
+  const opened: string[] = [];
   const root = new Element();
   const shell = new GameShell(root as unknown as HTMLElement, {
-    play() {}, openMap() {}, openCharacter() {}, openSkills() {}, returnToTitle() {},
+    play() {}, openMap() {}, openInventory() {}, returnToTitle() {},
+    openCharacter() { opened.push('character'); }, openSkills() { opened.push('skills'); },
+    openDifficulty() { opened.push('difficulty'); },
     homePortal() { assert.equal(doc.activeElement, shell.canvas, 'focus returns before invoking the action'); calls++; },
   });
   const home = root.querySelector('#hud-controls').querySelector('[data-hud="home"]');
@@ -126,8 +129,19 @@ test('Home restores canvas focus before starting or cancelling a portal action',
   }
   assert.equal(calls, 2);
   shell.setNavigationVisible(false); home.dispatchEvent(new Event('click'));
+  for (const id of ['map', 'character', 'skills', 'difficulty'])
+    assert.equal(root.querySelector('#hud-controls').querySelector(`[data-hud="${id}"]`).hidden, true);
   shell.setNavigationVisible(true); shell.setHomePortalVisible(false); home.dispatchEvent(new Event('click'));
   assert.equal(calls, 2, 'hidden navigation and unavailable portals still reject activation');
+  for (const id of ['character', 'skills', 'difficulty']) {
+    const button = root.querySelector('#hud-controls').querySelector(`[data-hud="${id}"]`);
+    assert.equal(button.hidden, false); button.dispatchEvent(new Event('click'));
+  }
+  assert.deepEqual(opened, ['character', 'skills', 'difficulty'], 'progression and difficulty actions retain distinct destinations');
+  shell.setGamepadActive(true);
+  assert.match(root.querySelector('#hud-controls').querySelector('[data-hud="character"]').dataset.tooltip, /D-pad ←/);
+  shell.setGamepadActive(false);
+  assert.match(root.querySelector('#hud-controls').querySelector('[data-hud="character"]').dataset.tooltip, /Character · C/);
 });
 
 test('portal presentation refreshes desktop/controller destinations and clears stale touch-era links', () => {

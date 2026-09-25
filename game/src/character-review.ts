@@ -23,6 +23,7 @@ import { Simulation } from './simulation.ts';
 import { Renderer } from './renderer.ts';
 import { PostFX } from './postfx.ts';
 import { GameShell } from './game-shell.ts';
+import { CharacterPanel } from './character-panel.ts';
 import { InventoryPanel } from './inventory-panel.ts';
 import { SkillTreePanel } from './skill-tree-panel.ts';
 import { generateItem, deriveItem } from './items.ts';
@@ -129,12 +130,12 @@ if(auraReview){
 refreshCharacter(p); p.hp = p.maxHp; p.mana = manaCapacity(p);
 if(auraReview&&p.auras)p.auras.blood={target:1,stacks:3,remaining:2.2};
 const root = document.querySelector<HTMLElement>('#app')!;
-let selected = new URLSearchParams(location.search).get('panel') ?? 'character';
+let selected = new URLSearchParams(location.search).get('panel') ?? 'inventory';
 const shell = life.own(new GameShell(root, { play: () => {}, returnToTitle: () => {}, openMap: () => {},
-  openCharacter: () => show('character'), openSkills: () => show('skills') }));
+  openCharacter: () => show('character'), openInventory: () => show('inventory'), openSkills: () => show('skills') }));
 const result = (action: ActionResult) => {
   if (!action.ok) shell.notifications.info(action.message ?? 'Unavailable');
-  refreshCharacter(p); inventory.refresh(p); tree.refresh(p); background();
+  refreshCharacter(p); inventory.refresh(p); character.refresh(p); tree.refresh(p); background();
 };
 const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => show('skills'),
   equip: (i, slot) => result(equipItem(p.character, i, p.level, slot)),
@@ -147,8 +148,10 @@ const inventory = life.own(new InventoryPanel(shell.panelMount, { close: () => s
   assignSkill: (slot, skill) => result(executeCharacterCommand(p, { type: 'assignSkill', slot, skill })),
   hudOptions: () => ({ reducedMotion: true }),
   openSkills: skill => { show('skills'); tree.inspectNode(skill ? `skill:${skill}` : 'origin', true); tree.setDetailsVisible(true); },
-  allocate: attribute => result(allocateAttribute(p.character, attribute)),
+  openCharacter: () => show('character'),
+  allocate: (attribute, amount) => result(executeCharacterCommand(p, { type: 'allocateAttribute', attribute, amount })),
 }));
+const character = life.own(new CharacterPanel(shell.panelMount, { close: () => show('hud'), openInventory: () => show('inventory'), openSkills: () => show('skills'), allocate: (attribute, amount) => result(allocateAttribute(p.character, attribute, amount)) }));
 const tree = life.own(new SkillTreePanel(shell.panelMount, {
   develop: command => {
     const action = executeCharacterCommand(p, command);
@@ -198,7 +201,7 @@ function background() {
   shell.uiCanvas.width = Math.round(w * density); shell.uiCanvas.height = Math.round(h * density);
   const ui = shell.uiCanvas.getContext('2d')!;
   ui.setTransform(shell.uiCanvas.width / renderer.width, 0, 0, shell.uiCanvas.height / renderer.height, 0, 0);
-  if (selected !== 'character') drawFloatingHUD(ui, p, renderer.width, renderer.height, 0, { reducedMotion: true });
+  if (selected !== 'inventory') drawFloatingHUD(ui, p, renderer.width, renderer.height, 0, { reducedMotion: true });
   inventory.refresh(p);
   shell.resizeControls(renderer.width, renderer.height);
   shell.setBuffs(selected === 'hud' ? activeBuffs(p) : []);
@@ -210,7 +213,7 @@ function background() {
   shell.shortcutMenu.setPoints(p.character.statPoints, p.character.skillPoints);
 }
 function show(panel: string) {
-  selected = panel; inventory.close(); tree.close(); shell.showMenu(panel === 'hud' ? 'playing' : panel === 'skills' ? 'skills' : 'character', 0, 0);
+  selected = panel; inventory.close(); character.close(); tree.close(); shell.showMenu(panel === 'hud' ? 'playing' : panel === 'skills' ? 'skills' : panel === 'character' ? 'character' : 'inventory', 0, 0);
   if (panel === 'hud') { background(); return; }
   if (panel === 'skills') {
     tree.open(p); tree.inspectNode(new URLSearchParams(location.search).get('node') ?? (new URLSearchParams(location.search).get('zoom')==='overview' ? 'origin' : progressionReview ? 'skill:fireball' : 'skill:cleave'), true);
@@ -232,11 +235,12 @@ function show(panel: string) {
       tree.setView(cluster.x + (zoom === 'region' ? -350 : 0), cluster.y + (zoom === 'region' ? 250 : 0), zoom === 'detail' ? 1.2 : .3);
     }
   }
+  else if (panel === 'character') character.open(p, 'Aeryn');
   else inventory.open(p);
   background();
   root.dataset.ready = 'true'; root.dataset.panel = panel;
 }
 background(); show(selected);
-if (comparisonReview && selected === 'character') inventory.element.querySelector<HTMLButtonElement>('[data-bag="0"]')?.focus();
+if (comparisonReview && selected === 'inventory') inventory.element.querySelector<HTMLButtonElement>('[data-bag="0"]')?.focus();
 const observer = new ResizeObserver(background); observer.observe(root); life.defer(() => observer.disconnect());
 if (import.meta.hot) import.meta.hot.dispose(() => life.dispose());
