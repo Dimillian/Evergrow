@@ -7,6 +7,7 @@ import { CharacterSession } from '../src/character-session.ts';
 import { Simulation } from '../src/simulation.ts';
 import { executeSavedAppearanceChange } from '../src/appearance-command.ts';
 import type { CharacterSave } from '../src/character-save.ts';
+import { executeConsoleCommand } from '../src/console-command.ts';
 import type { Item } from '../src/character-types.ts';
 import type { ItemPresentation } from '../src/item-ui.ts';
 import { CloudClient } from '../src/cloud-client.ts';
@@ -108,6 +109,26 @@ for (const saved of [true, false]) test(`returning to the hall ${saved ? 'clears
   assert.equal(opened, saved); assert.equal(flushed, saved);
   assert.equal(warning, saved ? '' : 'Offline');
   assert.equal(game.session.active === null, saved);
+});
+
+test('console help preserves a save warning until a mutation is durably stored', async () => {
+  let warning='Disk full',writes=0,succeeds=false;
+  const sim=new Simulation({seed:7319,blocked:()=>false,move:(x,y,dx,dy)=>({x:x+dx,y:y+dy})},{seed:7319,spawn:false});
+  sim.player.hp=1;
+  const game=Object.assign(Object.create(Game.prototype),{
+    panels:{phase:'console'},sim,renderer:{spawnExclusionBounds:()=>({x:-400,y:-250,width:800,height:500})},
+    durable:async(operation:()=>Promise<{ok:boolean;message?:string}>)=>operation(),
+    saveError:'Disk full',session:{error:'Disk full',save:async()=>{writes++;return succeeds;}},
+    shell:{setSaveStatus:(message='')=>{warning=message;}},
+  });
+  const execute=(game as unknown as {executeLocalConsole(raw:string,allowed:()=>boolean,executor:typeof executeConsoleCommand):Promise<{ok:boolean}>}).executeLocalConsole.bind(game);
+  assert.equal((await execute('help',()=>true,executeConsoleCommand)).ok,true);
+  assert.equal(writes,0);assert.equal(warning,'Disk full');
+  assert.equal((await execute('refill hp',()=>true,executeConsoleCommand)).ok,false);
+  assert.equal(writes,1);assert.equal(warning,'Disk full');
+  succeeds=true;
+  assert.equal((await execute('refill hp',()=>true,executeConsoleCommand)).ok,true);
+  assert.equal(writes,2);assert.equal(warning,'');
 });
 
 test('explicitly refreshing a stale local character allows a cosmetic save without losing newer progress', async () => {

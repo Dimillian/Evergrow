@@ -120,4 +120,5 @@ Code checks and static reviews do not establish gameplay feel, economy balance o
 
 - [Retuned level-50 loot audit](audits/loot-level50-retuned-2026-09-14.md): physical weapon pools, material/affix budget shifts and roll-aware power.
 
+- [Local command console](local-console.md): local-only command input, generated item drops, ordinary monster spawns and HP/mana refills.
 - [World difficulty](world-difficulty.md): per-character challenge tiers, procedural crests, minimap selector and snapshotted rewards.

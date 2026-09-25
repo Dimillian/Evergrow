@@ -1,3 +1,5 @@
+import type { ConsolePanel } from './console-panel.ts';
+import { canUseLocalConsole, isConsoleShortcut } from './console-access.ts';
 import { changeWorldDifficulty, difficultyChangeProblem } from './world-difficulty-command.ts';
 import { activityStatus } from './activity-status.ts';
 import { executeSkillRespec } from './skill-respec-command.ts';
@@ -96,6 +98,8 @@ import { presentationProfile, presentationViewport, type PresentationProfile } f
 
 /** Coordinates browser lifecycle, simulation and presentation; system rules live in their owners. */
 export class Game {
+  private commandConsole?: ConsolePanel;
+  private consoleShortcut?: (event: KeyboardEvent) => boolean;
   private thor!: ThorRuntime;
   private journeys!: JourneyController;
   private locations!: LocationController;
@@ -293,6 +297,7 @@ export class Game {
         arrived: () => this.finishTravel(), notify: message => this.notify(message),
       });
       this.panels = new PanelCoordinator({
+        console: {open:()=>this.commandConsole?.open(),close:()=>this.commandConsole?.close()},
         chronicle:{open:()=>{void this.chronicle.open(async onCached=>{await this.saveCharacter(true);return this.saveClient.chronicle(onCached);},this.session.active?.record.id);},close:()=>this.chronicle.close(false)},
         journeys:{open:()=>this.journeys.panel.open(this.journeys.selected),close:()=>this.journeys.panel.close()},
         event: { open: () => { if(this.activeRiftPortal)this.riftPanel.open(this.sim.expeditions,this.sim.player,this.activeRiftPortal); else if(this.activeExpeditionTable)this.expeditionPanel.open(this.sim.expeditions,this.sim.player.level,this.overworld.seed,this.activeExpeditionTable); else if(this.activeDungeonEntrance) this.eventPanel.openDungeon(this.activeDungeonEntrance); else if (this.activeEvent) this.eventPanel.open(this.activeEvent); }, close: () => { this.eventPanel.close(); this.expeditionPanel.close(); this.riftPanel.close(); this.activeRiftPortal=null; this.activeExpeditionTable=null; this.activeEvent = null; this.activeDungeonEntrance = null; } },
@@ -383,6 +388,26 @@ export class Game {
       this.titleScreen.setSource({ ...this.saveClient.state, supported: !!import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid, mode: import.meta.env.VITE_SITE_CLOUD && !window.EvergrowAndroid ? 'cloud' : 'local', status: 'Loading…' });
       this.titleScreen.open([]);
       void this.saveClient.initialize().then(() => this.loadRoster());
+      if (import.meta.env.VITE_LOCAL_COMMANDS && !import.meta.env.VITE_SITE_CLOUD) {
+        void import('./console-panel.ts').then(({ConsolePanel, executeConsoleCommand}) => {
+          if(this.disposed)return;
+          const allowed=()=>canUseLocalConsole(!!import.meta.env.VITE_LOCAL_COMMANDS,!!import.meta.env.VITE_SITE_CLOUD,
+            this.saveClient.mode,location.hostname,!!window.EvergrowAndroid) && !!this.session.active;
+          this.commandConsole=this.lifetime.own(new ConsolePanel(this.shell.panelMount, {
+            close:()=>{if(!this.savingAction)this.resume();},
+            execute:raw=>this.executeLocalConsole(raw,allowed,executeConsoleCommand),
+          }));
+          this.consoleShortcut=event=>{
+            const target=event.target;
+            const editingText=!(target instanceof Node&&this.commandConsole?.element.contains(target))&&(target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement
+              ||target instanceof HTMLSelectElement||target instanceof HTMLElement&&target.isContentEditable);
+            if(!isConsoleShortcut(event,editingText)||!allowed()||this.appearanceEditor)return false;
+            if(this.phase!=='console'&&!this.panels.canOpen('console'))return false;
+            if(!event.repeat&&!this.savingAction)this.panels.toggle('console');
+            return true;
+          };
+        }).catch(error=>console.error('Local command console could not load.',error));
+      }
       this.animation = requestAnimationFrame(this.frame);
     } catch (error) {
       try { this.lifetime.dispose(); } catch (cleanupError) { console.error(cleanupError); }
@@ -438,6 +463,7 @@ export class Game {
       }
     }, { signal });
     bindGameKeyboard(window, {
+      shortcut: event => this.consoleShortcut?.(event) ?? false,
       clear: () => { this.clearInput(); this.panels.releaseMap(); },
       release: code => { this.input.keyUp(code); if (code === 'Tab') this.panels.releaseMap(); },
       intercept: event => {
@@ -1046,6 +1072,17 @@ export class Game {
     return { ok, message: this.saveError };
   }
 
+  private executeLocalConsole(raw:string,allowed:()=>boolean,execute:(sim:Simulation,raw:string,context:{
+    allowed():boolean;view:ReturnType<Renderer['spawnExclusionBounds']>;seed():number;identity():string;
+    persist(checkpoint:CharacterCheckpoint):Promise<{ok:boolean;message?:string}>;
+  })=>Promise<{ok:boolean;message?:string}>) {
+    return this.durable(()=>execute(this.sim,raw,{
+      allowed:()=>allowed()&&this.phase==='console',view:this.renderer.spawnExclusionBounds(this.sim.player),
+      seed:()=>crypto.getRandomValues(new Uint32Array(1))[0],identity:()=>crypto.randomUUID(),
+      persist:checkpoint=>this.persistTravel(checkpoint),
+    }),{ok:false,message:'Saving the previous action…'});
+  }
+
   private shouldShowHomePortal(): boolean {
     return this.phase === 'playing' && !this.world.isSanctuary(this.sim.player.x, this.sim.player.y);
   }
@@ -1428,6 +1465,7 @@ export class Game {
     }
     const pad = this.gamepad;
     if (pad.pressed.size) void this.audio.unlock().catch(() => {});
+    if(this.phase==='console'){if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.resume();return;}
     if(this.appearanceEditor){
       if(pad.pressed.has(PAD.dodge)||pad.pressed.has(PAD.pause))this.appearanceEditor.cancel();
       else this.appearanceEditor.updateGamepad(pad,now);

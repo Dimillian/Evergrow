@@ -1,3 +1,4 @@
+import { assignItemIdentity } from './items.ts';
 import { worldDifficulty } from './world-difficulty.ts';
 import { manaCapacity } from './auras.ts';
 import { manaVialAmount } from './mana-content.ts';
@@ -35,8 +36,10 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
   if (gold) dropGold(context.groundGold, { id: context.nextId(), x: enemy.x, y: enemy.y, amount: gold, age: 0 });
   if (levels) context.emit({ type: 'level', x: player.x, y: player.y,
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
+  let itemOrdinal = 0;
   for (const item of context.suppressDrops || isBossKind(enemy.kind) ? [] : rollEnemyLoot({ playerLevel: dropPlayerLevel, seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
     biome: enemy.biome, kind: enemy.kind, difficulty:enemy.rewardDifficulty, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
+    if (enemy.lootIdentity) assignItemIdentity(item, `loot:${enemy.lootIdentity}:${itemOrdinal++}`);
     addGroundItem(context.groundItems, { id: context.nextId(), x: enemy.x, y: enemy.y, item });
   }
   recharge++;
