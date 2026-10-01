@@ -53,3 +53,36 @@ test('large guardians can approach a player standing close beside a tree', () =>
     }
     assert.ok(Math.hypot(p.x, p.y) < 48);
 });
+
+test('shared root and edge proofs reduce clearance work without changing routes', () => {
+    let queries = 0;
+    const geometry = { blocked: (x: number, y: number, r: number) => Math.abs(x) < 15 + r && Math.abs(y) < 100 + r };
+    const world = { ...geometry, walkableSegment(x:number,y:number,tx:number,ty:number,r:number) {
+        queries++; return hasWalkableSegment(geometry,x,y,tx,ty,r);
+    } };
+    const nav = new WorldNavigation(world);
+    const first = nav.route(-200, 0, 200, 0, 18, 16384), cold = queries;
+    assert.ok(first);
+    queries = 0;
+    assert.deepEqual(nav.route(-200, 0, 200, 0, 18, 16384), first);
+    assert.ok(queries < cold / 4, 'same pack reuses exact root and grid proofs');
+    // Actor connectors are revalidated after movement; cache keys never round them.
+    for (const radius of [10, 18, 30]) for (const y of [-64, -1.25, 0, 53.5]) {
+        const start = {x:-200.25,y}, goal = {x:200.125,y:3.25};
+        const actual = nav.route(start.x,start.y,goal.x,goal.y,radius,16384);
+        const fresh = new WorldNavigation(world).route(start.x,start.y,goal.x,goal.y,radius,16384);
+        assert.deepEqual(actual,fresh);
+        if(actual) assert.ok(hasWalkableSegment(geometry,start.x,start.y,actual.target.x,actual.target.y,Math.ceil(radius/2)*2));
+    }
+});
+
+test('clearing navigation invalidates rejected target anchors and blocked grid edges', () => {
+    let closed = true;
+    const world = { blocked:(x:number,y:number,r:number)=>closed && Math.abs(x)<40+r && Math.abs(y)<40+r };
+    const nav = new WorldNavigation(world);
+    assert.equal(nav.route(-200,0,0,0,18,1024),null);
+    closed = false; nav.clear();
+    assert.deepEqual(nav.route(-200,0,0,0,18),{target:{x:0,y:0},distance:200});
+    closed = true; nav.clear();
+    assert.equal(nav.route(-200,0,0,0,18,1024),null);
+});

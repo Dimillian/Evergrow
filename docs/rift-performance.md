@@ -1,5 +1,7 @@
 # Rift crowd performance
 
+The [October 1 follow-up](world-performance.md#outline-outdoor-lighting-and-navigation-follow-up-october-1-2026) adds shared exact navigation proofs and zoom-aware rank-outline composition. Its 1,260-tick crowd replay matches the prior simulation while reducing walking-clearance calls by 47%. The measurements below remain the historical September checkpoint.
+
 Measured September 14, 2026 on the development machine. These are CPU timings, not a guaranteed gameplay frame rate.
 
 ## Reproduce

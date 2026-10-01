@@ -2,6 +2,8 @@
 
 Local October 1 rendering pass: scene-aware, memory-budgeted prop caches and zoom raster tiers; compact cached prop shading; conservative scaled prop/enemy render bounds; complete character timings and per-frame visibility/cache telemetry in F3. Data & audits includes frozen forest/water/rift zoom comparisons. No gameplay or save changes. See [world performance](world-performance.md#zoomed-out-rendering-october-1-2026-local) for limits and validation.
 
+October 1 follow-up: zoom-aware precomposed rank outlines, a shared outdoor-light atlas with effect-specific resolution, and exact cached navigation anchors/edges. A 1,260-tick crowd replay matches the preceding simulation with 47% fewer walking-clearance queries. See [follow-up validation](world-performance.md#outline-outdoor-lighting-and-navigation-follow-up-october-1-2026).
+
 Local September 19 Area journal: explicit unlimited Accept/Accept all, reversible Dismiss to Nearby, independent pins, retained known/completed activities and area browsing. Show on Map returns to selected quest details on close. Existing saves keep progress; old suppression IDs are ignored and previously trimmed completion details recover when encountered. See [Journeys](journeys.md).
 
 Local September 19 Light & Open HUD: independent right-aligned map and Journey list, a clear gap, compact map metadata, lighter framing and a gold row only for an explicitly pinned quest. The old portal row is replaced by a small lower-left minimap Home icon, visible whenever the player is outside town, including during movement; existing portal shortcuts and touch/companion actions remain. Shared surface/dungeon map chrome and input bounds. Collapsed Journeys omits its divider. No save reset. See [interface kit](ui-kit.md).

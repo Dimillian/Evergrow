@@ -109,7 +109,7 @@ export class WorldLandscape {
   get cacheStats() { return { settlements: this.settlements.size, wildernessSites: this.wilderness.size }; }
 
   /** Cached generated content belongs to this world instance, not global module state. */
-  dispose() { this.collisionRegions.clear(); this.propCells.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
+  dispose() { worldNavigation(this).clear(); this.collisionRegions.clear(); this.propCells.clear(); this.settlements.clear(); this.settlementCells.clear(); this.wilderness.clear(); }
 
   sampleBiome(x: number, y: number): BiomeSample { return sampleBiome(x, y, this.seed); }
 

@@ -16,14 +16,17 @@ uniform sampler2D field, crowns, climates, openlands;
 uniform vec4 view, bounds, lamps[4];
 uniform vec3 colors[4], skyTint, skyDirection;
 uniform float daylight, skyPower;
-uniform vec2 focus;
+uniform vec2 focus, layerSize;
 uniform float time, mode, enclosure;
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
 float cover(vec2 p){return texture2D(crowns,(p-bounds.xy)/bounds.zw).r;}
 float overhead(vec2 p){return texture2D(crowns,(p-bounds.xy)/bounds.zw).g;}
 void main(){
-  vec2 world=view.xy+vec2(uv.x,1.-uv.y)*view.zw;
+  // Extrude one edge texel around each atlas crop so Canvas upsampling cannot
+  // blend a neighbouring effect into the viewport's outermost pixels.
+  vec2 local=clamp((uv*(layerSize+2.)-1.)/layerSize,.5/layerSize,1.-.5/layerSize);
+  vec2 world=view.xy+vec2(local.x,1.-local.y)*view.zw;
   vec4 climate=texture2D(field,(world-bounds.xy)/bounds.zw);
   vec2 fieldUV=(world-bounds.xy)/bounds.zw;
   vec4 biomes=texture2D(climates,fieldUV), lands=texture2D(openlands,fieldUV);
@@ -114,9 +117,23 @@ void main(){
   gl_FragColor=vec4(result*strength,1.);
 }`;
 
-/** Outdoor half-resolution surface, cloud and air passes. Cached metadata and real foliage silhouettes; no scene readback. */
+/** Ground relief retains half resolution; soft air and broad clouds need fewer pixels. */
+export function outdoorLightLayout(width: number, height: number) {
+  const scale = Math.min(.5, RULES.maxAxis / width, RULES.maxAxis / height);
+  let x = 1;
+  return [1, .5, .25].map(factor => {
+    const layer = { x, width: Math.max(1, Math.ceil(width * scale * factor)), height: Math.max(1, Math.ceil(height * scale * factor)) };
+    x += layer.width + 2; return layer;
+  });
+}
+
+/** Render all outdoor layers before one GPU-to-Canvas copy, then composite their
+ * atlas crops in the original ground/cloud/air order around the live actors. */
 export class OutdoorLightEffects {
   private canvas = document.createElement('canvas');
+  private atlas = document.createElement('canvas');
+  private layers = outdoorLightLayout(1, 1);
+  private prepared = false;
   private canopy = document.createElement('canvas');
   private silhouettes = new WeakMap<HTMLCanvasElement, readonly HTMLCanvasElement[]>();
   private cells = new Map<string, readonly number[]>();
@@ -153,7 +170,7 @@ export class OutdoorLightEffects {
         gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader)??'Outdoor shader compile');gl.attachShader(program,shader);
       }
       gl.bindAttribLocation(program,0,'p');gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program)??'Outdoor shader link');
-      gl.useProgram(program);this.uniforms=Object.fromEntries(['field','crowns','view','bounds','time','mode','enclosure','lamps[0]','colors[0]','climates','openlands','skyTint','skyDirection','daylight','skyPower','focus'].map(n=>[n,gl.getUniformLocation(program,n)]));
+      gl.useProgram(program);this.uniforms=Object.fromEntries(['field','crowns','view','bounds','time','mode','enclosure','lamps[0]','colors[0]','climates','openlands','skyTint','skyDirection','daylight','skyPower','focus','layerSize'].map(n=>[n,gl.getUniformLocation(program,n)]));
       gl.uniform1i(this.uniforms.field,0);gl.uniform1i(this.uniforms.crowns,1);gl.uniform1i(this.uniforms.climates,2);gl.uniform1i(this.uniforms.openlands,3);
       this.buffer=gl.createBuffer();if(!this.buffer)throw Error('Outdoor geometry allocation');gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);
       gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
@@ -174,11 +191,13 @@ export class OutdoorLightEffects {
     this.silhouettes.set(source,masks);return masks;
   }
   prepare(world:World,view:CameraView,props:readonly Prop[],spriteFor:(p:Prop)=>Sprite,lights:readonly PointLight[],time:number,reduced:boolean,enclosure:number,width:number,height:number,sky:SkyState=skyAtHour(9),focus:{x:number;y:number}={x:view.left+view.width/2,y:view.top+view.height/2}){
+    this.prepared=false;
     if(enclosure>.99||this.lost)return false;
     if(!this.setup())return false;
-    const gl=this.gl!,scale=Math.min(.5,RULES.maxAxis/width,RULES.maxAxis/height);
-    const w=Math.max(1,Math.ceil(width*scale)),h=Math.max(1,Math.ceil(height*scale));
-    if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
+    const gl=this.gl!;
+    this.layers=outdoorLightLayout(width,height);
+    const w=this.layers.reduce((sum,layer)=>sum+layer.width+2,0),h=this.layers[0].height+2;
+    for(const canvas of [this.canvas,this.atlas]) if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
     if(this.world!==world){this.world=world;this.cells.clear();this.fieldKey='';this.canopyKey='';}
     const cell=RULES.cell,left=Math.floor((view.left-RULES.margin)/cell)*cell,top=Math.floor((view.top-RULES.margin)/cell)*cell;
     const cols=Math.ceil((view.left+view.width+RULES.margin-left)/cell),rows=Math.ceil((view.top+view.height+RULES.margin-top)/cell);
@@ -234,15 +253,24 @@ export class OutdoorLightEffects {
     gl.uniform2f(this.uniforms.focus,focus.x,focus.y);
     gl.uniform1f(this.uniforms.daylight,sky.daylight);gl.uniform1f(this.uniforms.skyPower,sky.power);
     gl.uniform1f(this.uniforms.time,t);gl.uniform1f(this.uniforms.enclosure,enclosure);gl.uniform4fv(this.uniforms['lamps[0]'],this.positions);gl.uniform3fv(this.uniforms['colors[0]'],this.colors);
+    gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+    for(let i=0;i<4;i++){gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,this.textures[i]);}
+    for(const [mode,layer] of this.layers.entries()) {
+      gl.viewport(layer.x-1,0,layer.width+2,layer.height+2);gl.uniform2f(this.uniforms.layerSize,layer.width,layer.height);
+      gl.uniform1f(this.uniforms.mode,mode);gl.drawArrays(gl.TRIANGLES,0,6);
+    }
+    const atlas=this.atlas.getContext('2d')!;
+    atlas.clearRect(0,0,w,h);atlas.drawImage(this.canvas,0,0);
+    this.prepared=true;
     return true;
   }
   draw(c:CanvasRenderingContext2D,view:CameraView,air:boolean,clouds=false){
-    if(!this.program||this.lost)return;
-    const gl=this.gl!;gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.useProgram(this.program);gl.bindBuffer(gl.ARRAY_BUFFER,this.buffer);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
-    for(let i=0;i<4;i++){gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,this.textures[i]);}gl.uniform1f(this.uniforms.mode,clouds?2:air?1:0);gl.drawArrays(gl.TRIANGLES,0,6);
-    c.save();c.globalCompositeOperation=clouds?'multiply':'screen';c.imageSmoothingEnabled=true;c.drawImage(this.canvas,view.left,view.top,view.width,view.height);c.restore();
+    if(!this.prepared||this.lost)return;
+    const layer=this.layers[clouds?2:air?1:0];
+    c.save();c.globalCompositeOperation=clouds?'multiply':'screen';c.imageSmoothingEnabled=true;
+    c.drawImage(this.atlas,layer.x,this.atlas.height-layer.height-1,layer.width,layer.height,view.left,view.top,view.width,view.height);c.restore();
   }
-  private clearHandles(){this.program=null;this.buffer=null;this.textures=[];this.fieldKey=this.fieldSize=this.canopyKey='';this.canopyAllocated=false;this.props=undefined;}
+  private clearHandles(){this.prepared=false;this.program=null;this.buffer=null;this.textures=[];this.fieldKey=this.fieldSize=this.canopyKey='';this.canopyAllocated=false;this.props=undefined;}
   private release(){if(this.gl&&!this.gl.isContextLost()){for(const t of this.textures)this.gl.deleteTexture(t);this.gl.deleteBuffer(this.buffer);this.gl.deleteProgram(this.program);}this.clearHandles();}
   reset(){this.release();this.attempted=false;this.world=undefined;this.cells.clear();this.silhouettes=new WeakMap();}
 }

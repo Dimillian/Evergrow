@@ -34,6 +34,41 @@ For the unchanged 256-enemy rift fixture, conservative bounds reduce rig submiss
 
 Application/headless type checks and the production build pass. The 1,777-test suite exercised the change; one unrelated cloud-worker acknowledgement timeout (including its parent test) passed on an isolated rerun of all 38 cloud-cadence tests. The final scenery/art regression group also passed all 17 tests after raster-policy refinement. No automated browser gameplay was run.
 
+## Outline, outdoor lighting and navigation follow-up (October 1, 2026)
+
+The follow-up profiles the real browser renderer and the existing headless crowd simulation separately. Ranked silhouettes now use upward-rounded 1×/1.5×/2× raster density based on their displayed transform. Tint, four rim samples, soft glow and the live rig are composed on a small reusable surface before one image reaches the world canvas. The world canvas receives precomposed images instead of per-enemy shadow-blur operations. Body/weapon bounds, pose updates, rank colors and screen-space glow width are retained; each creature kind has at most three density tiers and Renderer reset releases them.
+
+Outdoor ground relief, air and clouds now render together into one GPU atlas, followed by one WebGL-to-Canvas snapshot. The original depth order and screen/multiply blend modes are retained when the atlas crops are drawn around actors and world illumination. Ground relief keeps half resolution (640-pixel maximum axis); soft air uses quarter resolution and broad clouds one-eighth resolution. Extruded one-pixel gutters keep filtered crops from bleeding into one another at screen edges. At 1209 × 680 this shades about 56% fewer pixels across the three passes. Sky, canopy motion and light uniforms still update at their existing rates; the fixed CRT and native-resolution HUD are unchanged.
+
+Navigation shares exact target anchors (64 entries) and directed, radius-specific grid-edge clearance proofs (65,536 entries). A bounded FIFO ring evicts old edges without repeatedly scanning deleted Map slots. Each route also reuses its source connectors while scoring waypoints. Source coordinates are never rounded for clearance checks, and movement/contact tests remain live. Breaking a container and disposing the world invalidate all navigation caches. Population and 120 Hz simulation are unchanged.
+
+A before/after replay of the existing 128/256/512-enemy rift scenarios matched the full sampled player, enemy, projectile, ground-effect, event and expedition state across **1,260 ticks**. Calls to `WorldLandscape.walkableSegment` fell from **2,594,107 to 1,373,106 (47%)**. Tests additionally cover clearance radii, fractional/negative positions, route invalidation, outline geometry and reuse, atlas crop order/gutters, context restoration and reduced motion.
+
+### Follow-up verification
+
+`npm run check` passed **all 1,781 tests**, application/core type checking and the production build. All nine final browser captures (three scenes × three zooms, 90 warmup + 30 measured frames) had zero warmed sprite misses and evictions. Forest and crowd PNGs were compared with `a18dff4`; the ground detail, depth order, rank silhouettes and lighting remain present, with the intended lower-density small outlines and soft air/cloud sampling.
+
+Paired 0.8× frozen browser captures against `a18dff4`, Chromium 151 with **software SwiftShader**, 1209 × 680, identical 90/30 warmup/sample counts and no CPU sampling profiler:
+
+| Scene | Before median frame CPU | After median frame CPU | Change |
+| --- | ---: | ---: | ---: |
+| Forest | 208.5 ms | 148.8 ms | −29% |
+| 256-enemy rift (182 rigs admitted) | 336.7 ms | 259.0 ms | −23% |
+
+These unusually high absolute times reflect software graphics on a shared cloud host. They are measurements of this environment, not device FPS or a promised hardware speedup. Tail timings vary with host scheduling. The separate 512-enemy simulation benchmark measured 25.835 → 18.422 ms median per two fixed ticks (−29%); the exact replay/query-count comparison above is independent of host speed.
+
+### Browser reproduction
+
+With Vite running, the optional terminal study uses the same disposable fixtures and runtime Renderer/PostFX as Data & audits:
+
+```sh
+EVERGROW_BROWSER_PATH=/path/to/chromium node game/scripts/benchmark-browser-zoom.mjs /tmp/zoom.json
+```
+
+It opens only an isolated frozen study, advances no gameplay and accesses no saves. `ZOOM_BENCH_URL` selects another local checkout's Vite server. `ZOOM_SCENES=forest,crowd`, `ZOOM_LEVELS=0.8`, `ZOOM_WARMUP=90`, `ZOOM_FRAMES=30` narrow a comparison. `ZOOM_CAPTURE_DIR` saves world PNGs; `ZOOM_CPU_PROFILES=1` additionally records CPU profiles in that directory. JSON records the actual browser/graphics renderer. Agent-driven browser studies still require user authorization; this follow-up was explicitly requested.
+
+CPU stage samples include submission and synchronization stalls, which can be charged to a later Canvas operation or texture upload. Nested timings overlap. Frozen captures exclude simulation, combat effect creation, camera traversal, terrain workers and saves. Software SwiftShader observations locate work and support paired comparisons; they are not target-device FPS predictions. Captures compare the retained silhouettes and lighting; these optimisations do not promise pixel-identical supersampling or blur.
+
 The September 6, 2026 checkpoint reduces terrain-boundary stalls and repeated procedural queries. It preserves terrain detail, world generation, collision and combat rules.
 
 ## Rendering and query changes

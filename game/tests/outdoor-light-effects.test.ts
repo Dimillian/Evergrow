@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { outdoorLightCell, OUTDOOR_LIGHT_RULES, type OutdoorLightWorld } from '../src/outdoor-light-content.ts';
-import { OutdoorLightEffects } from '../src/outdoor-light-effects.ts';
+import { OutdoorLightEffects, outdoorLightLayout } from '../src/outdoor-light-effects.ts';
 import { skyAtHour } from '../src/world-time.ts';
 import { BIOME_IDS, type BiomeWeights } from '../src/biomes.ts';
 import { cameraView } from '../src/camera.ts';
@@ -24,12 +24,12 @@ test('outdoor metadata blends climates, keeps interiors dry and does not duplica
 
 test('outdoor light caches geographic samples, bounds buffers, throttles canopy uploads and restores contexts',t=>{
   const descriptor=Object.getOwnPropertyDescriptor(globalThis,'document');t.after(()=>{if(descriptor)Object.defineProperty(globalThis,'document',descriptor);else Reflect.deleteProperty(globalThis,'document');});
-  let unit=0,contexts=0,samples=0;const uploads:number[]=[],uniforms:Record<string,number>={},handlers=new Map<string,(event:{preventDefault():void})=>void>();
+  let unit=0,contexts=0,samples=0,shaderDraws=0;const copies:unknown[][]=[];const uploads:number[]=[],uniforms:Record<string,number>={},handlers=new Map<string,(event:{preventDefault():void})=>void>();
   const gl=new Proxy({TEXTURE0:100,TEXTURE1:101,createShader:()=>({}),createProgram:()=>({}),createTexture:()=>({}),createBuffer:()=>({}),
     getShaderParameter:()=>true,getProgramParameter:()=>true,isContextLost:()=>false,getUniformLocation:(_:unknown,n:string)=>n,
-    activeTexture:(n:number)=>{unit=n-100;},uniform1f:(n:string,v:number)=>{uniforms[n]=v;},texImage2D:()=>uploads.push(unit),texSubImage2D:()=>uploads.push(unit),
+    drawArrays:()=>{shaderDraws++;},activeTexture:(n:number)=>{unit=n-100;},uniform1f:(n:string,v:number)=>{uniforms[n]=v;},texImage2D:()=>uploads.push(unit),texSubImage2D:()=>uploads.push(unit),
   },{get:(o,k)=>k in o?Reflect.get(o,k):()=>{}});
-  const context=new Proxy({},{get:()=>()=>{}}),canvases:{width:number;height:number}[]=[];
+  const context=new Proxy({drawImage:(...args:unknown[])=>copies.push(args)},{get:(o,k)=>k in o?Reflect.get(o,k):()=>{}}),canvases:{width:number;height:number}[]=[];
   Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>{
     const canvas={width:1,height:1,getContext:(type:string)=>{if(type==='2d')return context;contexts++;return gl;},addEventListener:(n:string,c:(e:{preventDefault():void})=>void)=>handlers.set(n,c)};canvases.push(canvas);return canvas;
   }}});
@@ -38,7 +38,13 @@ test('outdoor light caches geographic samples, bounds buffers, throttles canopy 
   const sprite=()=>{throw Error('No props in fixture');};
   const prepare=(time:number,reduced=false,v=view,w=world)=>effects.prepare(w,v,props,sprite,[],time,reduced,0,1600,1100);
   assert.equal(effects.prepare(world,view,props,sprite,[],0,false,1,1600,1100),false);assert.equal(contexts,0,'fully enclosed scenes allocate no context');
-  assert(prepare(0));assert.deepEqual(uploads,[0,2,3,1]);assert.equal(canvases[0].width,OUTDOOR_LIGHT_RULES.maxAxis);const initialSamples=samples;
+  assert(prepare(0));assert.deepEqual(uploads,[0,2,3,1]);assert.equal(canvases[0].width,OUTDOOR_LIGHT_RULES.maxAxis*1.75+6);assert.equal(shaderDraws,3);assert.equal(copies.length,1,'one GPU surface snapshot per frame');
+  const layers=outdoorLightLayout(1600,1100);
+  for(const [air,clouds,index] of [[false,false,0],[false,true,2],[true,false,1]] as const){
+    effects.draw(context as unknown as CanvasRenderingContext2D,view,air,clouds);
+    const layer=layers[index];assert.deepEqual(copies.at(-1)!.slice(1),[layer.x,canvases[0].height-layer.height-1,layer.width,layer.height,view.left,view.top,view.width,view.height]);
+  }
+  assert.equal(shaderDraws,3,'layer composition performs no more GPU rendering');const initialSamples=samples;
   uploads.length=0;prepare(.02);assert.deepEqual(uploads,[]);assert.equal(samples,initialSamples);
   prepare(.11);assert.deepEqual(uploads,[1],'only canopy coverage changes with wind');
   uploads.length=0;prepare(8,true);assert.equal(uniforms.time,0);uploads.length=0;prepare(10,true);assert.deepEqual(uploads,[],'reduced motion freezes wind coverage');
@@ -46,4 +52,16 @@ test('outdoor light caches geographic samples, bounds buffers, throttles canopy 
   handlers.get('webglcontextlost')!({preventDefault(){}});assert.equal(prepare(0),false);handlers.get('webglcontextrestored')!({preventDefault(){}});uploads.length=0;assert(prepare(0));assert.deepEqual(uploads,[0,2,3,1]);
   uploads.length=0;effects.prepare(world,view,props,sprite,[],0,true,0,1600,1100,skyAtHour(18));assert.deepEqual(uploads,[1],'changing sun direction refreshes only canopy projection');
   effects.reset();uploads.length=0;assert(prepare(0));assert.deepEqual(uploads,[0,2,3,1]);
+});
+
+test('outdoor atlas keeps sharp ground relief, bounds soft-effect pixels and separates filtered crops',()=>{
+  for(const [width,height] of [[1209,680],[680,1209],[3840,2160],[960,600]]){
+    const layers=outdoorLightLayout(width,height),[ground,air,cloud]=layers;
+    assert.ok(Math.max(ground.width,ground.height)<=OUTDOOR_LIGHT_RULES.maxAxis);
+    assert.ok(ground.width>=width*Math.min(.5,640/width,640/height));
+    assert.ok(air.width<=Math.ceil(ground.width/2));assert.ok(cloud.width<=Math.ceil(ground.width/4));
+    const pixels=layers.reduce((sum,l)=>sum+(l.width+2)*(l.height+2),0);
+    assert.ok(pixels<ground.width*ground.height*1.4,'less than half the old three half-resolution passes');
+    for(let i=1;i<layers.length;i++)assert.equal(layers[i].x-layers[i-1].x-layers[i-1].width,2,'each crop has its own extruded gutter');
+  }
 });

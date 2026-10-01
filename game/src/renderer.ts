@@ -290,6 +290,7 @@ export class Renderer {
     this.outdoorLightEffects.reset();
     this.dungeonLightEffects.reset(); this.emission = undefined;
     this.battleBarks.reset();
+    this.enemyOutlines.reset();
     this.water.reset(); this.waterArt.reset(); this.lighting.reset(); this.sceneShadows.reset(); this.atmosphere.reset(); this.propSurfaceLight.reset();
     this.portalGuide = 0; this.portalAnchors = []; this.fadingPortal = null;
     this.cameraX = 0; this.cameraY = 0; this.effects.reset(); this.rangedAim = null;
