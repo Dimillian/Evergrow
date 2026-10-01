@@ -1,5 +1,19 @@
 # Evergrow changelog
 
+## v0.7.2 — 2026-10-01T13:09:00Z
+
+### Tweaks
+
+- Reduced scenery rendering work when zoomed out, especially in forests and other densely decorated areas.
+- Optimized champion and elite outlines, outdoor lighting and cloud shadows to reduce rendering cost in busy scenes.
+- Large monster crowds reuse more navigation calculations while retaining their existing movement and collision rules.
+- The F3 performance monitor now shows visible scenery, cache usage and more complete character rendering timings.
+
+### Fixes
+
+- Fixed repeated scenery rebuilding that could cause persistent slowdowns when many different props were visible.
+- Offscreen props and monsters no longer incur unnecessary drawing work when their full visuals are outside the view.
+
 ## v0.7.1 — 2026-09-25T02:10:00Z
 
 ### New
