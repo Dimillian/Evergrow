@@ -37,6 +37,17 @@ The user approved the next major prototype milestone, **0.7.0**, on 2026-09-20 f
 
 ## Last verified publication
 
+- Game v0.7.2 / Sites version 64, publicly deployed on 2026-10-01 at 13:12:34 UTC.
+- Published source: `59d9bf55a5a6ed02641d5b44f2032e56cbed8eb3`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_601c69a7e57081919a360cc9c919aa04`.
+- Deployment: `appgdep_6abe5c2aa8108191953a7f8a31e25bba`; Sites returned `succeeded`.
+- Includes zoom-aware scenery retention and culling, cheaper rank outlines and outdoor lighting, shared crowd-navigation calculations and expanded F3 rendering diagnostics.
+- All 1,781 code tests passed, alongside application/core type checking, cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run for publication.
+- No character reset or required player action. Development tools remain excluded; the local server remains available.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.7.1 / Sites version 63, publicly deployed on 2026-09-25 at 02:13:40 UTC.
 - Published source: `b5df1a5dc8104c4b40824f10bd9a1878bacddcc6`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_7742d5c6c7c081919d710528a7661781`.
