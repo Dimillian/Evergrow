@@ -1,3 +1,4 @@
+import { createEnemy } from './enemy-factory.ts';
 import { worldDifficulty, lesserDifficulty } from './world-difficulty.ts';
 import { advanceChains, type ChainFlight } from './chain-lightning.ts';
 import { RiftTactics } from './rift-tactics.ts';
@@ -74,7 +75,6 @@ import { PlayerMovement } from './player-movement.ts';
 
 export const FIXED_STEP = COMBAT_TIMING.fixedStep;
 export const HIT_FLASH_DURATION = COMBAT_TIMING.hitFlashDuration;
-const TAU = Math.PI * 2;
 
 export function initialPlayer(x: number, y: number): Player {
   const character = createCharacterSheet();
@@ -247,7 +247,7 @@ export class Simulation {
     this.camps.restoreScales(saved.encounterScales);
     for (const actor of saved.actors ?? []) {
       const enemy=this.spawnEnemy(actor.kind,actor.x,actor.y,actor.rank, actor.campId ? {campId:actor.campId,memberId:actor.memberId!,lootSeed:actor.seed} : undefined);
-      if(enemy)Object.assign(enemy,applyEnemyModifiers(scaledEnemyStats(actor.kind,actor.level,actor.rank),{kind:actor.kind,rank:actor.rank,lootSeed:actor.seed,rift:actor.rift,difficulty:p.character.difficulty,rewardDifficulty:lesserDifficulty(actor.rewardDifficulty,p.character.difficulty)}),{rift:actor.rift,level:actor.level,biome:actor.biome,lootSeed:actor.seed,hp:actor.hp*worldDifficulty(p.character.difficulty).health,rewardDifficulty:lesserDifficulty(actor.rewardDifficulty,p.character.difficulty),homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
+      if(enemy)Object.assign(enemy,applyEnemyModifiers(scaledEnemyStats(actor.kind,actor.level,actor.rank),{kind:actor.kind,rank:actor.rank,lootSeed:actor.seed,rift:actor.rift,difficulty:p.character.difficulty,rewardDifficulty:lesserDifficulty(actor.rewardDifficulty,p.character.difficulty)}),{rift:actor.rift,level:actor.level,biome:actor.biome,lootSeed:actor.seed,lootIdentity:actor.lootIdentity,hp:actor.hp*worldDifficulty(p.character.difficulty).health,difficulty:p.character.difficulty,rewardDifficulty:lesserDifficulty(actor.rewardDifficulty,p.character.difficulty),homeX:actor.homeX,homeY:actor.homeY,bossPhases:actor.bossPhases,state:'idle',stateDuration:1});
     }
     this.camps.adopt(this.enemies); this.camps.restoreWounds(saved.campWounds??[]); this.pickups=saved.pickups??[];
     this.reserveIdentity(Math.max(1,...this.pickups.map(i=>i.id+1)));
@@ -364,19 +364,11 @@ export class Simulation {
     const difficulty=worldDifficulty(this.player.character.difficulty).id;
     const run=currentDungeon(this.expeditions);
     const rewardDifficulty=lesserDifficulty(source?.difficulty ?? (run ? run.difficulty ?? 'normal' : difficulty),difficulty);
-    const scaled = applyEnemyModifiers(scaledEnemyStats(kind, level, rank),{kind,rank,lootSeed,rift,difficulty,rewardDifficulty});
     const biome = this.world.dungeonBiome ?? (this.world.sampleBiome?.(x, y) ?? sampleBiome(x, y)).id;
-    const enemy: Enemy = {
-      id: this.nextId++, level, rank, biome, lootSeed, difficulty, rewardDifficulty, ...(rift?{rift}:{}), ...scaled, dungeonTheme:this.world.dungeonTheme,
-      ...(source ? { campId: source.campId, campMemberId: source.memberId } : {}),
-      x, y, prevX: x, prevY: y, vx: 0, vy: 0, knockbackX: 0, knockbackY: 0, angle: 0, hp: scaled.maxHp,
-      kind, state: 'idle', stateTime: 0, stateDuration: ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange,
-      attackAngle: 0, attackTargetX: x, attackTargetY: y, homeX: x, homeY: y, awareness: 0, lostSightTime: 0,
-      lastSeenX: x, lastSeenY: y, senseTime: 0, seesPlayer: false, patrolPhase: (this.nextId * 2.399963) % TAU,
-      hitFlash: 0, hitAngle: 0, radius: stats.radius, stagger: 0,
-      attackHit: false, interrupted: false,
-      slowTime: 0, slowFactor: 1, burnTime: 0, burnDps: 0, burnTick: 0,
-    };
+    const enemy = createEnemy({ id:this.nextId++, kind, level, rank, biome, lootSeed, x, y, rift, difficulty, rewardDifficulty,
+      dungeonTheme:this.world.dungeonTheme,
+      ...(source ? {campId:source.campId, campMemberId:source.memberId} : {}),
+      idleDuration:ENCOUNTER_RULES.initialIdleMin + this.random() * ENCOUNTER_RULES.initialIdleRange });
     this.enemies.push(enemy);
     this.emit({ type: 'spawn', x, y, enemyKind: kind });
     return enemy;

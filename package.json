@@ -8,6 +8,7 @@
     "build:site": "npm run typecheck && node scripts/stage-site.mjs",
     "typecheck": "npm --prefix game run typecheck",
     "check": "npm --prefix game run check",
+    "check:console-build": "node scripts/check-console-build.mjs",
     "stats": "npm --prefix game run stats",
     "test": "npm --prefix game test",
     "test:browser": "npm --prefix game run test:browser",

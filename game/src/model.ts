@@ -238,6 +238,8 @@ export interface Enemy {
   readonly rank: EnemyRank;
   readonly biome: BiomeId;
   readonly lootSeed: number;
+  /** Distinct physical rewards for authored actors that intentionally repeat a loot roll. */
+  readonly lootIdentity?: string;
   /** Spawn-time offense and reward snapshots; crossing an area edge never rescales a living enemy. */
   readonly damage: number;
   readonly xpReward: number;

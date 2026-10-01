@@ -1,6 +1,7 @@
 /** Keyboard ownership boundary. Native shortcuts must never latch a gameplay key. */
 export interface GameKeyboardHandlers {
   press(event: KeyboardEvent): void;
+  shortcut?(event: KeyboardEvent): boolean;
   intercept?(event: KeyboardEvent): boolean;
   release(code: string): void;
   clear(): void;
@@ -15,7 +16,9 @@ export function bindGameKeyboard(target: EventTarget, handlers: GameKeyboardHand
   target.addEventListener('keydown', raw => {
     const event = raw as KeyboardEvent;
     if (nativeShortcut(event)) handlers.clear();
-    else if (handlers.intercept?.(event)) {
+    if (!event.defaultPrevented && !event.isComposing && handlers.shortcut?.(event)) {
+      event.preventDefault(); event.stopImmediatePropagation();
+    } else if (!nativeShortcut(event) && handlers.intercept?.(event)) {
       event.preventDefault(); event.stopImmediatePropagation();
     }
   }, { signal, capture: true });

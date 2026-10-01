@@ -544,3 +544,11 @@ function deriveUnique(item:Item):Item {
   if(next.focus)next.focus={...next.focus,name,visual:{...next.focus.visual,trim:UNIQUE_COLOR,edge:'#d7b6ee',glow:'#ba8bf1'}};
   return next;
 }
+
+/** Keep held equipment identity aligned when a reward source issues a distinct physical copy. */
+export function assignItemIdentity(item: Item, id: string): void {
+  item.id = id;
+  if (item.weapon) item.weapon.id = id;
+  if (item.shield) item.shield.id = id;
+  if (item.focus) item.focus.id = id;
+}

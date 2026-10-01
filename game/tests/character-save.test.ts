@@ -6,7 +6,7 @@ import { CharacterRepository, characterSlotKey } from '../src/character-storage.
 import { CharacterSession } from '../src/character-session.ts';
 import { decodeCharacterSave, CHARACTER_SLOT_COUNT } from '../src/character-save.ts';
 import { awardCharacterExperience, refreshCharacter } from '../src/character.ts';
-import { generateItem, createCharacterSheet, STARTER_LOADOUTS } from '../src/items.ts';
+import { generateItem, assignItemIdentity, createCharacterSheet, STARTER_LOADOUTS } from '../src/items.ts';
 import { addInventoryItem, equipItem } from '../src/inventory.ts';
 import { executeCharacterCommand } from '../src/character-commands.ts';
 import { SKILL_NODES } from '../src/skill-tree.ts';
@@ -266,6 +266,20 @@ test('save validation rejects malformed currency and duplicated ground identitie
   assert.equal(decodeCharacterSave(JSON.stringify(record)), null);
 });
 
+test('save validation rejects duplicate actor loot ownership and collisions with existing item identities', async () => {
+  const { repo, sim } = await setup(), record = repo.read(0).record!;
+  const first=sim.spawnEnemy('brute',100,0)!,second=sim.spawnEnemy('brute',150,0)!;
+  Object.assign(first,{lootIdentity:'duplicate'});Object.assign(second,{lootIdentity:'duplicate'});
+  let invalid=structuredClone(record);invalid.checkpoint=sim.captureCheckpoint();
+  assert.equal(decodeCharacterSave(JSON.stringify(invalid)),null);
+
+  Object.assign(second,{lootIdentity:'other'});
+  const item=generateItem(17,1,'head');assignItemIdentity(item,'loot:duplicate:0');
+  addGroundItem(sim.groundItems,{id:sim.nextEntityIdentity,x:0,y:0,item});
+  invalid=structuredClone(record);invalid.checkpoint=sim.captureCheckpoint();
+  assert.equal(decodeCharacterSave(JSON.stringify(invalid)),null);
+});
+
 test('characters retain independent world seeds when switching, saving and reopening the repository', async () => {
   const { repo, storage, session } = (await setup());
   const seeds = [0, 18427, 4294967295];
@@ -401,5 +415,4 @@ test('roll quality repricing reaches equipped, carried, stored, buyback and both
   assert.equal(d.level,p.level);assert.equal(d.xp,p.xp);assert.equal(c.gold,s.gold);assert.deepEqual(c.allocatedNodes,s.allocatedNodes);
   assert.equal(JSON.stringify(save),raw);assert.deepEqual(decodeCharacterSave(JSON.stringify(decoded)),decoded);
 });
-
 
