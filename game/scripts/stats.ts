@@ -64,7 +64,7 @@ console.log(JSON.stringify({
     wildernessCells: WILDERNESS_RULES.cacheLimit, campActorCache: CAMP_POPULATION_RULES.actorCacheCapacity,
     climateRegions: BIOME_FIELD_RULES.cacheLimit, biomeLife: BIOME_LIFE_LIMITS,
     groundDressingStamps: GROUND_DRESSING_LIMIT, layeredTreeFamilies: Object.keys(TREE_BOUNDS).length,
-    environmentSprites: ENVIRONMENT_ART_RULES.cacheLimit, environmentVariantsPerFamily: ENVIRONMENT_ART_RULES.variants,
+    environmentSpriteReservedBytes: ENVIRONMENT_ART_RULES.cacheBytes, environmentVariantsPerFamily: ENVIRONMENT_ART_RULES.variants,
     mapTerrainTiles: MAP_TERRAIN_RULES.cacheLimit, visibleMapTerrainTiles: MAP_TERRAIN_RULES.maximumVisibleTiles,
     mapZoom: MAP_ZOOM, nominalMapTerrainSizes: [.2, .1, .04].map(zoom => mapTerrainSize(zoom, 1280, 720)),
     exploration: EXPLORATION_LIMITS },

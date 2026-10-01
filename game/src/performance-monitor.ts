@@ -154,7 +154,7 @@ export class PerformanceMonitor {
       c.stroke();
     }
     if (!this.count) { c.textAlign = 'center'; c.fillStyle = '#9fb2bd'; c.fillText('Collecting frames…', (left + right) / 2, height / 2); }
-    this.range.textContent = `${(duration / 1000).toFixed(1)}s history · ${this.count} frames${graph.unit === 'ms' ? ' · dashed: 60 FPS budget' : ' · count'}`;
+    this.range.textContent = `${(duration / 1000).toFixed(1)}s history · ${this.count} frames${graph.unit === 'ms' ? ' · dashed: 60 FPS budget' : ` · ${graph.unit}`}`;
     if (this.legend.dataset.graph !== graph.id) {
       this.legend.dataset.graph = graph.id; this.legend.replaceChildren();
       for (const item of graph.series) {
@@ -166,7 +166,7 @@ export class PerformanceMonitor {
     const readings = this.legend.querySelectorAll('b');
     graph.series.forEach((item, i) => {
       const value = this.count ? frameValue(this.samples, this.count - 1, item.metric) : 0;
-      readings[i].textContent = graph.unit === 'ms' ? value.toFixed(1) : String(Math.round(value));
+      readings[i].textContent = graph.unit === 'count' ? String(Math.round(value)) : value.toFixed(1);
     });
     this.note.textContent = graph.note;
     this.canvas.setAttribute('aria-label', `${graph.label}, ${graph.unit}. ${Array.from(this.legend.children).map(row => row.textContent).join(', ')}`);

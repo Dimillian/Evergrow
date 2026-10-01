@@ -1,6 +1,6 @@
 import { frameValue, type FrameMetric } from './frame-profiler.ts';
 export interface PerformanceSeries { metric: FrameMetric; label: string; color: string; }
-export interface PerformanceGraph { id: string; label: string; unit: 'ms' | 'count'; note: string; series: readonly PerformanceSeries[]; }
+export interface PerformanceGraph { id: string; label: string; unit: 'ms' | 'count' | 'MiB'; note: string; series: readonly PerformanceSeries[]; }
 const series = (metric: FrameMetric, label: string, color: string): PerformanceSeries => ({ metric, label, color });
 export const PERFORMANCE_GRAPHS: readonly PerformanceGraph[] = [
   { id: 'frames', label: 'Frame timing', unit: 'ms', note: 'Frame interval includes browser scheduling; CPU measures submitted work.', series: [series('frameInterval', 'Frame interval', '#dfc58b'), series('frameCPU', 'CPU work', '#8ddbc3')] },
@@ -9,6 +9,9 @@ export const PERFORMANCE_GRAPHS: readonly PerformanceGraph[] = [
   { id: 'actors', label: 'Props & characters', unit: 'ms', note: 'Drawing cost inside Actors; includes visible props, structures and rigs.', series: [series('props', 'Props', '#8ddbc3'), series('structures', 'Buildings', '#dfc58b'), series('characters', 'Characters', '#85bfe8')] },
   { id: 'scene', label: 'Scene load', unit: 'count', note: 'Living enemies, projectiles and ground effects across the active simulation.', series: [series('enemies', 'Enemies', '#dfc58b'), series('projectiles', 'Projectiles', '#85bfe8'), series('groundEffects', 'Ground effects', '#b3a4e8')] },
   { id: 'terrain', label: 'Terrain streaming', unit: 'count', note: 'Resident worker tiles (or synchronous cache) and outstanding worker tiles.', series: [series('terrainTiles', 'Cached tiles', '#8ddbc3'), series('terrainQueued', 'Pending tiles', '#dfc58b')] },
+  { id: 'visible', label: 'Visible objects', unit: 'count', note: 'Props and living enemy rigs admitted by render bounds, sampled every frame.', series: [series('visibleProps', 'Props', '#8ddbc3'), series('visibleEnemies', 'Enemy rigs', '#dfc58b')] },
+  { id: 'cache', label: 'Scenery cache', unit: 'count', note: 'Sprite lookups, generation misses and evictions per frame across rendering passes.', series: [series('spriteHits', 'Hits', '#8ddbc3'), series('spriteMisses', 'Misses', '#e39a91'), series('spriteEvictions', 'Evictions', '#dfc58b')] },
+  { id: 'memory', label: 'Scenery memory', unit: 'MiB', note: 'Conservative source-plus-derived raster reservation; not measured GPU memory.', series: [series('spriteCacheMiB', 'Reserved', '#85bfe8')] },
 ];
 export function summarizeFrames(samples: Float64Array, count: number) {
   const intervals: number[] = [];

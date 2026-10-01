@@ -98,6 +98,7 @@ import { deriveAttackStats } from './equipment.ts';
 import { hasLineOfSight } from './combat-geometry.ts';
 import { drawEnemyPlate, getEnemyPlateLayout } from './enemy-plate.ts';
 import { drawSiteGround, drawSiteDecor, wildernessLights } from './wilderness-art.ts';
+import { propIntersectsView, enemyIntersectsView } from './render-bounds.ts';
 
 import { EnemyDeaths } from './death-presentation.ts';
 import { drawEnemyRemains, deathDepth, resetDeathArt } from './death-art.ts';
@@ -187,6 +188,8 @@ export class Renderer {
   private ghostTimer = 0;
   private visualTime = 0;
   private get cachedProps() { return this.visibility.props; }
+  private visibleProps: Prop[] = [];
+  private visibleEnemies = 0;
   groundLootLabels: GroundLootLabel[] = [];
   private enemyFocus = new EnemyFocus();
   private battleBarks = new BattleBarkScene();
@@ -217,6 +220,13 @@ export class Renderer {
 
   get combatViewport() { const v = this.lastDisplayedView; return { x: v.left, y: v.top, width: v.width, height: v.height }; }
   get terrainStats() { return this.groundLayer.stats; }
+  get renderStats() {
+    const environment = this.environmentArt.cacheStats, base = this.art.cacheStats;
+    return { visibleProps: this.visibleProps.length, visibleEnemies: this.visibleEnemies,
+      spriteHits: environment.hits + base.hits, spriteMisses: environment.misses + base.misses,
+      spriteEvictions: environment.evictions + base.evictions,
+      spriteCacheMiB: (environment.reservedBytes + base.reservedBytes) / 1048576 };
+  }
   get worldHeight() { return this.view.height; }
   get worldBounds() { return { x: this.view.left, y: this.view.top, width: this.view.width, height: this.view.height }; }
   spawnExclusionBounds(player: Player) {
@@ -293,6 +303,7 @@ export class Renderer {
     this.rewards.reset(); this.experienceFeedback.reset(); this.experienceDisplay = undefined;
     this.enemyFocus.reset(); this.focusedEnemy = this.plateEnemy = null; this.plateOpacity = 0;
     this.visibility.reset();
+    this.art.reset(); this.environmentArt.reset(); this.visibleProps = []; this.visibleEnemies = 0;
   }
 
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
@@ -392,6 +403,11 @@ export class Renderer {
       if (this.plateOpacity < .01) this.plateEnemy = null;
     }
     this.visibility.update(world, this.view);
+    this.visibleProps = this.cachedProps.filter(prop => propIntersectsView(prop, this.view));
+    this.visibleEnemies = 0;
+    this.environmentArt.beginFrame(this.cachedProps, zoom);
+    this.art.beginFrame(this.cachedProps, zoom);
+    this.propSurfaceLight.beginFrame();
     this.siteAftermath = projectSiteAftermath(this.visibility.sites, sim.eventState, id => sim.getCampState(id));
     this.residents=this.cryptFloor?[]:world.getSettlements(left,top,worldWidth,worldHeight).flatMap(t=>settlementResidents(t,sim.time)).filter(n=>n.x>=left-90&&n.x<=left+worldWidth+90&&n.y>=top-90&&n.y<=top+worldHeight+90);
     if(active){
@@ -566,6 +582,7 @@ export class Renderer {
     vignette.addColorStop(0, '#04101900'); vignette.addColorStop(1, '#02081260');
     c.fillStyle = vignette; c.fillRect(0, 0, this.width, this.height);
     this.damageVignette(settings.reducedMotion);
+    if (this.profiler?.enabled) this.profiler.setCounters({ ...this.renderStats, cameraZoom: zoom });
   }
 
   /** Draw after world post-processing into the native-resolution transparent UI surface. */
@@ -725,11 +742,15 @@ export class Renderer {
 
   private actorsAndProps(sim: Simulation, world: World, px: number, py: number, alpha: number, dt: number, settings: RenderSettings) {
     const c = this.ctx, p = sim.player;
-    const entries: Array<{ y: number; stage?: FrameStage; draw: () => void }> = this.cachedProps.map(prop => ({ y: prop.y, stage: 'props', draw: () => {
-      // Prefetched offscreen props retain collision/light coverage without generating unseen sprites.
-      if (prop.x + 115 < this.view.left || prop.x - 115 > this.view.left + this.view.width
-        || prop.y + 10 < this.view.top || prop.y - 230 > this.view.top + this.view.height) return;
+    const entries: Array<{ y: number; stage?: FrameStage; draw: () => void }> = this.visibleProps.map(prop => ({ y: prop.y, stage: 'props', draw: () => {
       const sprite = this.propSprite(prop);
+      const compact = this.view.zoom < .95 && sprite.height * prop.scale * this.view.zoom < 180;
+      const drawLayer = (image: HTMLCanvasElement) => {
+        if (compact && this.propSurfaceLight.drawCompact(c, prop, sprite, image, this.cryptFloor ? undefined : this.sky)) return;
+        c.drawImage(image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+        this.propSurfaceLight.draw(c, prop, sprite, image, this.cryptFloor ? undefined : this.sky);
+        if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, image, world, this.visualTime, settings.reducedMotion, this.sky);
+      };
       const definition = propDefinition(prop.kind);
       const crown = definition.canopy;
       const occludes = crown && py < prop.y + 8 && py > prop.y - (crown.height + crown.radius) * prop.scale
@@ -753,17 +774,13 @@ export class Renderer {
         c.transform(1, 0, -bend * .35, 1 - Math.abs(bend) * .18, 0, 0);
         c.transform(1, 0, wind * -.012, 1, 0, 0);
       }
-      c.drawImage(sprite.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-      this.propSurfaceLight.draw(c, prop, sprite, sprite.image, this.cryptFloor ? undefined : this.sky);
-      if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, sprite.image, world, this.visualTime, settings.reducedMotion, this.sky);
+      drawLayer(sprite.image);
       for (const [layer, foliage] of (sprite.foliage ?? []).entries()) {
         c.save();
         const gust = biomeWind(prop.x, prop.y, this.visualTime - layer * .18, prop.biome ?? 'deadwood', settings.reducedMotion).x * definition.sway * 2.2;
         c.transform(1, 0, gust * (layer ? -.009 : -.005), 1, 0, 0);
         c.globalAlpha *= foliageOpacity;
-        c.drawImage(foliage, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
-        this.propSurfaceLight.draw(c, prop, sprite, foliage, this.cryptFloor ? undefined : this.sky);
-        if (!this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, foliage, world, this.visualTime, settings.reducedMotion, this.sky);
+        drawLayer(foliage);
         c.restore();
       }
       c.restore();
@@ -804,12 +821,10 @@ export class Renderer {
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
       const x = lerp(enemy.prevX, enemy.x, alpha), y = lerp(enemy.prevY, enemy.y, alpha);
-      // Keep simulating pursued rooms, but don't build or draw wholly offscreen rigs.
-      // Generous padding includes bosses, held weapons and status effects.
-      if (x < this.view.left - 256 || x > this.view.left + this.view.width + 256
-        || y < this.view.top - 256 || y > this.view.top + this.view.height + 256) continue;
+      if (!enemyIntersectsView(enemy, x, y, this.view)) continue;
+      this.visibleEnemies++;
       if(p.skillEffects?.harvest?.length)entries.push({y:y+1,draw:()=>drawHarvestMark(c,p,enemy.id,x,y)});
-      entries.push({ y, draw: () => {const scale=enemyVisualScale(enemy);this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
+      entries.push({ y, stage: 'characters', draw: () => {const scale=enemyVisualScale(enemy);this.actor(x, y, { kind: enemy.kind, dungeonTheme:enemy.dungeonTheme, angle: enemy.angle,
         command: enemy.warband?.order, commandWarning: enemy.warband?.warning,
         time: sim.time + enemy.id, effectTime: settings.reducedMotion ? 0 : sim.time + enemy.id, moveAngle: Math.atan2(enemy.vy, enemy.vx),
         moving: Math.min(1, Math.hypot(enemy.vx, enemy.vy) / 70),
@@ -830,7 +845,7 @@ export class Renderer {
         c.restore();
       }});
     }
-    if (settings.phase !== 'ready') entries.push({ y: py, draw: () => {
+    if (settings.phase !== 'ready') entries.push({ y: py, stage: 'characters', draw: () => {
       const pose = playerPose(p, sim.time);
       pose.effectTime = settings.reducedMotion ? 0 : sim.time;
       if (sim.portal.active) { pose.cast = .45 * Math.min(1, sim.portal.progress * 4); pose.castColor = '#b5a0ee'; }

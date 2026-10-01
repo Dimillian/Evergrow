@@ -6,11 +6,40 @@ import { propDefinition } from './biome-props.ts';
 /** A cached relief pass for existing painted sprites. Gear uses its authored normals;
  * scenery keeps its painted facets, with blended directional keys and narrow lit edges. */
 export class PropSurfaceLight {
+  private combined = new WeakMap<HTMLCanvasElement, { image: HTMLCanvasElement; key: string }>();
+  private bakeBudget = 0;
+  beginFrame() { this.bakeBudget = 4; }
   private edges = new WeakMap<HTMLCanvasElement, readonly HTMLCanvasElement[]>();
   private wetMasks = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
   private climates = new WeakMap<Prop, { warm: number; cool: number; wet: number }>();
   private masks = new WeakMap<HTMLCanvasElement, readonly HTMLCanvasElement[]>();
-  reset() { this.masks = new WeakMap(); this.edges = new WeakMap(); this.wetMasks = new WeakMap(); this.climates = new WeakMap(); }
+  reset() { this.masks = new WeakMap(); this.edges = new WeakMap(); this.wetMasks = new WeakMap(); this.climates = new WeakMap(); this.combined = new WeakMap(); }
+  /** Small projected props use one prelit image per independently moving layer.
+   * Slowly changing sky updates are spread over frames, never a whole-forest bake. */
+  drawCompact(c: CanvasRenderingContext2D, prop: Prop, sprite: Sprite, source: HTMLCanvasElement, sky?: SkyState): boolean {
+    if (propDefinition(prop.kind).radius[1] === 0 || propDefinition(prop.kind).emissive) return false;
+    const power = Math.round((sky?.power ?? .95) * 32) / 32;
+    const right = Math.round(Math.max(0, Math.min(1, .5 + (sky?.direction[0] ?? -.56) * .9)) * 32) / 32;
+    const key = `${power}:${right}:${propDefinition(prop.kind).canopy ? 1 : 0}`;
+    let cached = this.combined.get(source);
+    if (cached?.key !== key && this.bakeBudget > 0) {
+      this.bakeBudget--;
+      const image = cached?.image ?? document.createElement('canvas');
+      if (image.width !== source.width || image.height !== source.height) { image.width = source.width; image.height = source.height; }
+      const target = image.getContext('2d')!;
+      target.clearRect(0, 0, image.width, image.height); target.drawImage(source, 0, 0);
+      const opacity = (propDefinition(prop.kind).canopy ? .55 : .85) * power;
+      for (const [flip, weight] of [[false, 1 - right], [true, right]] as const) {
+        if (weight < .001) continue;
+        target.globalAlpha = opacity * weight; target.drawImage(this.mask(source, flip), 0, 0);
+      }
+      target.globalAlpha = 1;
+      cached = { image, key }; this.combined.set(source, cached);
+    }
+    if (!cached) return false;
+    c.drawImage(cached.image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
+    return true;
+  }
   private mask(source: HTMLCanvasElement, right = false) {
     const cached = this.masks.get(source); if (cached) return cached[right ? 1 : 0];
     const images = [false,true].map(flip=>{

@@ -1,8 +1,10 @@
 export const FRAME_STAGES = ['simulation', 'world', 'sceneSetup', 'scenery', 'actors', 'props', 'structures', 'characters', 'terrain', 'water', 'lighting', 'postfx', 'ui', 'monitor'] as const;
 export type FrameStage = typeof FRAME_STAGES[number];
-export const FRAME_COUNTERS = ['enemies', 'projectiles', 'groundEffects', 'terrainTiles', 'terrainQueued'] as const;
+export const FRAME_COUNTERS = ['enemies', 'projectiles', 'groundEffects', 'terrainTiles', 'terrainQueued',
+  'visibleProps', 'visibleEnemies', 'spriteHits', 'spriteMisses', 'spriteEvictions'] as const;
+export const FRAME_GAUGES = ['spriteCacheMiB', 'cameraZoom'] as const;
 export type FrameCounters = Record<typeof FRAME_COUNTERS[number], number>;
-export const FRAME_METRICS = ['timestamp', 'frameInterval', 'frameCPU', ...FRAME_STAGES, 'other', ...FRAME_COUNTERS] as const;
+export const FRAME_METRICS = ['timestamp', 'frameInterval', 'frameCPU', ...FRAME_STAGES, 'other', ...FRAME_COUNTERS, ...FRAME_GAUGES] as const;
 export type FrameMetric = typeof FRAME_METRICS[number];
 export const FRAME_CAPACITY = 600;
 export const FRAME_STRIDE = FRAME_METRICS.length;
@@ -41,9 +43,12 @@ export class FrameProfiler {
     this.current[index.frameInterval] = this.previous === null ? 0 : Math.max(0, now - this.previous);
     this.previous = now;
   }
-  setCounters(counters: FrameCounters) {
+  setCounters(counters: Partial<FrameCounters & Record<typeof FRAME_GAUGES[number], number>>) {
     if (!this.active) return;
-    for (const name of FRAME_COUNTERS) this.current[index[name]] = Math.max(0, counters[name]);
+    for (const name of [...FRAME_COUNTERS, ...FRAME_GAUGES]) {
+      const value = counters[name];
+      if (value !== undefined) this.current[index[name]] = Number.isFinite(value) ? Math.max(0, value) : 0;
+    }
   }
   finish() {
     if (!this.active || !this.recording) return;
@@ -78,7 +83,8 @@ export class FrameProfiler {
       metrics[name] = { p50: at(.5), p95: at(.95), p99: at(.99), max: at(1) };
     }
     const timeline = Array.from({ length: this.count }, (_, i) => Object.fromEntries(FRAME_METRICS.map(name => [name, frameValue(samples, i, name)])));
-    return { enabled: this.active, frames: this.count, units: 'milliseconds', counterUnits: 'count', metrics, timeline,
+    return { enabled: this.active, frames: this.count, units: 'milliseconds', counterUnits: 'count',
+      gaugeUnits: { spriteCacheMiB: 'MiB reserved estimate', cameraZoom: 'ratio' }, metrics, timeline,
       slowFrames: [...timeline].sort((a, b) => b.frameCPU - a.frameCPU).slice(0, 10) };
   }
 }

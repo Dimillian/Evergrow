@@ -6,6 +6,7 @@ import { World, TILE_SIZE, type Prop } from '../src/world.ts';
 import type { Building, Settlement } from '../src/settlements.ts';
 import { getHUDLayout } from '../src/hud.ts';
 import { cameraView, MIN_CAMERA_ZOOM } from '../src/camera.ts';
+import { FrameProfiler } from '../src/frame-profiler.ts';
 
 type Matrix = { a: number; b: number; c: number; d: number; e: number; f: number };
 type Rect = { left: number; top: number; width: number; height: number };
@@ -78,7 +79,7 @@ class EmptyWorld extends World {
   override getGroundTile(): HTMLCanvasElement { return { width: TILE_SIZE, height: TILE_SIZE } as HTMLCanvasElement; }
 }
 
-function fixture(t: TestContext) {
+function fixture(t: TestContext, profiler?: FrameProfiler) {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
   const previousPath = Object.getOwnPropertyDescriptor(globalThis, 'Path2D');
   // Icon paths are opaque to this projection/text recorder, just like canvas fill/stroke.
@@ -92,7 +93,7 @@ function fixture(t: TestContext) {
     if (previousPath) Object.defineProperty(globalThis, 'Path2D', previousPath);
     else Reflect.deleteProperty(globalThis, 'Path2D');
   });
-  const renderer = new Renderer(), world = new EmptyWorld();
+  const renderer = new Renderer(false, profiler), world = new EmptyWorld();
   const sim = new Simulation(world, { spawn: false, startX: -123.25, startY: 67.125 });
   renderer.cameraX = sim.player.x; renderer.cameraY = sim.player.y - 15;
   const canvas = renderer.canvas as unknown as RecordingCanvas;
@@ -104,6 +105,20 @@ function fixture(t: TestContext) {
   };
   return { renderer, sim, world, canvas, settings, render };
 }
+
+test('character timings include the player and visible enemy rigs but exclude wholly offscreen rigs', t => {
+  let clock = 0; const profiler = new FrameProfiler(true, () => ++clock);
+  const { renderer, sim, render } = fixture(t, profiler);
+  profiler.begin(0); render(); profiler.finish();
+  const playerCost = profiler.snapshot().timeline[0].characters;
+  assert.ok(playerCost > 0);
+  sim.spawnEnemy('stalker', sim.player.x + 30, sim.player.y, 'normal');
+  sim.spawnEnemy('stalker', sim.player.x + 4000, sim.player.y, 'normal');
+  profiler.begin(16); render(); profiler.finish();
+  const frame = profiler.snapshot().timeline[1];
+  assert.ok(frame.characters > playerCost); assert.equal(frame.visibleEnemies, 1);
+  assert.equal(renderer.renderStats.visibleEnemies, 1);
+});
 
 test('zooming out while stationary refreshes scene coverage without resizing the world buffer', t => {
   const { renderer, world, canvas, render } = fixture(t);

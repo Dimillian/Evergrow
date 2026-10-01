@@ -1,7 +1,9 @@
 import { weatherStone } from './material-art.ts';
-import { createTreeSprite } from './tree-art.ts';
+import { createTreeSprite, TREE_BOUNDS } from './tree-art.ts';
 import type { Sprite } from './art-types.ts';
 import { hash, randomFromSeed, between, polygon, line, taper, type CanvasFactory, type Point, type Random } from './art-primitives.ts';
+import { SceneryCache, sceneryZoom, SCENERY_SURFACE_RESERVE } from './scenery-cache.ts';
+import type { Prop } from './world.ts';
 
 /** Three bounded raster sizes; geometry and world-space anchors never change. */
 export const propRasterScale = (scale: number): number => scale > 2 ? 4 : scale > 1.25 ? 2 : 1;
@@ -30,9 +32,11 @@ function context(sprite: Sprite): CanvasRenderingContext2D {
 /** Finite variant libraries keep texture memory independent of explored distance. */
 export class ArtLibrary {
   private readonly factory: CanvasFactory;
-  private readonly livingTrees = new Map<number, Sprite>();
-  private readonly deadTrees = new Map<number, Sprite>();
-  private readonly rocks = new Map<number, Sprite>();
+  private readonly scenery = new SceneryCache(96 * 1024 * 1024);
+  private zoom = 1;
+  private rasterDensity = 1;
+  private scene?: readonly Prop[];
+  private frameKeys: string[] = [];
   private readonly grasses = new Map<number, Sprite>();
   private shrine: Sprite | undefined;
 
@@ -45,23 +49,51 @@ export class ArtLibrary {
     });
   }
 
+  get cacheStats() { return this.scenery.stats; }
+  reset() { this.scenery.clear(); this.grasses.clear(); this.shrine = undefined; this.zoom = 1; this.rasterDensity = 1; this.scene = undefined; }
+  beginFrame(props: readonly Prop[], zoom: number) {
+    const nextZoom = sceneryZoom(zoom, this.zoom);
+    if (props !== this.scene || nextZoom !== this.zoom) {
+      this.scene = props; this.zoom = nextZoom; this.rasterDensity = 1;
+      for (const density of [1, .75, .5, .25, .125]) {
+        this.rasterDensity = density;
+        if (this.sceneBytes(props) <= this.scenery.budget) break;
+      }
+      this.frameKeys = props.filter(p => p.kind === 'tree' || p.kind === 'deadTree' || p.kind === 'rock')
+        .map(p => this.key(p.kind, p.seed, p.scale));
+    }
+    this.scenery.beginFrame(this.frameKeys);
+  }
+  private key(kind: string, seed: number, scale: number) {
+    return `${kind}:${hash(seed) % (kind === 'rock' ? ROCK_VARIANTS : TREE_VARIANTS)}:${this.resolution(scale)}`;
+  }
+  private resolution(scale: number) { return Math.max(.5, propRasterScale(scale * Math.min(1, this.zoom)) * this.rasterDensity); }
+  private sceneBytes(props: readonly Prop[]) {
+    const keys = new Set<string>(); let bytes = 0;
+    for (const prop of props) {
+      if (prop.kind !== 'tree' && prop.kind !== 'deadTree' && prop.kind !== 'rock') continue;
+      const key = this.key(prop.kind, prop.seed, prop.scale); if (keys.has(key)) continue; keys.add(key);
+      const [width, height] = prop.kind === 'rock' ? [33, 31] : TREE_BOUNDS[prop.kind];
+      bytes += Math.ceil(width * this.resolution(prop.scale)) * Math.ceil(height * this.resolution(prop.scale)) * (prop.kind === 'tree' ? 3 : 1) * 4 * SCENERY_SURFACE_RESERVE;
+    }
+    return bytes;
+  }
   getTree(seed: number, dead: boolean, scale = 1): Sprite {
-    const variant = hash(seed) % TREE_VARIANTS, resolution = propRasterScale(scale), key = variant + resolution * TREE_VARIANTS;
-    const cache = dead ? this.deadTrees : this.livingTrees;
-    let sprite = cache.get(key);
+    const variant = hash(seed) % TREE_VARIANTS, resolution = this.resolution(scale), key = this.key(dead ? 'deadTree' : 'tree', seed, scale);
+    let sprite = this.scenery.get(key);
     if (!sprite) {
       sprite = createTreeSprite(this.factory, dead ? 'deadTree' : 'tree', hash(variant + (dead ? 8901 : 1741)), resolution);
-      cache.set(key, sprite);
+      this.scenery.set(key, sprite);
     }
     return sprite;
   }
 
   getRock(seed: number, scale = 1): Sprite {
-    const variant = hash(seed) % ROCK_VARIANTS, resolution = propRasterScale(scale), key = variant + resolution * ROCK_VARIANTS;
-    let sprite = this.rocks.get(key);
+    const variant = hash(seed) % ROCK_VARIANTS, resolution = this.resolution(scale), key = this.key('rock', seed, scale);
+    let sprite = this.scenery.get(key);
     if (!sprite) {
       sprite = this.drawRock(randomFromSeed(hash(variant + 6169)), resolution);
-      this.rocks.set(key, sprite);
+      this.scenery.set(key, sprite);
     }
     return sprite;
   }

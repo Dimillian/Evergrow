@@ -5,12 +5,14 @@ import type { Prop } from './world.ts';
 import { drawGlow } from './lighting.ts';
 import { BIOME_PROP_BOUNDS, drawBiomeProp } from './biome-prop-art.ts';
 import type { BiomeWeights } from './biomes.ts';
+import { SceneryCache, sceneryZoom, SCENERY_SURFACE_RESERVE } from './scenery-cache.ts';
+import { propArtSize } from './render-bounds.ts';
 
 type Point = readonly [number, number];
 type CanvasFactory = (width: number, height: number) => HTMLCanvasElement;
 interface ViewRect { x: number; y: number; width: number; height: number; }
 const TAU = Math.PI * 2;
-export const ENVIRONMENT_ART_RULES = Object.freeze({ variants: 24, cacheLimit: 96, ambientCells: 384 });
+export const ENVIRONMENT_ART_RULES = Object.freeze({ variants: 24, cacheBytes: 160 * 1024 * 1024, ambientCells: 384 });
 
 function hash(seed: number): number {
   let n = seed | 0;
@@ -38,7 +40,11 @@ function leaf(c: CanvasRenderingContext2D, from: Point, to: Point, width: number
 
 /** Distinct biome silhouettes from a bounded family of deterministic geometry. */
 export class EnvironmentArt {
-  private cache = new Map<string, Sprite>();
+  private cache = new SceneryCache(ENVIRONMENT_ART_RULES.cacheBytes);
+  private zoom = 1;
+  private rasterDensity = 1;
+  private scene?: readonly Prop[];
+  private frameKeys: string[] = [];
   private factory: CanvasFactory;
 
   constructor(createCanvas?: CanvasFactory) {
@@ -46,22 +52,46 @@ export class EnvironmentArt {
       const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; return canvas;
     });
   }
-  reset() { this.cache.clear(); }
-  get cacheStats() { return { sprites: this.cache.size,
-    pixels: [...this.cache.values()].reduce((pixels, sprite) => pixels + sprite.image.width * sprite.image.height * (1 + (sprite.foliage?.length ?? 0)), 0) }; }
+  reset() { this.cache.clear(); this.zoom = 1; this.scene = undefined; this.rasterDensity = 1; }
+  get cacheStats() { return this.cache.stats; }
+  beginFrame(props: readonly Prop[], zoom: number) {
+    const nextZoom = sceneryZoom(zoom, this.zoom);
+    if (props !== this.scene || nextZoom !== this.zoom) {
+      this.scene = props; this.zoom = nextZoom; this.rasterDensity = 1;
+      // Plan the whole view before generating anything. Enlarged/high-DPI props
+      // cannot churn the cache simply because their raster tier costs more bytes.
+      for (const density of [1, .75, .5, .25, .125]) {
+        this.rasterDensity = density;
+        if (this.sceneBytes(props) <= ENVIRONMENT_ART_RULES.cacheBytes) break;
+      }
+      this.frameKeys = props.map(prop => this.key(prop));
+    }
+    this.cache.beginFrame(this.frameKeys);
+  }
+  private resolution(prop: Prop) { return Math.max(.5, propRasterScale(prop.scale * Math.min(1, this.zoom)) * this.rasterDensity); }
+  private key(prop: Prop) { return `${prop.kind}:${hash(prop.seed) % ENVIRONMENT_ART_RULES.variants}:${this.resolution(prop)}`; }
+  private sceneBytes(props: readonly Prop[]) {
+    const keys = new Set<string>(); let bytes = 0;
+    for (const prop of props) {
+      if (['tree', 'deadTree', 'rock', 'shrine'].includes(prop.kind)) continue;
+      const key = this.key(prop); if (keys.has(key)) continue; keys.add(key);
+      const [width, height] = propArtSize(prop), layers = isTreeKind(prop.kind) && prop.kind !== 'charredTree' ? 3 : 1;
+      bytes += Math.ceil(width * this.resolution(prop)) * Math.ceil(height * this.resolution(prop)) * layers * 4 * SCENERY_SURFACE_RESERVE;
+    }
+    return bytes;
+  }
 
   getSprite(prop: Prop): Sprite | null {
     const family = prop.kind, bounds = BIOME_PROP_BOUNDS[family];
     if (!bounds && !isTreeKind(family) && !['reeds', 'fern', 'flowers'].includes(family)) return null;
     if (family === 'tree' || family === 'deadTree') return null;
-    const resolution = propRasterScale(prop.scale);
-    const variant = hash(prop.seed) % ENVIRONMENT_ART_RULES.variants, key = `${family}:${variant}:${resolution}`;
+    const resolution = this.resolution(prop);
+    const variant = hash(prop.seed) % ENVIRONMENT_ART_RULES.variants, key = this.key(prop);
     const existing = this.cache.get(key);
-    if (existing) { this.cache.delete(key); this.cache.set(key, existing); return existing; }
+    if (existing) return existing;
     if (isTreeKind(family)) {
       const sprite = createTreeSprite(this.factory, family, hash(variant + family.length * 313), resolution);
       this.cache.set(key, sprite);
-      if (this.cache.size > ENVIRONMENT_ART_RULES.cacheLimit) this.cache.delete(this.cache.keys().next().value!);
       return sprite;
     }
     const width = bounds?.[0] ?? (family === 'fern' ? 52 : family === 'reeds' ? 42 : 34);
@@ -78,7 +108,6 @@ export class EnvironmentArt {
     else if (family === 'fern') this.fern(c, seed);
     else this.flowers(c, seed);
     this.cache.set(key, sprite);
-    if (this.cache.size > ENVIRONMENT_ART_RULES.cacheLimit) this.cache.delete(this.cache.keys().next().value!);
     return sprite;
   }
 

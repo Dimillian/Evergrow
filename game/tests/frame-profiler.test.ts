@@ -4,6 +4,17 @@ import { FrameProfiler, FRAME_CAPACITY, FRAME_STRIDE, frameValue } from '../src/
 import { PERFORMANCE_GRAPHS, summarizeFrames } from '../src/performance-graphs.ts';
 const buffer = () => new Float64Array(FRAME_CAPACITY * FRAME_STRIDE);
 
+test('per-frame rendering counts and gauges survive slower simulation-counter updates and export with units', () => {
+  const profiler = new FrameProfiler(true, () => 0);
+  profiler.begin(0); profiler.setCounters({ visibleProps: 218, spriteMisses: 41, spriteCacheMiB: 12.5, cameraZoom: .8 });
+  profiler.setCounters({ enemies: 12 }); profiler.finish();
+  profiler.begin(16); profiler.setCounters({ visibleProps: 218, spriteMisses: 0 }); profiler.finish();
+  const report = profiler.snapshot();
+  assert.equal(report.timeline[0].spriteMisses, 41); assert.equal(report.timeline[1].spriteMisses, 0);
+  assert.equal(report.timeline[1].enemies, 12); assert.equal(report.timeline[0].cameraZoom, .8);
+  assert.equal(report.gaugeUnits.spriteCacheMiB, 'MiB reserved estimate');
+});
+
 test('chronological ring stays bounded after wrap and retains aligned counters', () => {
   let clock = 0;
   const profiler = new FrameProfiler(true, () => clock);
@@ -62,6 +73,6 @@ test('graph summaries use frame-count over elapsed time and all dropdown metrics
   const samples = buffer(), count = profiler.copySamples(samples);
   const summary = summarizeFrames(samples, count);
   assert.equal(summary.fps, 30); assert.equal(summary.p95, 80); assert.equal(summary.hitches, 1);
-  assert.equal(new Set(PERFORMANCE_GRAPHS.map(graph => graph.id)).size, 6);
+  assert.equal(new Set(PERFORMANCE_GRAPHS.map(graph => graph.id)).size, PERFORMANCE_GRAPHS.length);
   for (const graph of PERFORMANCE_GRAPHS) for (const series of graph.series) assert.ok(Number.isFinite(frameValue(samples, 0, series.metric)));
 });

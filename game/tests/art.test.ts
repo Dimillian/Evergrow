@@ -102,7 +102,7 @@ test('appearance study parts preserve finite drawing and canvas state across cov
   }
 });
 
-test('travelling through thousands of prop seeds reuses a finite procedural sprite library', () => {
+test('travelling through thousands of prop seeds bounds resident rasters and reuses warm geometry', () => {
   const canvases: Array<{ width: number; height: number; context: ArtContext }> = [];
   const art = new ArtLibrary((width, height) => {
     const canvas = { width, height, context: new ArtContext(), getContext() { return this.context; } };
@@ -112,13 +112,12 @@ test('travelling through thousands of prop seeds reuses a finite procedural spri
   const first = [art.getTree(42, false), art.getTree(42, true), art.getRock(42), art.getGrass(42), art.getShrine()];
   for (let seed = -5000; seed <= 5000; seed++) {
     art.getTree(seed, false); art.getTree(seed, true); art.getRock(seed); art.getGrass(seed); art.getShrine();
+    assert.ok(art.cacheStats.reservedBytes <= 96 * 1024 * 1024);
   }
-  assert.ok(canvases.length <= 257, '48 layered living trees, 48 dead trees, 32 rocks, 32 grasses, one shrine');
-  const storedPixels = canvases.reduce((sum, canvas) => sum + canvas.width * canvas.height, 0);
-  assert.ok(storedPixels * 4 < 20 * 1024 * 1024, 'the full layered RGBA prop library stays below 20MiB');
-  const commands = canvases.reduce((sum, canvas) => sum + canvas.context.commands, 0);
   const again = [art.getTree(42, false), art.getTree(42, true), art.getRock(42), art.getGrass(42), art.getShrine()];
-  assert.ok(again.every((sprite, index) => sprite === first[index]));
+  assert.deepEqual(again.map(s => [s.width, s.height, s.anchorX, s.anchorY]), first.map(s => [s.width, s.height, s.anchorX, s.anchorY]), 'eviction never changes geometry');
+  const commands = canvases.reduce((sum, canvas) => sum + canvas.context.commands, 0);
+  assert.deepEqual([art.getTree(42, false), art.getTree(42, true), art.getRock(42), art.getGrass(42), art.getShrine()], again);
   assert.equal(canvases.reduce((sum, canvas) => sum + canvas.context.commands, 0), commands,
     'cache hits never redraw the geometry');
 });

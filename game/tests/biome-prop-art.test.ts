@@ -46,15 +46,14 @@ test('all biome sprite families emit finite unclipped geometry from reproducible
     const calls = contexts.length;
     assert.equal(art.getSprite(prop(kind, seed)), sprite, 'a cache hit reuses the actual procedural sprite');
     assert.equal(contexts.length, calls);
-    assert.ok(art.cacheStats.sprites <= ENVIRONMENT_ART_RULES.cacheLimit);
-    assert.ok(art.cacheStats.pixels * 4 <= ENVIRONMENT_ART_RULES.cacheLimit * 186 * 182 * 3 * 4);
+    assert.ok(art.cacheStats.reservedBytes <= ENVIRONMENT_ART_RULES.cacheBytes);
   }
   for (const { width, height, context } of contexts) for (const [x, y] of context.points) {
     assert.ok(x >= -.01 && x <= width + .01 && y >= -.01 && y <= height + .01,
       `sprite point ${x.toFixed(2)},${y.toFixed(2)} stays within ${width}×${height}`);
   }
   for (const kind of ['tree', 'deadTree', 'rock', 'shrine'] as const) assert.equal(art.getSprite(prop(kind)), null, 'base atlas owns this family');
-  art.reset(); assert.deepEqual(art.cacheStats, { sprites: 0, pixels: 0 });
+  art.reset(); assert.deepEqual(art.cacheStats, { sprites: 0, pixels: 0, reservedBytes: 0, hits: 0, misses: 0, evictions: 0 });
   assert.equal(Object.keys(BIOME_PROP_BOUNDS).length, 16);
 });
 

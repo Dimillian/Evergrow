@@ -1,5 +1,39 @@
 # Walking and terrain performance
 
+## Zoomed-out rendering (October 1, 2026, local)
+
+This pass targets scenery and rig rendering. Gameplay population, 120 Hz simulation, targeting, world generation and saves are unchanged.
+
+- `scenery-cache.ts` replaces the environment's 96-entry eviction policy with byte-budgeted scene retention. Environment and base scenery reserve at most 160 MiB and 96 MiB respectively, including a conservative 12× allowance for source-associated lighting/shadow surfaces. These are raster reservations, not measured GPU/process memory or a budget for the entire renderer. Independent terrain, water and other caches retain their own limits.
+- Each library plans all candidate sprite keys before any render pass. Raster tiers follow camera zoom with hysteresis; if the view's estimated working set exceeds its budget, tiers step down to a minimum half-resolution source. Logical geometry, collision, depth ordering and independently moving foliage stay unchanged. Inactive entries evict first. If even the minimum tier exceeds the budget, bounded eviction still applies; arbitrary oversized review views are not guaranteed zero misses.
+- Props are rejected using scaled source bounds plus wind/bending allowance **before** allocating and sorting draw entries. Enemy rigs use rank-scaled body, weapon/recoil and status-effect envelopes instead of a blanket 256-unit margin. Attack warnings remain in their independent pass.
+- At zoom below 0.95, non-emissive props under 180 projected logical pixels can use a cached combined base/relief image for each moving layer. Fine outdoor edge glints/wet sheen are omitted for those compact layers. Canopy movement and player-occlusion alpha remain live. Sky changes use small quantized lighting steps, with at most four layer bakes per frame; missing combined layers initially use the existing detail path.
+- F3's **Characters** timing includes player and enemy rigs as well as NPCs. **Visible objects**, **Scenery cache**, and **Scenery memory** show render admissions, per-frame hits/misses/evictions, and reserved raster MiB. JSON exports include camera zoom and gauge units. Rendering counters are sampled every frame; simulation population counters retain their 10 Hz updates. Nested timings are not additive.
+
+### Repeatable zoom comparisons
+
+**Data & audits → Zoom rendering benchmark** (`/tools/audits.html`) runs only when its button is pressed. It uses the real Renderer and PostFX on frozen forest (seed 18427, center 5000/5000), river (seed 7319), and 256-enemy rift (seed 7342) fixtures, at a 1209 × 680 logical viewport. Each fixture is compared at 1.8×, 1× and 0.8× after 90 warmup frames, with 120 captured frames. The table reports CPU median/p95/p99, admitted props/enemies and p95 sprite misses. Export JSON retains full captures. Cancel and page exit release the study; operating-system reduced motion is respected and recorded. No AI ticks, gameplay input or save access occur. Frozen terrain uses the synchronous path, so this does not measure runtime worker streaming.
+
+An optional native Canvas equivalent runs without a browser:
+
+```sh
+CANVAS_MODULE=/absolute/path/to/@napi-rs/canvas node --expose-gc --experimental-strip-types game/scripts/benchmark-zoom-rendering.mjs /tmp/zoom-rendering.json
+```
+
+`ZOOM_SCENE=forest`, `ZOOM_LEVEL=0.8`, `ZOOM_WARMUP=90`, `ZOOM_FRAMES=120`, and `ZOOM_CAPTURE_DIR=/tmp/zoom-captures` optionally narrow the run or export images. `ZOOM_BENCH_SOURCE` selects another checkout's absolute `game/src` directory; an older checkout must also receive the identical `zoom-benchmark-scenes.ts` fixture. Native runs release the destination display list and force GC between frames to bound Skia snapshot retention. CPU measurements include native raster completion but exclude that cleanup, WebGL, browser scheduling and terrain workers. They are not browser FPS measurements.
+
+Regression coverage includes the reported forest's former cache-churn access sequence, working-set eviction and hard byte limits, zoom-tier hysteresis and geometry preservation, bounded combined-light bakes, scaled render bounds, and player/enemy profiler integration. Use F3 exports on the affected device for sustained gameplay acceptance, including movement, combat effects and GPU pressure.
+
+### Local verification
+
+All nine final native captures (three scenes × three zoom levels, 90 warmup and 30 measured frames each) completed with **zero warmed sprite rebuilds and zero sprite evictions**. This does not imply zero terrain, lighting or effect work.
+
+The native forest comparison against `0370246` used 90 warmup frames and 30 measured frames at 0.8×. The previous renderer generated **41 new scenery sprites on every measured frame**; the updated renderer generated **zero**, with zero sprite evictions. The revised image retains full-resolution canopy sources in this fixture; its combined shading deliberately omits small moving edge glints. Source/derived raster reservations for both scenery libraries together were approximately 146 MiB, not a measurement of process or GPU memory.
+
+For the unchanged 256-enemy rift fixture, conservative bounds reduce rig submissions from **129 to 76** at 1.8×, **201 to 141** at 1×, and **230 to 182** at 0.8×. All 256 actors remain in simulation. These deterministic work counts are independent of host speed. Native timings were collected on a shared cloud CPU and are not used to claim browser FPS or device frame-time gains.
+
+Application/headless type checks and the production build pass. The 1,777-test suite exercised the change; one unrelated cloud-worker acknowledgement timeout (including its parent test) passed on an isolated rerun of all 38 cloud-cadence tests. The final scenery/art regression group also passed all 17 tests after raster-policy refinement. No automated browser gameplay was run.
+
 The September 6, 2026 checkpoint reduces terrain-boundary stalls and repeated procedural queries. It preserves terrain detail, world generation, collision and combat rules.
 
 ## Rendering and query changes
