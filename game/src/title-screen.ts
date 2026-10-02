@@ -1,5 +1,6 @@
+import { bindTitleLight } from './title-light.ts';
 import { titleCharacterDetails, titleCharacterLoading } from './title-character-details.ts';
-import { gameEmblemSVG } from './game-emblem.ts';
+import { gameEmblemSVG, gameIdentityMarkup } from './game-emblem.ts';
 import { drawTitlePlinth } from './title-plinth.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import type { EquipmentSlot } from './character-types.ts';
@@ -68,6 +69,7 @@ export class TitleScreen {
   private abort = new AbortController();
   private focus?: { dispose(): void };
   private frame = 0;
+  private resetTitleLight?: () => void;
   private framePacer = new FramePacer(60);
   private confirming: 'delete' | 'cloud' | null = null;
   private loading = false;
@@ -81,13 +83,14 @@ export class TitleScreen {
     this.motion.addEventListener('change', () => { this.portraitDirty = true; }, { signal: this.abort.signal });
     this.element = document.createElement('div'); this.element.className = 'title-screen'; this.element.hidden = true;
     this.element.innerHTML = `<details class="title-audio"><summary aria-label="Audio options">Sound <kbd class="audio-pad-key">Y</kbd></summary>${audioControlsMarkup(true)}</details><div class="title-vignette" aria-hidden="true"></div>
-      <header class="title-brand"><div class="title-identity"><div class="title-emblem" aria-hidden="true">${gameEmblemSVG()}</div><h1>EVERGROW</h1></div><nav class="title-home-nav" aria-label="Home">${homePages.map(page=>`<button data-home-page="${page}" aria-current="${page==='characters'?'page':'false'}">${homeLabels[page]}${page==='changelog'?'<i class="home-unread" aria-label="Unread update" hidden></i>':''}</button>`).join('')}</nav><span class="home-pad-hint">LB / RB</span></header>
+      <header class="title-brand">${gameIdentityMarkup(true, true)}<nav class="title-home-nav" aria-label="Home">${homePages.map(page=>`<button data-home-page="${page}" aria-current="${page==='characters'?'page':'false'}">${homeLabels[page]}${page==='changelog'?'<i class="home-unread" aria-label="Unread update" hidden></i>':''}</button>`).join('')}</nav><span class="home-pad-hint">LB / RB</span></header>
       <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas></section>
       <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div></div></section><section class="title-dossier ui-window" aria-label="Character details"><div class="title-selection"></div>
       <footer class="title-roster-footer"><span class="title-storage-status" role="status"></span><a class="title-signout" href="/signout-with-chatgpt?return_to=/" target="_top" hidden>Sign out</a><span class="title-transfer"><button data-action="import">Import</button><button data-action="download">Download</button></span></footer>
       <div class="title-cloud-recovery" hidden><p class="title-cloud-message" role="status"></p><button class="ui-button" data-action="retry">Retry</button><a class="ui-button" href="/signin-with-chatgpt?return_to=/" target="_top" hidden>Sign in again</a></div>
       <p class="title-save-message" role="status" hidden></p><input type="file" class="title-file" accept=".json,application/json" hidden></section><section class="title-library ui-window" hidden aria-label="Home content"></section>`;
+    this.resetTitleLight = bindTitleLight(this.element.querySelector<HTMLElement>('.title-identity')!, this.abort.signal);
     const refreshAudio = this.refreshAudio = bindAudioControls(this.element, actions, this.abort.signal);
     this.element.querySelector('details.title-audio')!.addEventListener('toggle', event => {
       refreshAudio(); actions.panelSound?.((event.target as HTMLDetailsElement).open);
@@ -327,7 +330,7 @@ export class TitleScreen {
     target.textContent = text; target.hidden = !text;
     if (retry) target.insertAdjacentHTML('beforeend', ' <button class="ui-button" data-action="refresh-selection">Retry</button>');
   }
-  close() { this.itemTooltip.hide(); this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
+  close() { this.resetTitleLight?.(); this.itemTooltip.hide(); this.changelog.close(false); this.chronicle.close(false); this.leaderboard.close(); this.element.inert = false; this.inspection++; this.element.hidden = true; this.focus?.dispose(); this.focus = undefined; cancelAnimationFrame(this.frame); this.frame = 0; }
   dispose() { this.close(); this.portraitObserver.disconnect(); this.itemTooltip.dispose(); this.changelog.dispose(); this.chronicle.dispose(); this.leaderboard.dispose(); this.abort.abort(); this.element.remove(); }
   private rollSeed() { const value = String(crypto.getRandomValues(new Uint32Array(1))[0]); this.seedDrafts.set(this.selected, value); return value; }
   private validateSeed(input: HTMLInputElement) { const seed = parseWorldSeed(input.value); input.setCustomValidity(seed === null ? 'Use a whole number from 0 to 4294967295.' : ''); return seed; }
@@ -376,7 +379,7 @@ export class TitleScreen {
     }
     if (!canUse) {
       if (this.source.status === 'Unavailable') { selection.innerHTML = '<div class="title-signin"><p>Cloud unavailable</p><button class="ui-button" data-action="retry">Retry</button></div>'; return; }
-      selection.innerHTML = `<div class="title-signin"><span class="title-signin-crest" aria-hidden="true">${uiIcon('skilltree')}</span><a class="ui-button ui-button--primary" href="/signin-with-chatgpt?return_to=/" target="_top">Sign in with ChatGPT</a><p>Continue on any browser.</p></div>`; return;
+      selection.innerHTML = `<div class="title-signin"><span class="title-signin-crest" aria-hidden="true">${gameEmblemSVG(52)}</span><a class="ui-button ui-button--primary" href="/signin-with-chatgpt?return_to=/" target="_top">Sign in with ChatGPT</a><p>Continue on any browser.</p></div>`; return;
     }
     if (this.confirming) {
       const deleteMessage = slot?.conflict

@@ -1,3 +1,4 @@
+import { gameIdentityMarkup } from './game-emblem.ts';
 import { controls } from './control-preferences.ts';
 import { uiIcon } from './ui-icons.ts';
 import { escapeUI } from './ui-components.ts';
@@ -5,7 +6,7 @@ import { PAUSE_CATEGORIES } from './pause-navigation.ts';
 
 export function pauseMenuMarkup(kills: number, duration: string, location: string): string {
   return `<div class="pause-menu-stack">
-    <div class="pause-brand" aria-label="Evergrow">EVERGROW</div>
+    <div class="pause-brand">${gameIdentityMarkup()}</div>
     <section class="ui-window menu-window pause-menu">
     <header class="ui-window-header pause-header">
       <div class="pause-heading">${uiIcon('pause')}<h1 id="menu-title" class="ui-title">Paused</h1></div>

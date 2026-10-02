@@ -30,7 +30,6 @@
 }
 @media(max-width:700px) {
  .title-brand { flex-wrap:wrap; gap:8px 12px; }
- .title-brand h1 { font-size:25px; }
  .title-home-nav { order:3; flex-basis:100%; justify-content:space-between; padding:3px; }
  .title-home-nav button { flex:1; padding:9px 5px; font-size:14px; }
  .title-screen.is-controller .home-pad-hint { margin-left:auto; }

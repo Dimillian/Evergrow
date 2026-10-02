@@ -1,3 +1,17 @@
-:root { --game-wordmark-size: clamp(28px, 3.2vw, 48px); }
-.title-brand h1, .pause-brand { font-family: var(--ui-font); font-size: var(--game-wordmark-size); font-weight: 400; letter-spacing: .18em; line-height: 1; margin: 0; color: #e7dfc6; text-shadow: 0 2px #111921, 0 0 40px #b4c1a940; }
-@media (max-width: 1050px), (max-height: 600px) { :root { --game-wordmark-size: 29px; } }
+:root { --game-wordmark-size: clamp(26px, 2.5vw, 34px); }
+.game-identity { position:relative; isolation:isolate; display:flex; align-items:center; gap:8px; min-width:0; flex:none; font-size:var(--game-wordmark-size); }
+.game-emblem { width:1em; height:1.18em; flex:none; opacity:.85; }
+.game-emblem svg { display:block; width:100%; height:100%; overflow:visible; }
+.game-identity .game-name { position:relative; font:400 1em/1 var(--ui-font); letter-spacing:.11em; color:#e5f0dc; text-shadow:0 2px 2px #061019; padding:0; margin:0 -.11em 0 0; }
+@supports (background-clip:text) {
+ .game-identity .game-name { background:linear-gradient(175deg,#f4f0d6 10%,#d8efdc 45%,#88bcae 75%,#dfd5b0); background-clip:text; -webkit-background-clip:text; color:transparent; text-shadow:none; filter:drop-shadow(0 2px 1px #07131e); }
+ .title-identity.is-lit .game-name { background-image:radial-gradient(ellipse 65px 75px at var(--text-light-x,50%) var(--text-light-y,50%),#fff9df 0%,#ffd795cc 30%,#ffba5900 100%),linear-gradient(175deg,#f4f0d6 10%,#d8efdc 45%,#88bcae 75%,#dfd5b0); }
+}
+/* Light lives behind the mark and inside its panes, never in a page-wide filter. */
+.title-identity::before { content:''; position:absolute; z-index:-1; pointer-events:none; width:160px; height:120px; left:var(--brand-light-x,50%); top:var(--brand-light-y,50%); transform:translate(-50%,-50%); opacity:0; background:radial-gradient(ellipse at 50% 60%,#ffd39030 0%,#eabb6515 27%,#65dbb30a 48%,#65dbb300 70%); transition:opacity 220ms ease; }
+.title-identity.is-lit::before { opacity:1; animation:brand-flame-breathe 1.7s ease-in-out infinite alternate; }
+.game-emblem-light { opacity:0; transition:opacity 220ms ease; }
+.title-identity.is-lit .game-emblem-light { opacity:1; }
+@keyframes brand-flame-breathe { from { opacity:.7; } to { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .title-identity::before,.game-emblem-light { transition:none; animation:none !important; } }
+@media (max-width:1050px),(max-height:600px) { :root { --game-wordmark-size:29px; } }

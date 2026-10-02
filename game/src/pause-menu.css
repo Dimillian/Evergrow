@@ -62,7 +62,7 @@
   .pause-utilities, .pause-footer { padding-block: 5px; }
 }
 
-.pause-brand { position: absolute; bottom: calc(100% + var(--pause-brand-gap)); width: 100%; text-align: center; text-indent: .18em; }
+.pause-brand { position: absolute; bottom: calc(100% + var(--pause-brand-gap)); width: 100%; display:flex; justify-content:center; }
 @media (max-height: 500px) { .pause-menu-stack { --pause-brand-gap: 12px; } }
 
 .controls-cursors { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 2px 0 14px; border-bottom: 1px solid var(--ui-line); margin-bottom: 8px; }

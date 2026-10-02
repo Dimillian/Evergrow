@@ -1,3 +1,4 @@
+import { gameEmblemSVG } from './game-emblem.ts';
 import { weaponEnhancementRank } from './enhancement-art.ts';
 import './character-editor.css';
 import { bindArmorTintPrompt } from './armor-tint-prompt.ts';
@@ -46,7 +47,7 @@ const selectOptions = (options: readonly { id: string; name: string }[]) => opti
 const swatches = (key: 'skin' | 'hairColor', palettes: readonly AppearancePalette[]) => palettes.map((p,index) => `<button type="button" class="swatch" style="--swatch:${p.base}" data-choice="${key}" data-value="${p.id}" data-page="${Math.floor(index/8)}" aria-label="${key === 'skin' ? 'Skin tone' : 'Hair color'}: ${p.name}" title="${p.name}" aria-pressed="false"></button>`).join('');
 const pager=(key:keyof typeof pages,title:string)=>`<span class="section-pager"><button type="button" class="page-arrow prev" data-page-key="${key}" data-step="-1" aria-label="Previous ${title} page">${uiIcon('chevron')}</button><output data-page-label="${key}" aria-live="polite"></output><button type="button" class="page-arrow" data-page-key="${key}" data-step="1" aria-label="Next ${title} page">${uiIcon('chevron')}</button></span>`;
 root.innerHTML = `<div class="editor-shell">
-  <header class="editor-header"><div class="editor-brand">${uiIcon('star')}<span>EVERGROW</span></div>${options.onInventory?`<button type="button" class="ui-button ui-button--quiet" id="inventory-preview" aria-label="Inventory preview">${uiIcon('inventory')} <span>Inventory preview</span></button>`:`<button type="button" class="ui-button ui-button--quiet ui-button--icon" id="close-editor" aria-label="Close editor">${uiIcon('close')}</button>`}</header>
+  <header class="editor-header"><div class="editor-brand">${gameEmblemSVG(25)}<span>EVERGROW</span></div>${options.onInventory?`<button type="button" class="ui-button ui-button--quiet" id="inventory-preview" aria-label="Inventory preview">${uiIcon('inventory')} <span>Inventory preview</span></button>`:`<button type="button" class="ui-button ui-button--quiet ui-button--icon" id="close-editor" aria-label="Close editor">${uiIcon('close')}</button>`}</header>
   <div class="editor-layout">
     <section class="editor-stage" aria-label="Character preview">
       <div class="stage-title"><h1 id="preview-name">Rowan</h1><span>Appearance preview</span></div>

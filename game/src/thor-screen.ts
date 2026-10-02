@@ -1,3 +1,4 @@
+import { gameEmblemSVG } from './game-emblem.ts';
 import { UITooltipStack } from './ui-tooltip-stack.ts';
 import { effectExplanation } from './effect-terms.ts';
 import { loadGameFont } from './font.ts';
@@ -36,7 +37,7 @@ const send = (command: ThorAction) => {
     if(previewAction){previewAction(command);return;}
     window.EvergrowCompanion?.command(JSON.stringify({ ...command, session: state.session }));
 };
-root.innerHTML = `<div class="thor-shell"><header class="thor-header"><span class="thor-sigil">${uiIcon('star')}</span><div><h1 id="thor-name">EVERGROW</h1><span id="thor-zone"></span></div><span id="thor-level"></span></header>
+root.innerHTML = `<div class="thor-shell"><header class="thor-header"><span class="thor-sigil">${gameEmblemSVG(28)}</span><div><h1 id="thor-name">EVERGROW</h1><span id="thor-zone"></span></div><span id="thor-level"></span></header>
 <div class="thor-resources"><div class="thor-life"><i></i><span></span></div><div class="thor-mana"><i></i><span></span></div></div>
 <nav class="thor-tabs" aria-label="Companion panels">${[['map', 'Map', 'map'], ['pack', 'Pack', 'inventory'], ['build', 'Build', 'character']].map(([id, label, icon]) => `<button data-tab="${id}" aria-selected="${id === 'map'}">${uiIcon(icon as Parameters<typeof uiIcon>[0])}<span>${label}</span><em data-badge="${id}"></em></button>`).join('')}</nav>
 <section class="thor-content" id="thor-content"></section><footer class="thor-footer"><button data-panel="journeys">${uiIcon('journal')}<span>Journal</span></button><button data-action="portal">${uiIcon('star')}<span>Portal</span></button><button data-action="resume" id="thor-resume">${uiIcon('close')}<span>Resume</span></button></footer><div class="thor-xp"><i></i></div><div id="thor-detail" class="thor-detail" hidden></div></div>`;

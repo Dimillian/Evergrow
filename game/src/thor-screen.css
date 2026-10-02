@@ -73,9 +73,6 @@ h1,h2,p {
   font-size: 10px
 }
 .thor-sigil {
-  border: 1px solid #556c74;
-  outline: 4px solid #34495122;
-  border-radius: 50%;
   display: grid;
   place-items: center;
   color: #b4ced4;
@@ -84,8 +81,8 @@ h1,h2,p {
   height: 27px
 }
 .thor-sigil svg {
-  width: 21px;
-  height: 21px
+  width: 27px;
+  height: 27px
 }
 #thor-level {
   margin-left: auto;
