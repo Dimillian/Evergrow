@@ -7,7 +7,7 @@ import { dungeonInteractionChests, dungeonRunChest, dungeonRunExit } from './dun
 import { EnemyOutlineArt } from './enemy-outline-art.ts';
 import { RIFT_RULES } from './rift-content.ts';
 import { enemyVisualScale } from './enemy-modifiers.ts';
-import { drawRiftPortal, drawRiftArrival } from './rift-art.ts';
+import { drawRiftPortal, drawRiftPortalEmission, riftPortalLight, drawRiftArrival } from './rift-art.ts';
 import type { DungeonFloor } from './dungeon.ts';
 import { controls, cursorPreference } from './control-preferences.ts';
 import { drawMouseCursor } from './cursor-art.ts';
@@ -468,7 +468,7 @@ export class Renderer {
     const dungeonRun=currentDungeon(sim.expeditions);
     this.riftAtmosphere.prepare(world,this.view,sim.dungeonFloor?.rift?dungeonRun?.rift:undefined,settings.reducedMotion);
     if(this.cryptFloor&&dungeonRun) drawCryptDecor(c,this.cryptFloor,dungeonRun,settings.reducedMotion ? 0 : this.visualTime,this.eventArt.chests,settings.reducedMotion);
-    else if(sim.dungeonFloor?.rift&&dungeonRun?.rift){const f=sim.dungeonFloor;drawRiftPortal(c,f.entry.x,f.entry.y,this.visualTime,.65);if(dungeonRun.rift.phase==='complete'){const exit=dungeonRunExit(f,dungeonRun);drawRiftPortal(c,exit.x,exit.y,this.visualTime,.65);const ch=dungeonRunChest(f,dungeonRun,2);this.eventArt.chests.draw(c,`${dungeonRun.entrance.id}:chest`,ch.x,ch.y,dungeonRun.rift.claimed,this.visualTime,0,true,settings.reducedMotion);}}
+    else if(sim.dungeonFloor?.rift&&dungeonRun?.rift){const f=sim.dungeonFloor;drawRiftPortal(c,f.entry.x,f.entry.y,settings.reducedMotion?0:this.visualTime,.65);if(dungeonRun.rift.phase==='complete'){const exit=dungeonRunExit(f,dungeonRun);drawRiftPortal(c,exit.x,exit.y,settings.reducedMotion?0:this.visualTime,.65);const ch=dungeonRunChest(f,dungeonRun,2);this.eventArt.chests.draw(c,`${dungeonRun.entrance.id}:chest`,ch.x,ch.y,dungeonRun.rift.claimed,this.visualTime,0,true,settings.reducedMotion);}}
     else for(const entrance of this.visibility.entrances)drawCryptGate(c,entrance,this.visualTime);
     for (const site of this.visibility.sites) drawSiteGround(c, site, settings.reducedMotion ? 0 : this.visualTime, this.siteAftermath.get(site.id));
     this.settlementArt.drawGround(c, this.cachedBuildings, this.visualTime, this.sky);
@@ -553,6 +553,12 @@ export class Renderer {
       const start = this.profiler?.start() ?? 0; this.outdoorLightEffects.draw(c, this.view, true); this.profiler?.end('lighting', start);
     }
     if (!this.cryptFloor) this.settlementArt.drawNightEmission(c,this.cachedBuildings,this.visualTime,this.sky);
+    const portalTime=settings.reducedMotion?0:this.visualTime;
+    for(const b of this.cachedBuildings)if(b.kind==='rift')drawRiftPortalEmission(c,b.x+b.width/2,b.y+b.height,portalTime);
+    if(sim.dungeonFloor?.rift&&dungeonRun?.rift){
+      const floor=sim.dungeonFloor;drawRiftPortalEmission(c,floor.entry.x,floor.entry.y,portalTime,.65);
+      if(dungeonRun.rift.phase==='complete'){const exit=dungeonRunExit(floor,dungeonRun);drawRiftPortalEmission(c,exit.x,exit.y,portalTime,.65);}
+    }
     // Emission is composed after surface illumination, so a hot core stays luminous.
     this.emitters(sim, alpha, lights, settings.reducedMotion);
     const arrival=dungeonRun?.rift?.guardian;
@@ -904,7 +910,14 @@ export class Renderer {
     heldPose.effectTime = reducedMotion ? 0 : sim.time;
     const heldLights = this.equipmentEmitters = heldEquipmentLights(heldPose, px, py);
     const lights: PointLight[] = [{ x: px, y: py - 15, radius: this.cryptFloor ? 250 : 185, color: this.cryptFloor || heldLights.length ? '#c0cbd8' : '#ffcf87', power: (this.cryptFloor ? .85 : .58) * (heldLights.length ? .65 : 1), shadows: true }, ...heldLights];
-    const riftLights:PointLight[]=this.cachedBuildings.filter(b=>b.kind==='rift').map(b=>({x:b.x+b.width/2,y:b.y-35,radius:150,color:'#ef548b',power:.55}));
+    const portalTime = reducedMotion ? 0 : this.visualTime;
+    const riftLights:PointLight[]=this.cachedBuildings.filter(b=>b.kind==='rift').map(b=>riftPortalLight(b.x+b.width/2,b.y+b.height,portalTime));
+    const activeRun=currentDungeon(sim.expeditions);
+    if(sim.dungeonFloor?.rift && activeRun?.rift){
+      const floor=sim.dungeonFloor,run=activeRun;
+      riftLights.push(riftPortalLight(floor.entry.x,floor.entry.y,portalTime,.65));
+      if(run.rift?.phase==='complete'){const exit=dungeonRunExit(floor,run);riftLights.push(riftPortalLight(exit.x,exit.y,portalTime,.65));}
+    }
     const environmentLights: PointLight[] = this.cryptFloor?cryptLights(this.cryptFloor, reducedMotion ? 0 : this.visualTime):[...riftLights,...this.visibility.entrances.map(e=>({x:e.x,y:e.y-30,radius:100,color:'#9bdbc9',power:.45}))];
     if (sim.portal.active) lights.push({ x: p.x, y: p.y - 30, radius: 105, color: '#b5a0ee', power: .22 + sim.portal.progress * .35 });
     for (const anchor of this.portalAnchors) if (sim.travel.returnTo?.town === anchor.band)

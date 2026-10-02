@@ -9,7 +9,11 @@ import { createRiftKey } from '../rift-content.ts';
 if(!import.meta.env.DEV)throw Error('Local review only');
 installUITheme();await loadGameFont();
 const params=new URLSearchParams(location.search),level=Math.max(1,Math.min(1e6,Number(params.get('level')??30))),root=document.querySelector<HTMLElement>('#app')!;
-if(params.get('view')==='map'){
+if(params.get('view')==='portal'){
+  const {mountRiftPortalReview}=await import('./rift-portal-review.ts');
+  const dispose=mountRiftPortalReview(root);
+  if(import.meta.hot)import.meta.hot.dispose(dispose);
+}else if(params.get('view')==='map'){
   const {mountRiftMapReview}=await import('./rift-map-review.ts');
   const dispose=mountRiftMapReview(root,params);
   if(import.meta.hot)import.meta.hot.dispose(dispose);

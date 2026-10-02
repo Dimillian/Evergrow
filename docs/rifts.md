@@ -115,3 +115,9 @@ After guardian victory, the rift HUD shows the frozen elapsed clear time in M:SS
 Rift entrance and return portals use the crimson rift rune on dungeon maps and minimaps, with a dedicated shared legend filter and “Rift Portal · Return to town” hover label. The full map title and minimap footer identify Crimson Rift and its level. Ordinary dungeon titles and exits retain their existing labels, and the latest responsive map zoom/visibility controls remain shared.
 
 The map tool’s **Rift cleared (HUD)** button (`?view=map&cleared`) stages a frozen completed run with the actual HUD, character instruments and minimap. It does not fabricate a personal-best notification or run gameplay.
+
+## Living portal presentation
+
+Town fixtures, rift entry/return portals and the entry-panel illustration share `rift-art.ts`: tapered moving tendrils, traveling charges, layered currents around a dark core, a pale crimson rim and bounded rising sparks. A slow shared pulse drives both the artwork and the real rose-colored scene light. Soft emission is composited after world darkening, preserving the luminous core at night without repainting opaque surfaces over actors. The light uses the existing scene budget and fixed-radius cached lighting; animation does not create simulation particles or change portal interaction. Reduced motion freezes the presentation.
+
+`/tools/rifts.html?view=portal` shows the runtime town renderer beside the shared artwork, using a frozen disposable character and no save access. Only the presentation clock advances; the study pauses when hidden.
