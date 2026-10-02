@@ -37,6 +37,17 @@ The user approved the next major prototype milestone, **0.7.0**, on 2026-09-20 f
 
 ## Last verified publication
 
+- Game v0.7.4 / Sites version 66, publicly deployed on 2026-10-02 at 16:45:23 UTC.
+- Published source: `26e32a9d6f9be49318186f7194ec588b063cecfe`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_92b40ff8b3288191aa6c0c860256fad5`.
+- Deployment: `appgdep_6abfdf88f1b08191a33d4da11e3dbb39`; Sites returned `succeeded`.
+- Includes nineteen new Uniques (37 total), richer surface lighting, animated compact rift portals and proximity audio, elemental killing-blow reactions, physical loot arrivals, precious-loot beacons and the character-shadow fix.
+- Pre-publication runtime regression run: 1,827 of 1,829 test entries passed; one cloud-worker timeout also failed its parent entry. The isolated cloud-cadence rerun passed all 38 checks, and all 26 final death/loot/material/architecture checks passed after the final refinements. Publication passed all three changelog tests, application/core type checking, the cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run for publication.
+- No character reset or required player action. Development tools and the separate native Chromatic port are excluded from the Site build; the local server remains available.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.7.3 / Sites version 65, publicly deployed on 2026-10-02 at 06:52:08 UTC.
 - Published source: `e9da88a17ff590fc6dd74fa9bf2d00f61fe032a9`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_85ebe2351dc081919af2209bd1ffa7c1`.
