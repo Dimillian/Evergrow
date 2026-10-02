@@ -30,7 +30,8 @@ const world = new World(7319), sim = new Simulation(world, { spawn: false }), re
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
 const params = new URLSearchParams(location.search);
-const pickupView = params.has('pickup') || (params.has('charms')||params.has('uniques')) || params.has('greater');
+const rarityView = params.has('rarities');
+const pickupView = rarityView || params.has('pickup') || (params.has('charms')||params.has('uniques')) || params.has('greater');
 const deathElement = params.get('element');
 const materialsView = new URLSearchParams(location.search).has('materials');
 const containersView = new URLSearchParams(location.search).has('containers');
@@ -62,6 +63,18 @@ if (pickupView) {
     sim.player.level = 35;
   }
   if(params.has('uniques'))drops.splice(0,drops.length,...UNIQUES.map((u,i)=>({id:400+i,x:x+(i%3-1)*115,y:y+(Math.floor(i/3)-(Math.ceil(UNIQUES.length/3)-1)/2)*110,item:generateUnique(7319+i,25,u.id)})));
+  if(rarityView){
+    const samples = [
+      generateItem(94,25,'weapon','longsword','common'),
+      generateItem(95,25,'head',undefined,'magic'),
+      generateItem(96,25,'weapon','crescent-recurve','rare'),
+      generateItem(97,25,'boots',undefined,'epic'),
+      generateItem(98,25,'weapon','ember-staff','legendary'),
+      generateUnique(99,25,'triune-carapace'),
+    ];
+    drops.splice(0,drops.length,...samples.map((item,i)=>({id:301+i,x:x+(i%3-1)*220,y:y+(i<3?-115:115),item})));
+    sim.player.level=25;
+  }
   sim.groundItems = drops;
   renderer.cameraX = x; renderer.cameraY = y;
   sim.player.angle = .5;
@@ -69,7 +82,13 @@ if (pickupView) {
 const draw = () => {
   canvas.width = innerWidth * devicePixelRatio; canvas.height = innerHeight * devicePixelRatio;
   stage.width = canvas.width; stage.height = canvas.height;
-  renderer.resize(1000, 600);
+  const viewWidth=rarityView?innerWidth:1000,viewHeight=rarityView?innerHeight:600;
+  if(rarityView){
+    const columns=viewWidth<800?2:3,rows=Math.ceil(drops.length/columns);
+    const gapX=Math.min(220,viewWidth/(columns+1)),gapY=Math.min(190,(viewHeight-100)/(rows+1));
+    for(const [i,drop]of drops.entries()){drop.x=sim.player.x+(i%columns-(columns-1)/2)*gapX;drop.y=sim.player.y+(Math.floor(i/columns)-(rows-1)/2)*gapY;}
+  }
+  renderer.resize(viewWidth, viewHeight);
   renderer.render(sim, world, 0, { phase: 'ready', reducedMotion: true });
   const c = renderer.ctx;
   if (!pickupView) { c.fillStyle = '#071118d8'; c.fillRect(0, 0, 1000, 600); }
@@ -99,13 +118,13 @@ const draw = () => {
   }
   fx.render(renderer.canvas, 0);
   const ui = canvas.getContext('2d')!;
-  const scale = Math.min(canvas.width / 1000, canvas.height / 600);
-  const left = (canvas.width - 1000 * scale) / 2, top = (canvas.height - 600 * scale) / 2;
+  const scale = Math.min(canvas.width / viewWidth, canvas.height / viewHeight);
+  const left = (canvas.width - viewWidth * scale) / 2, top = (canvas.height - viewHeight * scale) / 2;
   ui.fillStyle = '#081217'; ui.fillRect(0, 0, canvas.width, canvas.height);
-  ui.drawImage(stage, left, top, 1000 * scale, 600 * scale);
+  ui.drawImage(stage, left, top, viewWidth * scale, viewHeight * scale);
   ui.setTransform(scale, 0, 0, scale, left, top);
   if (pickupView) {
-    labels = drawLootLabels(ui, drops, (x, y) => renderer.worldToScreen(x, y), 1000, 600).map(b => ({
+    labels = drawLootLabels(ui, drops, (x, y) => renderer.worldToScreen(x, y), viewWidth, viewHeight).map(b => ({
       ...b, x: left + b.x * scale, y: top + b.y * scale, width: b.width * scale, height: b.height * scale,
       anchorX: left + b.anchorX * scale, anchorY: top + b.anchorY * scale,
     }));
