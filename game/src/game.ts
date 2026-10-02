@@ -968,7 +968,7 @@ export class Game {
       const npcs = this.world.getBuildings(p.x - 220, p.y - 220, 440, 440).map(buildingNPC).filter((npc): npc is TownNPC => npc !== null);
       const npc = focusNPC(npcs, p, this.world, pointer);
       if (!npc) {
-          const site = focusEvent(eventInteractionSites(this.world.getEventSites(p.x - 100, p.y - 100, 200, 200), this.sim.eventState), p, this.world, pointer);
+          const site = focusEvent(eventInteractionSites(this.world.getEventSites(p.x - 100, p.y - 100, 200, 200), this.sim.eventState, this.world), p, this.world, pointer);
           if (!site)
               return false;
           const record = this.sim.eventState.sites[site.id];

@@ -24,6 +24,7 @@ export interface WorldQuery {
   /** Settlements suppress hostile spawns and protect the player's occupied position. */
   isSanctuary?(x: number, y: number): boolean;
   getEnemyCamps?(x: number, y: number, width: number, height: number): readonly EnemyCamp[];
+  getWildernessSites?(x: number, y: number, width: number, height: number): readonly import('./wilderness-sites.ts').WildernessSite[];
   sampleBiome?(x: number, y: number): { id: BiomeId };
   move(x: number, y: number, dx: number, dy: number, radius: number): { x: number; y: number };
 }

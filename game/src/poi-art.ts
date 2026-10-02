@@ -1,10 +1,11 @@
 import { controls } from './control-preferences.ts';
 import { ChestArt } from './chest-art.ts';
-import { eventRecipe, sealPoint } from './event-recipes.ts';
+import { eventRecipe, eventSealTarget } from './event-recipes.ts';
 import { eventInteractionSites, type EventState } from './poi-content.ts';
 import { BLESSINGS, eventLabel, focusEvent, type EventSite, type EventRecord } from './poi-content.ts';
 import type { Simulation } from './simulation.ts';
 import type { World } from './world.ts';
+import type { WorldQuery } from './model.ts';
 import { text } from './font.ts';
 import { eventProgress } from './event-progress.ts';
 import { drawEventProgress } from './active-event-art.ts';
@@ -80,7 +81,7 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
   x: number;
   y: number;
 }, gamepad: boolean, sites: readonly EventSite[], card: EventProgressView) {
-  const p = sim.player, site = focusEvent(eventInteractionSites(sites,sim.eventState), p, world);
+  const p = sim.player, site = focusEvent(eventInteractionSites(sites,sim.eventState,world), p, world);
   const progress = sim.dungeonFloor ? null : eventProgress(sim.eventState);
   if (site && (site.id !== progress?.site.id || sim.eventState.trial?.sealReady)) {
     const point = project(site.x, site.y - 52), label = eventLabel(site, sim.eventState, sim.getCampState(site.id) === 'cleared');
@@ -101,13 +102,14 @@ export function drawEventUI(c: CanvasRenderingContext2D, sim: Simulation, world:
     text(c, `${BLESSINGS[blessing.kind].name} · ${Math.ceil(blessing.remaining)}s`, 24, card ? 163 : 138, 1, BLESSINGS[blessing.kind].color);
 }
 
-export function drawEventObjectives(c:CanvasRenderingContext2D,state:EventState,time:number):void {
+export function drawEventObjectives(c:CanvasRenderingContext2D,state:EventState,time:number,world?: Pick<WorldQuery, 'getWildernessSites'>):void {
   const trial=state.trial;if(!trial)return;const site=state.sites[trial.siteId],r=eventRecipe(site)!;
   if(r.mode!=='defend'&&r.mode!=='seals')return;
-  const point=r.mode==='seals'?sealPoint(site,trial.wave):site;
-  c.save();c.translate(point.x,point.y);const radius=r.mode==='defend'?175:24;
+  const target=r.mode==='seals'?eventSealTarget(site,trial.wave,world):null;
+  const point=target??site;
+  c.save();c.translate(point.x,point.y);const radius=r.mode==='defend'?175:target?.nest?46*target.nest.scale:24;
   const glow=c.createRadialGradient(0,0,0,0,0,radius);glow.addColorStop(0,'#9bd6c21a');glow.addColorStop(.8,'#9bd6c209');glow.addColorStop(1,'#9bd6c200');c.fillStyle=glow;c.fillRect(-radius,-radius,radius*2,radius*2);
   c.strokeStyle=trial.sealReady?'#f3d79c':'#9bd6c299';c.lineWidth=1.5;c.setLineDash([8,12]);c.lineDashOffset=-time*9;c.beginPath();c.ellipse(0,0,radius,radius*.72,0,0,Math.PI*2);c.stroke();c.setLineDash([]);
-  if(r.mode==='seals'){c.fillStyle=trial.sealReady?'#efd3a0':'#516d69';c.beginPath();c.moveTo(0,-28);c.lineTo(10,-12);c.lineTo(0,1);c.lineTo(-10,-12);c.closePath();c.fill();}
+  if(r.mode==='seals'){c.translate(0,target?.nest?-28:0);c.fillStyle=trial.sealReady?'#efd3a0':'#516d69';c.beginPath();c.moveTo(0,-28);c.lineTo(10,-12);c.lineTo(0,1);c.lineTo(-10,-12);c.closePath();c.fill();}
   c.restore();
 }

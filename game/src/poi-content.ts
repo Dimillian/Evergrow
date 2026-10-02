@@ -1,5 +1,5 @@
 import { storedDifficultyHealth, type WorldDifficulty } from './world-difficulty.ts';
-import { eventRecipe, sealPoint, isTrialKind } from './event-recipes.ts';
+import { eventRecipe, eventSealTarget, isTrialKind } from './event-recipes.ts';
 import { eventProgress } from './event-progress.ts';
 import type { WaveProgress } from './wave-system.ts';
 import { siteHash, type WildernessSite, type WildernessKind } from './wilderness-sites.ts';
@@ -109,7 +109,7 @@ export function eventLabel(site: Pick<EventSite, 'id' | 'kind'>, state: EventSta
   if (recipe) return recipe.action;
   return ({ camp: 'Open strongbox', caravan: 'Recover cargo', watchtower: 'Light beacon', graveyard: 'Disturb the vigil', standingStones: 'Choose blessing', reliquary: 'Open reliquary' } as Partial<Record<EventKind,string>>)[site.kind] ?? 'Interact';
 }
-export function focusEvent(sites: readonly EventSite[], player: Pick<Player, 'x' | 'y' | 'dead'>, world: WorldQuery, pointer?: {
+export function focusEvent(sites: readonly (EventSite & { targetRadius?: number })[], player: Pick<Player, 'x' | 'y' | 'dead'>, world: WorldQuery, pointer?: {
   x: number;
   y: number;
 }): EventSite | undefined {
@@ -117,7 +117,11 @@ export function focusEvent(sites: readonly EventSite[], player: Pick<Player, 'x'
     return;
   return sites.filter(s => Math.hypot(s.x - player.x, s.y - player.y) <= EVENT_RULES.reach
     && (!pointer || Math.hypot(s.x - pointer.x, s.y - 12 - pointer.y) < 34)
-    && hasLineOfSight(world, player.x, player.y, s.x, s.y))
+    && (() => {
+      // A solid objective is inspected at its near edge; its own body must not hide it.
+      const distance = Math.hypot(s.x-player.x, s.y-player.y), inset = Math.min(distance, (s.targetRadius ?? 0) ? s.targetRadius! + 3 : 0);
+      return hasLineOfSight(world, player.x, player.y, s.x+(player.x-s.x)*inset/(distance||1), s.y+(player.y-s.y)*inset/(distance||1));
+    })())
     .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
 }
 export function syncTrial(state: EventState, enemies: readonly Enemy[]): void {
@@ -144,11 +148,11 @@ export function compactEvents(state: EventState): void {
   state.claimed = [...retired];
 }
 
-export function eventInteractionSites(sites: readonly EventSite[],state:EventState):EventSite[] {
+export function eventInteractionSites(sites: readonly EventSite[],state:EventState,world?: Pick<WorldQuery, 'getWildernessSites'>):(EventSite & { targetRadius?: number })[] {
   sites=sites.filter(site=>site.kind!=='bossLair'&&!eventClaimed(state,site.id)&&(!isTrialKind(site.kind)||state.sites[site.id]?.phase!=='completed'));
   const trial=state.trial;if(!trial?.sealReady)return [...sites];
-  const site=state.sites[trial.siteId],point=sealPoint(site,trial.wave);
-  return [...sites.filter(s=>s.id!==site.id),{...site,...point}];
+  const site=state.sites[trial.siteId],{x,y,targetRadius}=eventSealTarget(site,trial.wave,world);
+  return [...sites.filter(s=>s.id!==site.id),{...site,x,y,targetRadius}];
 }
 
 /** Release the active slot: bank timed scores, or park exact finite-trial progress. */

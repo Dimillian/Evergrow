@@ -37,6 +37,8 @@ The seed selects each site's recipe. These are one-time character-owned encounte
 - Assault: defeat every admitted member; two seconds between waves.
 - Defense: defeat the wave and spend twelve cumulative seconds inside the marked objective. Leaving pauses hold progress.
 - Seals: defeat the current wave, then interact with its reachable objective before the next wave. Three distinct anchors are checked and saved when starting.
+
+Beast-den brood objectives use the three actual nests from the rotated wilderness blueprint. The diamond and ring mark the current nest, and E/click targets that same nest from nearby; its solid body does not block inspection, but intervening walls still do. Each destroyed nest immediately shows its emptied aftermath, including after pausing/resuming a trial. Already-started trials resolve their current wave against the same nest artwork without resetting progress. Other seal recipes retain their saved anchors.
 - Timed: ninety seconds of active gameplay, starting after the first actual admission. The clock includes intermissions. Waves begin at five actors, grow by two to eighteen, and have a twenty-wave recipe limit.
 
 Finite recipes contain two or three waves, generally starting with five to eight foes. Every wave has a veteran; final waves can have an elite from geographic level three, and later waves add another veteran. Cursed chests place an elite leader every third wave when eligible. Existing enemy archetypes supply distinct themed rosters.

@@ -66,6 +66,12 @@ export function sealPoint(site: EventSite & {
     const angle = wave * Math.PI * 2 / 3 - Math.PI / 2;
     return { x: site.x + Math.cos(angle) * 105, y: site.y - 110 + Math.sin(angle) * 75 };
 }
+/** The brood objective belongs to the actual, rotated nest in the world blueprint. */
+export function eventSealTarget(site: EventSite & { seals?: { x: number; y: number }[] }, wave: number, world?: Pick<WorldQuery, 'getWildernessSites'>) {
+    const nest = site.kind === 'beastDen' ? world?.getWildernessSites?.(site.x - 400, site.y - 400, 800, 800)
+        .find(s => s.id === site.id)?.decor.filter(d => d.kind === 'nest')[wave] : undefined;
+    return nest ? { x: nest.x, y: nest.y, targetRadius: nest.radius, nest } : { ...sealPoint(site, wave), targetRadius: 0, nest: undefined };
+}
 /** Freeze reachable objective anchors before starting a seal recipe. */
 export function planSeals(site: EventSite, world: WorldQuery): {
     x: number;

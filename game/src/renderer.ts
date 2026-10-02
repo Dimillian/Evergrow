@@ -560,7 +560,7 @@ export class Renderer {
     if (this.cryptFloor) drawCryptEmission(c, this.cryptFloor, settings.reducedMotion ? 0 : this.visualTime, this.view);
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
-    if(!this.cryptFloor)drawEventObjectives(c,sim.eventState,settings.reducedMotion?0:this.visualTime);
+    if(!this.cryptFloor)drawEventObjectives(c,sim.eventState,settings.reducedMotion?0:this.visualTime,world);
     drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion, sim.time);
     this.effects.drawSword(c);
     for (const effect of sim.groundEffects) {
@@ -814,7 +814,10 @@ export class Renderer {
       entries.push({ y: remains.y, draw: () => drawMaterialBurst(c, remains, settings.reducedMotion) });
     for (const site of this.visibility.sites) for (const decor of site.decor) {
       if (sim.brokenContainers.has(decor.id)) continue;
-      entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime, this.siteAftermath.get(site.id)) });
+      const record = sim.eventState.sites[site.id];
+      const trial = sim.eventState.trial?.siteId===site.id ? sim.eventState.trial : record?.pausedTrial;
+      const destroyedNest = site.kind==='beastDen' && decor.kind==='nest' && trial && site.decor.filter(d=>d.kind==='nest').indexOf(decor)<trial.cleared;
+      entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime, destroyedNest ? 'emptied' : this.siteAftermath.get(site.id)) });
     }
     for (const remains of this.deaths.remains)
       entries.push({ y: deathDepth(remains), draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });

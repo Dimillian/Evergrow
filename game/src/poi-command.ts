@@ -1,7 +1,7 @@
 import { encounterScaleAt, encounterMemberLevel, encounterRewardLevel } from './encounter-scaling.ts';
 import { metric } from './chronicle.ts';
 import { treasureLanding } from './treasure-flight.ts';
-import { eventRecipe, isTrialKind, recipeMembers, planSeals, sealPoint } from './event-recipes.ts';
+import { eventRecipe, isTrialKind, recipeMembers, planSeals, eventSealTarget } from './event-recipes.ts';
 import { freshWaves } from './wave-system.ts';
 import { stageJourneyCompletion } from './journey-rewards.ts';
 import { getZoneAt } from './zone-progression.ts';
@@ -21,10 +21,11 @@ export interface EventResult {
 }
 export function eventProblem(sim: Simulation, site: EventSite, choice: EventChoice | null): string | null {
   if(site.kind==='bossLair')return 'Defeat the boss to open its hoard.';
-  if (!focusEvent([site], sim.player, sim.world))
-    return 'Move closer.';
   const record = sim.eventState.sites[site.id];
-  if(record?.phase==='active'&&sim.eventState.trial?.siteId===site.id&&sim.eventState.trial.sealReady&&!focusEvent([{...record,...sealPoint(record,sim.eventState.trial.wave)}],sim.player,sim.world))return 'Move to the seal.';
+  const seal = record?.phase==='active'&&sim.eventState.trial?.siteId===site.id&&sim.eventState.trial.sealReady;
+  const target = seal ? {...record!, ...eventSealTarget(record!,sim.eventState.trial!.wave,sim.world)} : site;
+  if (!focusEvent([target], sim.player, sim.world))
+    return seal && site.kind==='beastDen' ? 'Move to the marked nest.' : seal ? 'Move to the seal.' : 'Move closer.';
   if (eventClaimed(sim.eventState, site.id))
     return 'Already claimed.';
   if(record?.phase==='paused'&&sim.eventState.trial)return 'Finish the active trial.';
