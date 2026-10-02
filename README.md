@@ -16,56 +16,54 @@ Play on desktop with keyboard/mouse or a controller, use touch controls, or [run
 
 On the hosted game, sign in with ChatGPT for cloud characters or choose Local for browser-only saves. Download and Import let you transfer a character and its explored map. Local development and Android keep local saves.
 
-![The starting wilderness in Deadwood](docs/screenshots/deadwood.png)
+![Verdant Forest with the current procedural scenery and lighting](docs/screenshots/verdant.png)
 
 ## What works today
 
-- **Characters & saves:** eight local save slots, a forest character hall, equipped previews, level/power summaries and automatic checkpoints. Every character starts with leather armor, a choice of sword, bow or fire staff, and an empty bag.
+- **Characters & saves:** eight local save slots, a forest character hall, equipped previews, level/power summaries and automatic checkpoints. Choose from six starter weapon loadouts, with leather armor and an empty bag.
 - **World:** nine blended biomes, natural groves and clearings, open steppe and desert, procedural towns, twelve wilderness landmarks, cursed chests and varied assault/defense/ritual events. Regional placement, branching 13–19-room crypts, day/night lighting and ambient wildlife. Scrolling minimap and explored-world atlas.
-
-  The latest world expansion is local for testing; it requires a fresh character. The hosted version remains unchanged until publication.
-- **Combat:** melee, bows and elemental staves; shields and dual wield; dodging, particles, damage feedback, and six enemy archetypes across three ranks. Encounters spawn outside the camera.
-- **Builds:** 2,333 nodes, 150 passive constellations and 20 active skills. Short early routes, useful resource/speed choices, and cross-discipline bridges at every layer. Upgradeable skill ranks, three skill-owned specialization leaves per skill, and three Arcana ultimates. First-tier skills stay cooldown-free.
-- **Gear & progression:** procedural names, icons and visible equipment; an 8×8 inventory, drag/drop, quick equip and comparison tooltips; item tiers, enemy loot tables, geographic danger scaling, and one skill point plus five attribute points per level.
+- **Combat:** melee, bows, elemental staves and wands; shields and dual wield; dodging, particles, damage feedback, and ranked enemies with distinct modifiers. Encounters spawn outside the camera.
+- **Builds:** 1,831 nodes across six territories, with 37 skills including mana-reserving auras. Plan routes, invest in skill ranks, choose Techniques and Doctrines, and reshape a build with respecs.
+- **Gear & progression:** procedural names, icons and visible equipment; a 12×6 spatial pack and a separate 12×4 active-charm grid, drag/drop, quick equip and comparison tooltips; Greater affixes, skill-changing Uniques, geographic danger scaling, and one skill point plus five attribute points per level.
 - **Presentation:** code-generated artwork, dynamic lighting, restrained CRT/phosphor, a shared retro-modern UI kit, and compact loot, gold, XP and discovery notifications.
 
 **Town portal:** free three-second cast to your home town, with a saved return portal back to your expedition. Set home at a town plaza anchor.
 
 **Town services:** procedural blacksmiths, jewelers and enchanters; buy/sell/buyback, upgrade gear to +10, raise rarity, reroll affixes and raise item level. Equipped gear can be improved in place.
 
-Character progress, shop state and each character’s explored map persist in the selected save location. **Save format v3 requires a new character for older saves; old slots remain stored.** Journeys offer light activity guidance; respecs remain future work. Endless progression is the direction, not a finished endgame.
+Character progress, shop state and each character’s explored map persist in the selected save location. Journeys guide exploration and automatically pin accepted activities. World difficulty, branching Expeditions and timed Crimson Rifts offer harder challenges and better rewards; these systems are still being tuned.
 
 ## Screenshots
 
-Real game interfaces and renderers, captured from frozen development scenes on September 5, 2026. Characters, equipment and resources are staged.
+Captured from the current local main branch on **October 2, 2026** (local build based on `b06e7c4`). These save-free development scenes use the real game interfaces and renderers, with staged characters, equipment and resources. They include changes that may not yet be published to the hosted game. [Capture sources](docs/screenshots/README.md).
 
 ### Combat HUD
 
-Animated life and mana glass, a compact shortcut rail, five assignable skill slots, and an integrated XP bar. UI and text stay crisp above the world’s CRT effects.
+Life and mana glass, stained-glass skill icons, five assignable skill slots, and an integrated XP bar. Aura reservations appear in the mana orb, with active effects and buildup above the skills.
 
-![Current Astral HUD with life and mana orbs, utility shortcuts, skill slots and XP](docs/screenshots/hud.png)
+![Current HUD with aura reservations, active buffs, skill slots and XP](docs/screenshots/hud.jpg)
 
 ### Loot & item details
 
-Distinct rarity borders and crests, procedural equipment icons, readable affixes, and effective stat comparisons before equipping. The bag holds 64 items and supports drag/drop and quick equip.
+Distinct rarity treatments, procedural equipment art and readable affixes in a spatial inventory. Unique tooltips lead with the skill they change and explain their signature effect.
 
-![Epic item tooltip showing affixes and on-equip stat changes beside the rarity-colored inventory](docs/screenshots/item-details.png)
+![Cinderheart Testament Unique tooltip with its Fireball signature beside the spatial inventory](docs/screenshots/item-details.jpg)
 
 ### Town services
 
 Trade with blacksmiths, jewelers and enchanters. Improve gear to +10, raise rarity, reroll affixes or bring a favorite item up to the area's level—including equipped gear.
 
-![Blacksmith enhancement preview with item stats, cost and rarity-colored equipment](docs/captures/2026-09-05/town-services/equipped-enhancement.png)
+![Current blacksmith enhancement workbench with selected shield, upgrade rank and gold cost](docs/screenshots/town-services.jpg)
 
 ### Characters & builds
 
-![The character hall with staged adventurers](docs/screenshots/title-character-hall.png)
+![The character hall with staged adventurers](docs/screenshots/title-character-hall.jpg)
 
 | Skill tree · early choices | Character & inventory |
 | --- | --- |
-| ![Early skills and branching passives](docs/screenshots/skill-tree.png) | ![Equipment, inventory and character stats](docs/screenshots/character.png) |
+| ![Early skills and branching passives](docs/screenshots/skill-tree.jpg) | ![Equipment, inventory and character stats](docs/screenshots/character.jpg) |
 
-[View the complete skill atlas](docs/screenshots/skill-atlas.png) · [Town service captures](docs/captures/2026-09-05/town-services/README.md).
+[View the complete skill atlas](docs/screenshots/skill-atlas.jpg) · [Historical town service captures · September 5](docs/captures/2026-09-05/town-services/README.md).
 
 ## Saves
 
@@ -73,7 +71,7 @@ The hosted game has **Cloud / Local** tabs. Cloud defaults to ChatGPT sign-in an
 
 ## Android / AYN Thor
 
-The Android app bundles the game for **offline play**, with native controller input and an Astral companion on the Thor’s lower screen: explored map, 64-slot pack, equipment details and character stats. Both app displays request **60 Hz**; game/title rendering is capped at **60 FPS** while combat keeps its fixed 120 Hz simulation.
+The Android app bundles the game for **offline play**, with native controller input and an Astral companion on the Thor’s lower screen: explored map, inventory, equipment details and character stats. Both app displays request **60 Hz**; game/title rendering is capped at **60 FPS** while combat keeps its fixed 120 Hz simulation.
 
 Requires **Node.js 22.13+**, **Java 17**, Android SDK **platform 35 + build-tools 35.0.0**, and `adb` on your PATH. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in `android/local.properties`. Enable USB debugging on the Thor and authorize the computer.
 
