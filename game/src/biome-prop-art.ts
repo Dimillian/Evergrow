@@ -1,3 +1,4 @@
+import { reliefFacet } from './surface-relief.ts';
 import { dryGrass, thornBrush, openStone } from './open-biome-art.ts';
 import { weatherStone } from './material-art.ts';
 import type { PropKind } from './biome-props.ts';
@@ -24,6 +25,8 @@ function crystal(c: CanvasRenderingContext2D, random: Random) {
   const shards = [[-15, -2, 10, 30], [13, -1, 12, 37], [-2, 2, 14, 62], [19, 2, 7, 19]];
   for (const [x, y, width, baseHeight] of shards) {
     const h = baseHeight + random() * 5, tip = x + width * .18;
+    reliefFacet(c, [[x-width*.5,y],[x-width*.48,y-h*.8],[tip,y-h],[x,y-h*.67],[x,y-2]], [-.8,-.25,.55], .02, .45);
+    reliefFacet(c, [[tip,y-h],[x+width*.5,y-h*.7],[x+width*.4,y-3],[x,y-2],[x,y-h*.67]], [.85,-.15,.5], .06, .4);
     polygon(c, [[x - width * .5, y], [x - width * .48, y - h * .8], [tip, y - h], [x + width * .5, y - h * .7], [x + width * .4, y - 3]], '#457c94');
     polygon(c, [[x - width * .5, y], [x - width * .48, y - h * .8], [tip, y - h], [x, y - h * .67], [x, y - 2]], '#acd6de');
     polygon(c, [[tip, y - h], [x + width * .5, y - h * .7], [x, y - h * .67]], '#e1f1e9');
@@ -36,6 +39,9 @@ function basalt(c: CanvasRenderingContext2D, random: Random, ember: boolean) {
   for (const [x, y, width, height] of [[-12, -3, 20, 28], [12, -1, 23, 37], [-3, 1, 24, 23]]) {
     const top = y - height * (ember ? .65 : 1) - random() * 3;
     polygon(c, [[x - width / 2, y], [x - width / 2, top + 6], [x, top], [x + width / 2, top + 4], [x + width / 2, y - 3], [x, y + 3]], '#363443');
+    reliefFacet(c, [[x-width/2,top+6],[x,top],[x+width/2,top+4],[x,top+10]], [0,-.7,.7], .02, .6);
+    reliefFacet(c, [[x-width/2,top+6],[x,top+10],[x,y+3],[x-width/2,y]], [-.8,.1,.6], .12);
+    reliefFacet(c, [[x,top+10],[x+width/2,top+4],[x+width/2,y-3],[x,y+3]], [.8,.1,.6], .2);
     polygon(c, [[x - width / 2, top + 6], [x, top], [x + width / 2, top + 4], [x, top + 10]], '#777079');
     polygon(c, [[x, top + 10], [x + width / 2, top + 4], [x + width / 2, y - 3], [x, y + 3]], '#242c35');
     line(c, [[x - width / 2, top + 6], [x, top + 10], [x, y]], '#8b8286', .65);
@@ -50,6 +56,9 @@ function basalt(c: CanvasRenderingContext2D, random: Random, ember: boolean) {
 function limestone(c: CanvasRenderingContext2D, random: Random) {
   const top = -30 - random() * 9;
   const points: Point[] = [[-28, -2], [-25, -20], [-9, top], [15, top + 3], [28, -14], [24, 0], [0, 3]];
+  reliefFacet(c, points, [0,.55,.8], .18);
+  reliefFacet(c, [[-25,-20],[-9,top],[15,top+3],[20,-19],[-3,-15]], [-.3,-.7,.64], .01, .7);
+  reliefFacet(c, [[15,top+3],[28,-14],[24,0],[2,3],[8,-15]], [.85,.1,.52], .15, .4);
   polygon(c, points, '#a1a596');
   polygon(c, [[-25, -20], [-9, top], [15, top + 3], [20, -19], [-3, -15]], '#c5c6ac');
   polygon(c, [[15, top + 3], [28, -14], [24, 0], [2, 3], [8, -15]], '#7c8984');

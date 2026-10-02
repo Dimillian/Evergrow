@@ -90,6 +90,8 @@ The Dungeon workshop's Lighting view (`/dungeon.html?view=lighting&seed=7319&roo
 
 ### Outdoor lighting study
 
+World → **Surface volume** (`/biomes.html?sculpted`) stages identical trees, stone and equipped character art before/after the local volume pass. Daylight, moving lantern and rift-light presets share runtime material sampling. Five tree families can be compared, and the real forest link opens the usual outdoor review with a **Volume** A/B toggle. No playable state is loaded. See [surface volume](surface-volume.md).
+
 `/biomes.html?lighting&view=verdant&variant=1` opens animated views of all nine climates using actual generated locations and the runtime renderer. Another area and seed selection inspect different landscape compositions; no scenery is added for screenshots. Actors stay frozen and the scene animates at 30 Hz, pausing while hidden and respecting reduced motion. Save PNG exports the current full-resolution composited frame. The regular biome gallery remains a still study. The optional Render timings disclosure reports bounded CPU timings, not GPU completion or gameplay frame rate.
 
 The outdoor lighting study now covers all nine climates. Use its time slider, Dawn/Noon/Dusk/Midnight presets, or accelerated **Play day cycle** to inspect the shared sky, moving cloud shade and changing shadow direction. Time controls affect only the disposable preview; the game derives its 36-minute day from saved simulation time.

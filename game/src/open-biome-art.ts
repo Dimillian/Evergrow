@@ -1,3 +1,4 @@
+import { reliefFacet } from './surface-relief.ts';
 import { polygon, line, type Random, type Point } from './art-primitives.ts';
 
 /** Cached code-drawn silhouettes for the open-landscape studies. */
@@ -24,6 +25,9 @@ export function thornBrush(c: CanvasRenderingContext2D,r: Random): void {
 export function openStone(c: CanvasRenderingContext2D,r: Random,sand: boolean,small = false): void {
   const h=((sand?43:63)+r()*18)*(small?.5:1),w=(sand?30:16)*(small?.58:1);
   const shape:Point[]=[[-w,0],[-w+3,-h*.5],[-w*.6,-h*.91],[w*.1,-h],[w*.72,-h*.86],[w,-h*.42],[w*.88,0],[0,4]];
+  reliefFacet(c,shape,[-.55,.25,.8],.12);
+  reliefFacet(c,[shape[1],shape[2],shape[3],shape[4],[w*.5,-h*.62],[-w*.7,-h*.65]],[-.35,-.75,.56],.015,.7);
+  reliefFacet(c,[[w*.1,-h],shape[4],shape[5],shape[6],[w*.15,2],[w*.32,-h*.58]],[.87,.1,.48],.2,.45);
   polygon(c,shape,sand?'#9e704c':'#767761');
   polygon(c,[shape[1],shape[2],shape[3],shape[4],[w*.5,-h*.62],[-w*.7,-h*.65]],sand?'#d0a575':'#afa98a');
   polygon(c,[[w*.1,-h],shape[4],shape[5],shape[6],[w*.15,2],[w*.32,-h*.58]],sand?'#886345':'#555f55');

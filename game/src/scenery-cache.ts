@@ -2,7 +2,7 @@ import type { Sprite } from './art-types.ts';
 
 // Reserve space for the source, relief, edge, shadow, reflection and combined
 // lighting canvases. This is a conservative CPU raster estimate, not GPU memory.
-export const SCENERY_SURFACE_RESERVE = 12;
+export const SCENERY_SURFACE_RESERVE = 14;
 export class SceneryCache {
   private entries = new Map<string, { sprite: Sprite; pixels: number }>();
   private wanted = new Set<string>();

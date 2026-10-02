@@ -51,6 +51,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'lights',group:'combat',name:'Weapon enchantments',path:'/weapon-lights.html',description:'Caster emission, melee enchantments and basic cast poses.'},
   {id:'layouts',group:'world',name:'Settlements',path:'/layouts.html',description:'Seeded refuges, villages, fortified cities, market stalls and family interiors with PNG export.'},
   {id:'atlas',group:'world',name:'World atlas',path:'/atlas.html',description:'Local, wide and vast world surveys with region levels, custom seeds and PNG export.'},
+  {id:'surface-volume',group:'world',name:'Sculpted surfaces',path:'/biomes.html?sculpted',description:'Before/after procedural trees, stone and armor with daylight, a moving lantern and violet rift light. Shared runtime surface shading.',tags:'volume depth normal lighting stained glass'},
   {id:'biomes',group:'world',name:'Climates',path:'/biomes.html',description:'All seven biomes and blended transitions using the game renderer.'},
   {id:'encounters',group:'world',name:'Camps & landmarks',path:'/encounters.html',description:'Frozen wilderness placements, camps and encounter warnings.'},
   {id:'bosses',group:'world',name:'Wilderness bosses',path:'/bosses.html',description:'Three guarded lairs, committed attack warnings and automatic hoards.',tags:'boss elite arena'},

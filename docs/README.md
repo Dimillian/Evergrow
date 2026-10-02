@@ -35,6 +35,8 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 
 ## Current system guides
 
+- [Sculpted surface lighting](surface-volume.md): local scenery planes, armor bevels, contact depth and before/after review.
+
 | Area | Guide |
 | --- | --- |
 | Character proportions, equipment materials and art review | [Character art](character-art.md) |

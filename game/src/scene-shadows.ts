@@ -10,7 +10,18 @@ import type { GearLight } from './gear-material.ts';
 export class SceneShadows {
   private silhouettes = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
   private actorStamp?: HTMLCanvasElement;
-  reset() { this.silhouettes = new WeakMap(); this.actorStamp = undefined; }
+  private contactStamp?: HTMLCanvasElement;
+  reset() { this.silhouettes = new WeakMap(); this.actorStamp = undefined; this.contactStamp = undefined; }
+  drawContact(c: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+    if (!this.contactStamp) {
+      const image = document.createElement('canvas'); image.width = 128; image.height = 48;
+      const target = image.getContext('2d')!; target.scale(1, .375);
+      const g = target.createRadialGradient(64,64,3,64,64,64);
+      g.addColorStop(0,'#07101ed0'); g.addColorStop(.32,'#0b172779'); g.addColorStop(1,'#0b172700');
+      target.fillStyle=g; target.fillRect(0,0,128,128); this.contactStamp=image;
+    }
+    c.drawImage(this.contactStamp,x-width,y-height,width*2,height*2);
+  }
   private actorMask() {
     if (this.actorStamp) return this.actorStamp;
     const stamp = document.createElement('canvas'); stamp.width = 128; stamp.height = 64;
@@ -35,7 +46,7 @@ export class SceneShadows {
     this.silhouettes.set(source, mask); return mask;
   }
   drawProps(c: CanvasRenderingContext2D, props: readonly Prop[], view: CameraView,
-    spriteFor: (prop: Prop) => Sprite, time: number, reduced: boolean, direction: GearLight['direction'] = SKY_DIRECTION, strength = 1) {
+    spriteFor: (prop: Prop) => Sprite, time: number, reduced: boolean, direction: GearLight['direction'] = SKY_DIRECTION, strength = 1, volume = true) {
     const projection = shadowProjection(direction);
     c.save(); c.imageSmoothingEnabled = true;
     let count = 0;
@@ -46,6 +57,7 @@ export class SceneShadows {
       const sprite = spriteFor(prop), definition = propDefinition(prop.kind);
       const wind = biomeWind(prop.x, prop.y, time, prop.biome ?? 'deadwood', reduced);
       c.save(); c.translate(prop.x, prop.y + 1); c.scale(prop.scale, prop.scale);
+      if (volume) this.drawContact(c, 0, 0, definition.shadow[0] * .95, Math.max(3, definition.shadow[1] * .65));
       // Actual trunk/rock silhouette, anchored at its contact with the terrain.
       c.save(); c.transform(1, 0, -projection.x, -projection.y, 0, 0);
       c.globalAlpha = (definition.canopy ? .18 : .24) * strength;

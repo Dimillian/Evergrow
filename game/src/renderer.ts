@@ -105,6 +105,8 @@ import { EnemyDeaths } from './death-presentation.ts';
 import { drawEnemyRemains, deathDepth, resetDeathArt } from './death-art.ts';
 interface Ghost { x: number; y: number; angle: number; gait: number; life: number; }
 export interface RenderSettings {
+  /** Local art comparisons only; gameplay uses the volume pass. */
+  surfaceVolume?: boolean;
   liveMap?: boolean;
   showGroundLootNames?: boolean;
   /** Save-free scene tools can animate presentation without following the player. */
@@ -428,7 +430,7 @@ export class Renderer {
     this.indoorBlend += ((world.getBuildingAt(px, py) ? 1 : 0) - this.indoorBlend) * (1 - Math.exp(-dt * 5));
     const biome = world.sampleBiome(px, py);
     this.sky = settings.skyHour === undefined ? skyAtTime(sim.time) : skyAtHour(settings.skyHour);
-    this.materialKey = sceneClimate(biome.weights, this.cryptFloor ? 1 : this.indoorBlend, this.sky).key;
+    this.materialKey = { ...sceneClimate(biome.weights, this.cryptFloor ? 1 : this.indoorBlend, this.sky).key, volume: settings.surfaceVolume !== false };
     this.biomeLife.update(dt, this.visualTime, this.cachedProps, { x: px, y: py, vx: p.vx, vy: p.vy },
       settings.reducedMotion, (x, y) => world.sampleGroundContact(x, y));
     const lights = this.sceneLights(sim, px, py, settings.reducedMotion, alpha);
@@ -497,7 +499,7 @@ export class Renderer {
       this.profiler?.end('water', opticsStart);
     }
     if (!this.cryptFloor) this.sceneShadows.drawProps(c, this.cachedProps, this.view,
-      prop => this.propSprite(prop), this.visualTime, settings.reducedMotion, this.sky.direction, this.sky.shadow);
+      prop => this.propSprite(prop), this.visualTime, settings.reducedMotion, this.sky.direction, this.sky.shadow, settings.surfaceVolume !== false);
     this.atmosphere.drawLayer(c, world, this.view, this.visualTime, settings.reducedMotion,
       px, py, false, !!this.cryptFloor, this.indoorBlend, this.sky);
     if (dungeonDetail) {
@@ -757,7 +759,13 @@ export class Renderer {
     const entries: Array<{ y: number; stage?: FrameStage; draw: () => void }> = this.visibleProps.map(prop => ({ y: prop.y, stage: 'props', draw: () => {
       const sprite = this.propSprite(prop);
       const compact = this.view.zoom < .95 && sprite.height * prop.scale * this.view.zoom < 180;
+      const volumeLight = settings.surfaceVolume !== false ? sampleGearLight(prop.x, prop.y - sprite.height * prop.scale * .45, this.materialLights, this.materialKey) : undefined;
+      const distance = Math.hypot(prop.x - px, prop.y - py);
       const drawLayer = (image: HTMLCanvasElement) => {
+        if (volumeLight && this.propSurfaceLight.drawVolume(c, sprite, image, volumeLight, distance)) {
+          if (!compact && !this.cryptFloor) this.propSurfaceLight.drawOutdoor(c, prop, sprite, image, world, this.visualTime, settings.reducedMotion, this.sky);
+          return;
+        }
         if (compact && this.propSurfaceLight.drawCompact(c, prop, sprite, image, this.cryptFloor ? undefined : this.sky)) return;
         c.drawImage(image, -sprite.anchorX, -sprite.anchorY, sprite.width, sprite.height);
         this.propSurfaceLight.draw(c, prop, sprite, image, this.cryptFloor ? undefined : this.sky);

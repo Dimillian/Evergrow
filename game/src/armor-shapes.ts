@@ -21,7 +21,7 @@ export function armorShapes(kind: ArmorShapeKind, piece: ArmorPiece, facing = Ma
       const cy=shape.points.reduce((sum,p)=>sum+p[1],0)/shape.points.length;
       const nx=Math.max(-.65,Math.min(.65,(cx-(kind==='shoulder'?1:0))*.12));
       const ny=Math.max(-.5,Math.min(.3,cy*.06-.18));
-      return {...shape,surface:{...gearSurface(material,piece.seed,[nx,ny,Math.sqrt(1-nx*nx-ny*ny)]),...(index>=1&&index<=3?{albedo:piece.material.base}:{})}};
+      return {...shape,surface:{...gearSurface(material,piece.seed,[nx,ny,Math.sqrt(1-nx*nx-ny*ny)]),occlusion: shape.fill === piece.material.shadow ? .13 : .015,...(index>=1&&index<=3?{albedo:piece.material.base}:{})}};
     });
   if(kind!=='head') {let cache=armorCache.get(piece);if(!cache){cache=new Map();armorCache.set(piece,cache);}cache.set(kind,shapes);}
   return shapes;

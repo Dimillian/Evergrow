@@ -2,7 +2,7 @@ import { drawEnhancementGlow, drawEnhancementMotion } from './enhancement-art.ts
 import { armorAccessoryShapes, type ArmorAccessory } from './armor-accessory-shapes.ts';
 import { bootShapes } from './boot-shapes.ts';
 import { bootProjection } from './boot-projection.ts';
-import { gearMaterialStops, gearMaterialMarks, gearCanvasLight } from './gear-material.ts';
+import { gearMaterialStops, gearMaterialMarks, gearCanvasLight, GEAR_MATERIALS } from './gear-material.ts';
 import { focusGlowColor, isRadiantGrimoire } from './radiant-content.ts';
 import { drawRadiantSeal } from './radiant-art.ts';
 import { drawWeaponEnchantment, drawEquipmentGlow } from './weapon-enchantment-art.ts';
@@ -16,7 +16,7 @@ import type { FocusDefinition, ShieldDefinition } from './model.ts';
 import { shieldShapes, weaponShapes, type GearShape } from './weapon-shapes.ts';
 import type { ArmorMaterial, ArmorPiece, CharacterOutfit } from './art-types.ts';
 import { PLAYER_ATTACHMENTS } from './character-motion.ts';
-import { polygon, line, taper, type Point, type Color } from './art-primitives.ts';
+import { polygon, line, taper, mixColor, type Point, type Color } from './art-primitives.ts';
 
 const STEEL: ArmorMaterial = { base: '#728c81', shadow: '#294750', edge: '#d1d6b0', trim: '#cfaa6c' };
 
@@ -32,12 +32,21 @@ export const STARTER_OUTFIT: CharacterOutfit = {
   cloak: { base: '#92364e', shadow: '#4e2a3e', highlight: '#cf5e69', trim: '#d4a070', seed: 71 },
 };
 
+const bevelCache = new WeakMap<GearShape, Array<{ a: Point; b: Point; nx: number; ny: number }>>();
+function armorBevel(shape: GearShape) {
+  const cached = bevelCache.get(shape); if (cached) return cached;
+  const points = shape.points, cx = points.reduce((v,p)=>v+p[0],0)/points.length, cy = points.reduce((v,p)=>v+p[1],0)/points.length;
+  const edges = points.map((a,i)=>{const b=points[(i+1)%points.length],dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy)||1;
+    let nx=-dy/length,ny=dx/length;if(nx*((a[0]+b[0])/2-cx)+ny*((a[1]+b[1])/2-cy)<0){nx=-nx;ny=-ny;}
+    return {a,b,nx,ny};}).filter(edge=>Math.hypot(edge.a[0]-edge.b[0],edge.a[1]-edge.b[1])>2);
+  bevelCache.set(shape,edges); return edges;
+}
 const shadingCache = new WeakMap<GearShape,{key:string;stops:Array<readonly [number,string]>}>();
 export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly GearShape[], color: Color, project?: (point: Point) => Point, enhancement = 0, time = 0): void {
   drawEnhancementGlow(ctx, shapes, enhancement, project, time);
   const matrix = ctx.getTransform(), fine = Math.hypot(matrix.a, matrix.b) >= 2.4;
   const lighting = gearCanvasLight(ctx), facing = Math.round(Math.atan2(matrix.b,matrix.a)*128)/128;
-  const lightKey=`${facing}:${lighting.direction.map(v=>Math.round(v*64)).join(',')}:${lighting.color}:${Math.round(lighting.power*64)}`;
+  const lightKey=`${lighting.volume !== false}:${facing}:${lighting.direction.map(v=>Math.round(v*64)).join(',')}:${lighting.color}:${Math.round(lighting.power*64)}`;
   for (const shape of shapes) {
     if (shape.fine && !fine) continue;
     // Deformation changes geometry only. Material shading stays keyed by the
@@ -63,6 +72,20 @@ export function drawGearShapes(ctx: CanvasRenderingContext2D, shapes: readonly G
           ctx.restore();
         }
       }
+    }
+    if (lighting.volume !== false && shape.fill && shape.surface?.occlusion !== undefined && GEAR_MATERIALS[shape.surface.material].metalness > .5 && !shape.fine) {
+      // Thin inward bevels give plates physical thickness without a glowing outline.
+      const dx=lighting.direction[0]*Math.cos(facing)+lighting.direction[1]*Math.sin(facing),dy=-lighting.direction[0]*Math.sin(facing)+lighting.direction[1]*Math.cos(facing);
+      ctx.save(); ctx.beginPath(); ctx.moveTo(...points[0]); for (const p of points.slice(1)) ctx.lineTo(...p); ctx.closePath(); ctx.clip();
+      for (const edge of armorBevel(shape)) {
+        const lit=edge.nx*dx+edge.ny*dy;
+        if (Math.abs(lit)<.25) continue;
+        const edgePoints:Point[]=[edge.a,edge.b].map(p=>[p[0]-edge.nx*.18,p[1]-edge.ny*.18]);
+        ctx.globalAlpha *= .65;
+        line(ctx, project ? edgePoints.map(project) : edgePoints, color(lit>0?mixColor(shape.fill,lighting.color,.48):'#122332'), lit>0?.28:.45);
+        ctx.globalAlpha /= .65;
+      }
+      ctx.restore();
     }
     if (shape.stroke) line(ctx, points, color(stops ? stops[1][1] : shape.stroke), shape.width ?? .7);
   }

@@ -1,3 +1,4 @@
+import { beginRelief, reliefFacet } from './surface-relief.ts';
 import { weatherStone } from './material-art.ts';
 import { createTreeSprite, TREE_BOUNDS } from './tree-art.ts';
 import type { Sprite } from './art-types.ts';
@@ -168,6 +169,10 @@ export class ArtLibrary {
     const foot: Point = [width * 0.62, height - 3];
     const front: Point = [width * 0.25, height - 4];
     const center: Point = [width * 0.53, height * 0.57];
+    beginRelief(ctx, sprite.image, width, height);
+    reliefFacet(ctx, [left, crown, topRight, center], [-.3, -.7, .64], .01, .55);
+    reliefFacet(ctx, [topRight, right, foot, center], [.9, .15, .4], .13, .35);
+    reliefFacet(ctx, [left, center, foot, front], [-.4, .65, .64], .18, .35);
     polygon(ctx, [left, crown, topRight, right, foot, front], '#444e46');
     polygon(ctx, [left, crown, topRight, center], '#656657');
     polygon(ctx, [topRight, right, foot, center], '#394940');

@@ -24,5 +24,5 @@ export function sampleGearLight(x:number,y:number,lights:readonly PointLight[], 
     red+=((packed>>>16)&255)*w;green+=((packed>>>8)&255)*w;blue+=(packed&255)*w;
   }
   if(!total)return key;
-  return {direction:[dx/weight,dy/weight,dz/weight],color:`rgb(${Math.round(red/weight)},${Math.round(green/weight)},${Math.round(blue/weight)})`,power:Math.min(1.5,key.power+total*.5)};
+  return {volume:key.volume,direction:[dx/weight,dy/weight,dz/weight],color:`rgb(${Math.round(red/weight)},${Math.round(green/weight)},${Math.round(blue/weight)})`,power:Math.min(1.5,key.power+total*.5)};
 }

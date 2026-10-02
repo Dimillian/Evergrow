@@ -1,3 +1,4 @@
+import { beginRelief } from './surface-relief.ts';
 import { propRasterScale } from './prop-art.ts';
 import { createTreeSprite, isTreeKind } from './tree-art.ts';
 import type { Sprite } from './art-types.ts';
@@ -103,6 +104,7 @@ export class EnvironmentArt {
     const seed = hash(variant + family.length * 313);
     c.scale(resolution, resolution);
     c.translate(sprite.anchorX, sprite.anchorY);
+    beginRelief(c, image, width, height, sprite.anchorX, sprite.anchorY);
     if (bounds) drawBiomeProp(c, family, seed);
     else if (family === 'reeds') this.reeds(c, seed);
     else if (family === 'fern') this.fern(c, seed);

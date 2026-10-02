@@ -6,6 +6,8 @@ import test from 'node:test';
 import { ArtLibrary, drawHumanoid, type CharacterPose } from '../src/art.ts';
 import { WEAPON_PROFILES, SHIELD_PROFILES } from '../src/weapon-content.ts';
 import { HAIR_STYLES, SKIN_PALETTES, ACCESSORIES, FACIAL_HAIR, DEFAULT_APPEARANCE } from '../src/appearance-content.ts';
+import { createTreeSprite, TREE_BOUNDS, type TreeKind } from '../src/tree-art.ts';
+import { reliefFacetCount } from '../src/surface-relief.ts';
 
 interface DrawingState {
   globalCompositeOperation: string; globalAlpha: number; fillStyle: string; strokeStyle: string;
@@ -99,6 +101,13 @@ test('appearance study parts preserve finite drawing and canvas state across cov
       assert.deepEqual(c.state(), before, `${hair.id} restores the drawing state`);
       assert.equal(c.depth, 0);
     }
+  }
+});
+
+test('every tree family authors surface planes on its independent trunk and crown layers', () => {
+  for(const kind of Object.keys(TREE_BOUNDS) as TreeKind[]) {
+    const sprite=createTreeSprite((width,height)=>({width,height,getContext:()=>new ArtContext()}) as unknown as HTMLCanvasElement,kind,1827);
+    for(const layer of [sprite.image,...sprite.foliage??[]]) assert.ok(reliefFacetCount(layer)>0,kind);
   }
 });
 

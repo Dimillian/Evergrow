@@ -1,3 +1,5 @@
+import { SurfaceRelief } from './surface-relief.ts';
+import type { GearLight } from './gear-material.ts';
 import type { SkyState } from './world-time.ts';
 import type { Sprite } from './art-types.ts';
 import type { Prop, World } from './world.ts';
@@ -6,14 +8,18 @@ import { propDefinition } from './biome-props.ts';
 /** A cached relief pass for existing painted sprites. Gear uses its authored normals;
  * scenery keeps its painted facets, with blended directional keys and narrow lit edges. */
 export class PropSurfaceLight {
+  private relief = new SurfaceRelief();
+  drawVolume(c: CanvasRenderingContext2D, sprite: Sprite, source: HTMLCanvasElement, light: GearLight, distance: number) {
+    return this.relief.draw(c, sprite, source, light, distance);
+  }
   private combined = new WeakMap<HTMLCanvasElement, { image: HTMLCanvasElement; key: string }>();
   private bakeBudget = 0;
-  beginFrame() { this.bakeBudget = 4; }
+  beginFrame() { this.bakeBudget = 4; this.relief.beginFrame(); }
   private edges = new WeakMap<HTMLCanvasElement, readonly HTMLCanvasElement[]>();
   private wetMasks = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
   private climates = new WeakMap<Prop, { warm: number; cool: number; wet: number }>();
   private masks = new WeakMap<HTMLCanvasElement, readonly HTMLCanvasElement[]>();
-  reset() { this.masks = new WeakMap(); this.edges = new WeakMap(); this.wetMasks = new WeakMap(); this.climates = new WeakMap(); this.combined = new WeakMap(); }
+  reset() { this.relief.reset(); this.masks = new WeakMap(); this.edges = new WeakMap(); this.wetMasks = new WeakMap(); this.climates = new WeakMap(); this.combined = new WeakMap(); }
   /** Small projected props use one prelit image per independently moving layer.
    * Slowly changing sky updates are spread over frames, never a whole-forest bake. */
   drawCompact(c: CanvasRenderingContext2D, prop: Prop, sprite: Sprite, source: HTMLCanvasElement, sky?: SkyState): boolean {

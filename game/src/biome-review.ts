@@ -26,7 +26,7 @@ async function boot() {
   const sceneWorld = world, scenes = biomeReviewScenes(sceneWorld,BIOME_IDS,variant).filter(scene=>!lightingStudy||BIOME_IDS.includes(scene.id as typeof BIOME_IDS[number]));
   if(!lightingStudy)scenes.push({ id: 'origin', name: `The first steps · ${world.sampleBiome(0, 0).name}`, description: 'The starting wilderness at world origin. A frozen scene from the current procedural renderer.', x: 0, y: -100 });
   let skyHour=Number(params.get('hour')??9);if(!Number.isFinite(skyHour))skyHour=9;skyHour=((skyHour%24)+24)%24;
-  let cycle=false;
+  let cycle=false, surfaceVolume=true;
   const profiler=new FrameProfiler(lightingStudy),sceneRenderer=renderer=new Renderer(false,profiler);
   let present:((dt:number)=>void)|undefined,renderCount=0;
   const canvas = document.createElement('canvas'); canvas.width = 1600; canvas.height = 1100;
@@ -35,7 +35,7 @@ async function boot() {
   const display = document.createElement('canvas'); display.width = 1600; display.height = 1100;
   root.innerHTML = `<header class="layout-review-header"><div><h1></h1></div><p class="layout-review-static">${lightingStudy?'Live light & atmosphere':`World generation ${WORLD_GENERATION_VERSION}`} · Seed ${seed}</p></header>
     <div class="layout-review-toolbar"><nav class="layout-review-views" aria-label="Biomes and transitions"></nav><button class="landscape-next">Another area</button><select style="font:inherit;color:#dddbc9;background:#132027;border:1px solid #40534f;padding:10px;border-radius:3px" class="landscape-seed" aria-label="World seed">${[7319,18427,90210].map(n=>`<option value="${n}" ${n===seed?'selected':''}>Seed ${n}</option>`).join('')}</select><a class="layout-review-download">Save PNG</a></div>
-    ${lightingStudy?`<div class="layout-review-toolbar"><label>Time <input data-hour type="range" min="0" max="23.99" step=".05" value="${skyHour}" aria-label="Time of day"/></label><output data-clock></output><button data-hour-preset="6.5">Dawn</button><button data-hour-preset="12">Noon</button><button data-hour-preset="17.5">Dusk</button><button data-hour-preset="0">Midnight</button><button data-cycle aria-pressed="false">Play day cycle</button></div>`:''}
+    ${lightingStudy?`<div class="layout-review-toolbar"><label>Time <input data-hour type="range" min="0" max="23.99" step=".05" value="${skyHour}" aria-label="Time of day"/></label><output data-clock></output><button data-hour-preset="6.5">Dawn</button><button data-hour-preset="12">Noon</button><button data-hour-preset="17.5">Dusk</button><button data-hour-preset="0">Midnight</button><button data-cycle aria-pressed="false">Play day cycle</button><button data-volume aria-pressed="true">Volume: on</button></div>`:''}
     <figure class="layout-review-figure"><div class="layout-review-frame"></div><figcaption class="layout-review-caption"><p class="layout-review-description"></p><p class="layout-review-location"></p></figcaption></figure>
     <p class="layout-review-status" role="status"></p>${lightingStudy?'<details><summary>Render timings</summary><output data-timings></output></details>':''}`;
   root.querySelector('.layout-review-frame')!.append(canvas);
@@ -68,7 +68,7 @@ async function boot() {
     profiler.reset();renderCount=0;
     present=dt=>{
       profiler.begin(performance.now());
-      sceneRenderer.render(sim,sceneWorld,dt,{phase:'paused',reducedMotion:!lightingStudy||reduced.matches,skyHour:lightingStudy?skyHour:undefined});
+      sceneRenderer.render(sim,sceneWorld,dt,{surfaceVolume,phase:'paused',reducedMotion:!lightingStudy||reduced.matches,skyHour:lightingStudy?skyHour:undefined});
       postfx??=new PostFX(display);const start=profiler.start();postfx.render(sceneRenderer.canvas,0);profiler.end('postfx',start);
       c.drawImage(display,0,0);profiler.finish();
       const clock=root.querySelector('[data-clock]');if(clock)clock.textContent=worldTimeLabel((skyHour-WORLD_TIME.startHour)/24*WORLD_TIME.daySeconds);
@@ -95,6 +95,7 @@ async function boot() {
   root.querySelector<HTMLInputElement>('[data-hour]')?.addEventListener('input',event=>setHour(Number((event.target as HTMLInputElement).value)),{signal:lifetime.signal});
   for(const button of root.querySelectorAll<HTMLButtonElement>('[data-hour-preset]'))button.addEventListener('click',()=>setHour(Number(button.dataset.hourPreset)),{signal:lifetime.signal});
   root.querySelector<HTMLButtonElement>('[data-cycle]')?.addEventListener('click',event=>{cycle=!cycle;const button=event.target as HTMLButtonElement;button.setAttribute('aria-pressed',String(cycle));button.textContent=cycle?'Pause day cycle':'Play day cycle';},{signal:lifetime.signal});
+  root.querySelector<HTMLButtonElement>('[data-volume]')?.addEventListener('click',event=>{surfaceVolume=!surfaceVolume;const button=event.target as HTMLButtonElement;button.textContent=surfaceVolume?'Volume: on':'Volume: off';button.setAttribute('aria-pressed',String(surfaceVolume));present?.(0);},{signal:lifetime.signal});
   draw(selected);
   save.onclick=()=>{save.href=canvas.toDataURL('image/png');};
   if(lightingStudy){let previous=performance.now();const animate=(now:number)=>{if(disposed)return;

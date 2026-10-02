@@ -1,3 +1,4 @@
+import { beginRelief, reliefFacet, reliefCrown } from './surface-relief.ts';
 import { polygon, line, taper, randomFromSeed, between, type Point, type Random, type CanvasFactory } from './art-primitives.ts';
 import type { Sprite } from './art-types.ts';
 import type { PropKind } from './biome-props.ts';
@@ -29,6 +30,7 @@ export function createTreeSprite(factory: CanvasFactory, kind: TreeKind, seed: n
     if (!c) throw new Error('A 2D canvas context is required for tree art.');
     c.scale(resolution, resolution);
     c.translate(anchorX, anchorY);
+    beginRelief(c, image, width, height, anchorX, anchorY);
     return { image, c };
   });
   const random = randomFromSeed(seed), habit = Math.floor(random() * 3);
@@ -49,6 +51,11 @@ export function createTreeSprite(factory: CanvasFactory, kind: TreeKind, seed: n
   for (let i = 0; i < spine.length - 1; i++) {
     taper(trunk, spine[i], spine[i + 1], thick * (1 - i * .23), Math.max(1, thick * (.76 - i * .22)), palette.bark);
     line(trunk, [[spine[i][0] - thick * .25, spine[i][1]], [spine[i + 1][0] - thick * .13, spine[i + 1][1]]], palette.barkLight, i === 0 ? 1.4 : .85);
+  }
+  // Two broad trunk faces, with a narrow root contact recess.
+  for (let i = 0; i < spine.length - 1; i++) {
+    const a = spine[i], b = spine[i + 1], w = thick * (1 - i * .23) * .5, tip = Math.max(.6, thick * (.76 - i * .22) * .5);
+    for (const side of [-1, 1]) reliefFacet(trunk, [[a[0], a[1]], [a[0] + side * w, a[1]], [b[0] + side * tip, b[1]], b], [side * .78, -.1, .62], i === 0 ? .08 : .02);
   }
   // Furrowed bark follows the trunk, with narrow lit ridges and a broken dark seam.
   for (let mark = 0; mark < 18; mark++) {
@@ -90,6 +97,8 @@ export function createTreeSprite(factory: CanvasFactory, kind: TreeKind, seed: n
       const x = lean * f + between(random, -2, 2), c = surfaces[tier % 2 + 1].c;
       const points: Point[] = [[x - span, y + 4], [x - span * .67, y - 5], [x - span * .81, y - 8], [x - span * .3, y - 17], [x, y - 28], [x + span * .42, y - 13], [x + span * .85, y - 4], [x + span, y + 5], [x + span * .3, y + 3], [x, y + 10], [x - span * .43, y + 5]];
       polygon(c, points, palette.leaf[tier % 2]);
+      reliefFacet(c, points, [0, .6, .65], .24);
+      reliefFacet(c, [[x-span*.85,y],[x,y-27],[x+span*.78,y-4],[x,y+2]], [-.3,-.6,.74], .03, .5);
       for (let needle = 0; needle < 12; needle++) {
         const nx = between(random, -span * .85, span * .85) + x, ny = y + between(random, -6, 4);
         line(c, [[nx, ny - 3], [nx + 4, ny + 3]], palette.leaf[2], .7);
@@ -131,6 +140,7 @@ function crown(c: CanvasRenderingContext2D, x: number, y: number, rx: number, ry
     const a = i / 24 * Math.PI * 2, r = (i % 3 === 0 ? .86 : 1) * between(random, .9, 1.05);
     return [x + Math.cos(a) * rx * r, y + Math.sin(a) * ry * r];
   });
+  reliefCrown(c, points, x, y, rx, ry);
   polygon(c, points, colors[0]);
   polygon(c, points.map(([px, py]) => [x + (px - x) * .94 - rx * .035, y + (py - y) * .84 - ry * .12]), colors[1]);
   // Broad top-facing color masses, then small grouped leaves. No uniform perimeter outline.

@@ -1,10 +1,11 @@
+import { volumeDiffuse } from './surface-lighting.ts';
 import { mixColor, type Point } from './art-primitives.ts';
 import type { GearShape } from './weapon-shapes.ts';
 
 import { GEAR_MATERIALS, type GearMaterial } from './gear-material-content.ts';
 export { GEAR_MATERIALS, GEAR_MATERIAL_IDS, type GearMaterial } from './gear-material-content.ts';
-export interface GearSurface { material: GearMaterial; normal: readonly [number, number, number]; seed: number; facet?: boolean; albedo?: string }
-export interface GearLight { direction: readonly [number, number, number]; color: string; power: number }
+export interface GearSurface { material: GearMaterial; normal: readonly [number, number, number]; seed: number; facet?: boolean; albedo?: string; occlusion?: number }
+export interface GearLight { volume?: boolean; direction: readonly [number, number, number]; color: string; power: number }
 export const DEFAULT_GEAR_LIGHT: Readonly<GearLight> = Object.freeze({ direction: [-.45,-.6,.66] as const, color:'#e9f1ff',power:1 });
 export function gearSurface(material: GearMaterial, seed = 0, normal: readonly [number, number, number] = [-.24, -.32, .916]): GearSurface {
   const length = Math.hypot(...normal) || 1;
@@ -31,9 +32,11 @@ export function gearMaterialStops(base: string, surface: GearSurface, facing = 0
   const m = GEAR_MATERIALS[surface.material], response=gearLightResponse(surface,light,facing);
   const power=Math.min(1.5,Math.max(0,light.power));
   const highlight=mixColor(m.light,light.color,.45);
-  const shade=(1-response.diffuse)*.38;
+  const volume = light.volume !== false;
+  const diffuse = volume ? volumeDiffuse(response.diffuse) : response.diffuse;
+  const shade = (1-diffuse)*(volume ? .56 : .38) + (volume ? surface.occlusion ?? 0 : 0);
   let pigment=mixColor(base,m.shade,shade);
-  pigment=mixColor(pigment,highlight,Math.min(.62,response.diffuse*.14*power+response.specular*1.2));
+  pigment=mixColor(pigment,highlight,Math.min(.62,diffuse*(volume ? .25 : .14)*power+response.specular*(volume ? 1.35 : 1.2)));
   if(surface.facet) return [[0,pigment],[1,pigment]];
   // Soft cylindrical variation, with restrained metallic reflection bands.
   const angle = Math.atan2(light.direction[1], light.direction[0]) - facing;
