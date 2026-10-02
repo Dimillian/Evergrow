@@ -1,11 +1,20 @@
 import { drawGlow, type PointLight } from './lighting.ts';
 
 const TAU = Math.PI * 2;
+// Keep artwork, emission and scene illumination at the same compact size.
+const PORTAL_SCALE = .78;
+const TENDRIL_ROOTS = [
+  { x: 6, y: -5, reach: 29, rise: -7, curl: 12 },
+  { x: 21, y: -39, reach: 26, rise: 17, curl: -9 },
+  { x: 20, y: -72, reach: 25, rise: -9, curl: 10 },
+  { x: 9, y: -98, reach: 21, rise: -22, curl: -6 },
+] as const;
 /** Shared slow breath for the aperture, ground spill and actual scene light. */
 export function riftPortalPulse(time: number): number {
   return .5 + .5 * Math.sin(time * 1.65);
 }
 export function riftPortalLight(x: number, y: number, time: number, scale = 1): PointLight {
+  scale *= PORTAL_SCALE;
   return { x, y: y - 40 * scale, radius: 175 * scale, color: '#ef548b',
     power: .52 + riftPortalPulse(time) * .16, stationary: true };
 }
@@ -22,19 +31,20 @@ function aperture(c: CanvasRenderingContext2D, time: number) {
 
 /** Tapered, articulated ribbons: fixed work and no particle allocations. */
 function tendril(c: CanvasRenderingContext2D, side: number, index: number, time: number) {
-  const length = 44 + index * 12;
+  const root = TENDRIL_ROOTS[index], phase = index * 1.7 + side * .8;
   const point = (u: number) => ({
-    x: side * (9 + index * 4 + Math.sin(u * 2.4) * length
-      + Math.sin(time * 1.1 - u * 4 + index * 1.7) * 7 * u),
-    y: 2 - u * (34 + index * 13) + Math.sin(u * 5 + time * .8 + index) * 10 * u,
+    x: side * (root.x + Math.sin(u * 2.1) * root.reach
+      + Math.sin(time * 1.1 - u * 4 + phase) * 3 * u),
+    y: root.y + root.rise * u + Math.sin(u * Math.PI) * root.curl
+      + Math.sin(u * 5 + time * .8 + phase) * 4 * u,
   });
   c.beginPath();
   for (let j = 0; j <= 16; j++) {
-    const u = j / 16, p = point(u), width = (1 - u) * (5 - index * .5);
+    const u = j / 16, p = point(u), width = (1 - u) * (2.7 - index * .25);
     if (!j) c.moveTo(p.x, p.y - width); else c.lineTo(p.x, p.y - width);
   }
   for (let j = 16; j >= 0; j--) {
-    const u = j / 16, p = point(u); c.lineTo(p.x, p.y + (1 - u) * (5 - index * .5));
+    const u = j / 16, p = point(u); c.lineTo(p.x, p.y + (1 - u) * (2.7 - index * .25));
   }
   c.closePath(); c.fillStyle = '#291426'; c.fill();
   c.lineWidth = .8; c.strokeStyle = '#873354'; c.stroke();
@@ -51,9 +61,10 @@ function tendril(c: CanvasRenderingContext2D, side: number, index: number, time:
 /** Living crimson tear, shared by town fixtures, rift exits and entry UI. */
 export function drawRiftPortal(c: CanvasRenderingContext2D, x: number, y: number, time: number, scale = 1): void {
   const pulse = riftPortalPulse(time);
+  scale *= PORTAL_SCALE;
   c.save(); c.translate(x, y); c.scale(scale, scale); c.lineCap = 'round'; c.lineJoin = 'round';
-  c.fillStyle = '#0b0716a0'; c.beginPath(); c.ellipse(0, 5, 57, 17, 0, 0, TAU); c.fill();
-  c.save(); c.scale(1, .3); drawGlow(c, 0, 9, 96, '#dc286b', .38 + pulse * .1); c.restore();
+  c.fillStyle = '#0b0716a0'; c.beginPath(); c.ellipse(0, 5, 39, 12, 0, 0, TAU); c.fill();
+  c.save(); c.scale(1, .3); drawGlow(c, 0, 9, 72, '#dc286b', .38 + pulse * .1); c.restore();
   drawGlow(c, 0, -49, 99, '#b92967', .24 + pulse * .08);
   for (let i = 3; i >= 0; i--) for (const side of [-1, 1]) tendril(c, side, i, time);
   aperture(c, time);
@@ -99,6 +110,7 @@ export function drawRiftPortal(c: CanvasRenderingContext2D, x: number, y: number
 
 /** Soft emission survives world darkening without repainting opaque silhouettes. */
 export function drawRiftPortalEmission(c: CanvasRenderingContext2D, x: number, y: number, time: number, scale = 1): void {
+  scale *= PORTAL_SCALE;
   const pulse = riftPortalPulse(time);
   drawGlow(c, x, y - 48 * scale, 72 * scale, '#df397e', .17 + pulse * .055);
   drawGlow(c, x + 2 * scale, y - 101 * scale, 17 * scale, '#ffbed9', .3 + pulse * .12);
