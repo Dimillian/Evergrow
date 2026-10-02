@@ -4,7 +4,7 @@ import type { HitSnapshot, Player, ProjectileEffects } from './model.ts';
 import type { SkillId } from './character-types.ts';
 import type { ProjectileDefinition } from './combat-content.ts';
 import { canUseSkill } from './skill-content.ts';
-export interface TimedSkillStance { remaining: number; reduction: number; charges: number; bonus: number; }
+export interface TimedSkillStance { remaining: number; reduction: number; charges: number; bonus: number; unlimited?: boolean; capacity?: number; }
 export interface SkillEcho { delay: number; x: number; y: number; angle: number; definition: ProjectileDefinition; effects: ProjectileEffects; }
 export interface PlayerSkillEffects {
   uniqueSerial?: number;
@@ -17,7 +17,7 @@ export interface PlayerSkillEffects {
   archer?: {x:number;y:number;angle:number;remaining:number;shotRemaining?:number};
   borrowed?: {capacity:number;remaining:number};
   brace?: TimedSkillStance; rallyOfIron?: TimedSkillStance; ghostHunt?: TimedSkillStance;
-  shelters?: Partial<Record<SkillId, { remaining: number; reduction: number }>>;
+  shelters?: Partial<Record<SkillId, { remaining: number; reduction: number; anchor?: {x:number;y:number;radius:number} }>>;
   embers?: StoredEmbers[];
   ward?: { remaining: number; capacity: number; rupture?: {absorbed:number;cap:number;radius:number;offense:HitSnapshot} };
   echoes: SkillEcho[];
@@ -30,7 +30,7 @@ export function snapshotSkillOffense(p: Player, skill?: SkillId): HitSnapshot {
 export function consumeRally(p: Player, melee: boolean): number {
   const buff=p.skillEffects?.rallyOfIron;
   if(!melee || !buff || buff.remaining<=0 || buff.charges<=0 || !canUseSkill('rallyOfIron',p.equipment))return 1;
-  buff.charges--;return 1+buff.bonus;
+  if(!buff.unlimited)buff.charges--;return 1+buff.bonus;
 }
 /** One delayed first-arrow snapshot per action. Topology and crit survive; healing/statuses/recursion do not. */
 export function queueSkillEcho(p: Player, x:number,y:number,angle:number,definition:ProjectileDefinition,effects:ProjectileEffects,aim?:{x:number;y:number}):void {
@@ -44,8 +44,12 @@ export function queueSkillEcho(p: Player, x:number,y:number,angle:number,definit
 /** Highest stance mitigation wins; a finite ward consumes only the remaining damage. */
 export function mitigateSkillHit(p: Player, amount:number):{damage:number;absorbed:number;burst?:WardBurst} {
   const s=p.skillEffects;if(!s)return{damage:amount,absorbed:0};
-  const reduction=Math.max(...Object.entries(s.shelters??{}).map(([id,b])=>b.remaining&&canUseSkill(id as SkillId,p.equipment)?b.reduction:0),s.brace?.remaining? s.brace.reduction:0,s.rallyOfIron?.remaining&&canUseSkill('rallyOfIron',p.equipment)?s.rallyOfIron.reduction:0);
+  const reduction=Math.max(...Object.entries(s.shelters??{}).map(([id,b])=>b.remaining&&canUseSkill(id as SkillId,p.equipment)&&(!b.anchor||Math.hypot(p.x-b.anchor.x,p.y-b.anchor.y)<=b.anchor.radius)?b.reduction:0),s.brace?.remaining? s.brace.reduction:0,s.rallyOfIron?.remaining&&canUseSkill('rallyOfIron',p.equipment)?s.rallyOfIron.reduction:0);
   amount=Math.max(1,Math.round(amount*(1-reduction)));
+  const brace=s.brace?.remaining&&hasUnique(p.character,'oathplate')?s.brace:undefined;
+  const braced=Math.min(amount,brace?.capacity??0);
+  if(brace?.capacity){brace.capacity-=braced;if(brace.capacity<=0)delete s.brace;}
+  amount-=braced;
   const ward=s.ward?.remaining&&canUseSkill('runicWard',p.equipment)?s.ward:undefined;
   const absorbed=ward?Math.min(amount,ward.capacity):0;
   let burst:WardBurst|undefined;
@@ -60,13 +64,16 @@ export function mitigateSkillHit(p: Player, amount:number):{damage:number;absorb
   const borrowed=s.borrowed;
   const borrowedAbsorbed=borrowed?Math.min(amount-absorbed,borrowed.capacity):0;
   if(borrowed){borrowed.capacity-=borrowedAbsorbed;if(borrowed.capacity<=0)delete s.borrowed;}
-  return{damage:amount-absorbed-borrowedAbsorbed,absorbed:absorbed+borrowedAbsorbed,...(burst?{burst}:{})};
+  return{damage:amount-absorbed-borrowedAbsorbed,absorbed:braced+absorbed+borrowedAbsorbed,...(burst?{burst}:{})};
 }
 export function advanceSkillEffects(p: Player,dt:number,emitEcho?:(echo:SkillEcho)=>boolean|void):void {
   const s=p.skillEffects;if(!s)return;if(p.dead){p.skillEffects=undefined;return;}
   for(const id of ['brace','rallyOfIron','ghostHunt'] as const){const b=s[id];if(b){b.remaining=Math.max(0,b.remaining-dt);if(!b.remaining||!p.character.allocatedNodes.includes(`skill:${id}`)||!canUseSkill(id,p.equipment))delete s[id];}}
   for(const [id,b]of Object.entries(s.shelters??{})){b.remaining=Math.max(0,b.remaining-dt);if(!b.remaining||!p.character.allocatedNodes.includes(`skill:${id}`)||!canUseSkill(id as SkillId,p.equipment))delete s.shelters![id as SkillId];}
   if(s.ward){s.ward.remaining=Math.max(0,s.ward.remaining-dt);s.ward.capacity=Math.min(s.ward.capacity,p.maxHp*.35);if(!s.ward.remaining||!p.character.allocatedNodes.includes('skill:runicWard')||!canUseSkill('runicWard',p.equipment))delete s.ward;}
+  if(s.brace?.capacity!==undefined){s.brace.capacity=Math.min(s.brace.capacity,p.maxHp*.35);if(!hasUnique(p.character,'oathplate'))delete s.brace;}
+  if(s.rallyOfIron?.unlimited&&!hasUnique(p.character,'war-drummers-crown'))delete s.rallyOfIron;
+  if(s.shelters?.ironCitadel?.anchor&&!hasUnique(p.character,'foundation-of-kings'))delete s.shelters.ironCitadel;
   // The shared barrier budget uses the current life limit and surviving ward.
   advanceUniqueEffects(p,dt);
   if(s.archer&&!s.ghostHunt){delete s.archer;s.echoes=[];}

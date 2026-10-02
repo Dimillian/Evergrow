@@ -76,6 +76,12 @@ export function advanceGroundEffects(effects: ActiveGroundEffect[], dt: number, 
         style: effect.style, skill: effect.skill });
       effect.tick += Math.max(GROUND_EFFECT_RULES.minimumInterval, effect.interval);
       effect.pulsesLeft--;
+      if(effect.pulsesLeft===0&&effect.lingeringFrost){
+        effect.duration=effect.lingeringFrost;effect.interval=.3;effect.tick=.3;effect.damage=0;
+        effect.slow={duration:.65,factor:.25};delete effect.stun;delete effect.lingeringFrost;
+        effect.pulsesLeft=groundEffectPulseCount(effect);
+        continue;
+      }
       if (effect.pulsesLeft === 0 && effect.scorch) {
         // Reuse the reserved area slot: an impact cannot lose its aftermath at capacity.
         const scorch = effect.scorch;

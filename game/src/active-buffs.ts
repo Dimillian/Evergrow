@@ -41,22 +41,24 @@ export function activeBuffs(p: Player, groundEffects: readonly GroundEffect[] = 
   for (const id of ['brace', 'rallyOfIron', 'ghostHunt'] as const) {
     const b = effects?.[id]; if (!b || id === 'ghostHunt' && b.charges <= 0) continue;
     const defense = b.reduction ? `${percent(b.reduction)} less hit damage.` : '';
-    const offense = b.charges ? id === 'ghostHunt' ? `${effects?.archer ? 'Spectral archer: ' : ''}${b.charges} arrow echoes at ${percent(b.bonus)} damage.` : `Next ${b.charges} melee actions: +${percent(b.bonus)} damage.` : '';
-    skill(id, b.remaining, [defense, offense].filter(Boolean).join(' '), id === 'ghostHunt' ? effects?.archer ? 'unique:pale-huntsman' : 'echo' : 'mitigation', b.charges || undefined);
+    const offense = b.unlimited ? `Every melee action: +${percent(b.bonus)} damage.` : b.charges ? id === 'ghostHunt' ? `${effects?.archer ? 'Spectral archer: ' : ''}${b.charges} arrow echoes at ${percent(b.bonus)} damage.` : `Next ${b.charges} melee actions: +${percent(b.bonus)} damage.` : '';
+    skill(id, b.remaining, [defense, offense,b.capacity!==undefined?`Barrier: ${Math.ceil(b.capacity)} damage remaining.`:''].filter(Boolean).join(' '), id === 'ghostHunt' ? effects?.archer ? 'unique:pale-huntsman' : 'echo' : 'mitigation', b.unlimited?undefined:b.charges || undefined);
   }
-  for (const [id, b] of Object.entries(effects?.shelters ?? {})) skill(id as SkillId, b.remaining, `${percent(b.reduction)} less hit damage.`, 'mitigation');
+  for (const [id, b] of Object.entries(effects?.shelters ?? {})) skill(id as SkillId, b.remaining, `${percent(b.reduction)} less hit damage.${b.anchor ? (Math.hypot(p.x-b.anchor.x,p.y-b.anchor.y)<=b.anchor.radius?' Inside your fortress.':' Outside your fortress: protection inactive.') : ''}`, 'mitigation');
   if (p.guardTime > 0 && p.equipment.offHand?.kind === 'shield') skill('bulwark', p.guardTime, `Blocks ${percent(Math.max(p.guardReduction, p.derived.blockReduction))} of hit damage.`);
   for(const id of AURA_IDS)if(auraPower(p,id)>0){
     const rank=auraRank(p.character,id),aura=resolveAura(id,rank);
     add({id:`aura:${id}`,name:AURAS[id].name,icon:id,color:AURAS[id].color,remaining:1,duration:1,persistent:true,reservation:aura.reservation,
-      summary:`Reserves ${aura.reservation}% mana. ${auraSummary(id,rank)}`,term:'reservation'});
+      summary:`Reserves ${aura.reservation}% mana. ${auraSummary(id,rank,p.character)}`,term:'reservation'});
   }
+  if(auraPower(p,'ironroot')&&p.auras?.uniques?.ironroot&&(p.auras.rooted??0)>0)add({id:'ironroot-rooted',name:'World roots',icon:'ironroot',color:AURAS.ironroot.color,remaining:1,duration:1,persistent:true,progress:(p.auras.rooted??0)/1.2,
+    summary:(p.auras.rooted??0)>=1.2?'Ironroot now reduces elemental hits too. Moving ends this protection.':'Taking root: elemental protection after 1.2 seconds standing still.'});
   const blood=p.auras?.blood;
   if(blood&&auraPower(p,'bloodOath'))add({id:'blood-oath-stacks',name:'Blood Oath buildup',icon:'bloodOath',color:AURAS.bloodOath.color,remaining:blood.remaining,duration:AURA_RULES.bloodDuration,charges:blood.stacks,
-    summary:`+${Number((blood.stacks*auraPower(p,'bloodOath')).toFixed(1))}% melee damage against the same target. Switching targets resets it.`});
+    summary:`+${Number((blood.stacks*auraPower(p,'bloodOath')).toFixed(1))}% melee damage. ${p.auras?.uniques?.bloodOath?'Stacks carry between targets.':'Switching targets resets it.'}`});
   const still=p.auras?.still??0;
   if(still>0&&auraPower(p,'stillwater'))add({id:'stillwater-focus',name:'Stillwater focus',icon:'stillwater',color:AURAS.stillwater.color,remaining:1,duration:1,persistent:true,progress:still/AURA_RULES.stillDuration,
-    summary:`${Number((auraPower(p,'stillwater')*still/AURA_RULES.stillDuration).toFixed(1))}% less mana cost. Moving ends the focus.`});
+    summary:`${Number((auraPower(p,'stillwater')*still/AURA_RULES.stillDuration).toFixed(1))}% less mana cost. ${p.auras?.uniques?.stillwater?'Moving drains focus over 2 seconds.':'Moving ends the focus.'}`});
   const unique = (id: string, name: string, icon: SkillId, remaining: number, duration: number, summary: string, charges?: number) => {
     if (hasUnique(p.character, id) && canUseSkill(icon, p.equipment)) add({ id, name, icon, remaining, duration, summary, charges, color: SKILL_DEFINITIONS[icon].color, term: `unique:${id}` });
   };

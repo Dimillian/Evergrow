@@ -25,7 +25,13 @@ export function drawProjectile(c: CanvasRenderingContext2D, shot: Projectile, x:
   const wake = shot.launch ? Math.min(1, Math.max(0, shot.maxLife - shot.life) / .08) : 1;
   if (style !== 'arrow') drawGlow(c, x, y, style === 'fire' ? 58 : style === 'radiant' ? 24 : 37, color, .65);
   c.save(); c.translate(x, y); c.rotate(shot.angle);
-  if(shot.effects?.fissureWidth){
+  if(shot.skill==='cleave'&&shot.effects?.fissureWidth){
+    const width=shot.effects.fissureWidth;
+    c.globalCompositeOperation='lighter';
+    for(let i=2;i>=0;i--){c.strokeStyle=['#fff0bd','#e8c883','#a97743'][i];c.globalAlpha*=i===2?.45:1;c.lineWidth=2+i*3;
+      c.beginPath();c.moveTo(-20-i*7,-width);c.quadraticCurveTo(24-i*7,0,-20-i*7,width);c.stroke();}
+    for(let i=0;i<5;i++){const sy=(i/4-.5)*width*1.6;c.fillStyle='#e8c883';c.fillRect(-30-(i*13%19),sy,7,1.5);}
+  } else if(shot.effects?.fissureWidth){
     const width=shot.effects.fissureWidth;c.strokeStyle='#c4a17c';c.lineWidth=3;
     c.beginPath();c.moveTo(-32,-width*.5);c.lineTo(-15,-width*.25);c.lineTo(-4,0);c.lineTo(-20,width*.3);c.lineTo(-27,width*.6);c.stroke();
     for(let i=0;i<7;i++){const sy=(i/6-.5)*width*2,lag=12+(i*17%23);polygon(c,[[-lag-12,sy],[-lag+3,sy-7],[-lag+8,sy+3]],i%2?'#ad927b':'#665747');}

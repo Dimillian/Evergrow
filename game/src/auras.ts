@@ -1,16 +1,23 @@
+import { hasUnique } from './unique-content.ts';
+import type { CharacterSheet } from './character-types.ts';
 import { projectileDamageType } from './resistance-content.ts';
 import { AURA_RULES, admittedAuras, auraRank, resolveAura, type AuraId } from './aura-content.ts';
 import type { Player, Enemy, ProjectileStyle } from './model.ts';
 import { isBossKind } from './encounter-scaling.ts';
 import { deriveAttackStats } from './equipment.ts';
 import { applySlow } from './combat-status.ts';
+export function auraUniques(sheet: CharacterSheet) {
+ return {ironroot:hasUnique(sheet,'roots-of-the-world'),bloodOath:hasUnique(sheet,'unbroken-vow'),hawkeye:hasUnique(sheet,'farflight-circlet'),
+  thornbound:hasUnique(sheet,'briarkeepers-wrap'),elementalResonance:hasUnique(sheet,'prismatic-heart'),stillwater:hasUnique(sheet,'stillwater-treads'),elementalSpikes:hasUnique(sheet,'triune-carapace')};
+}
 export interface AuraState {
+ uniques?: ReturnType<typeof auraUniques>; rooted?: number; spikePulse?: number;
  powers: Partial<Record<AuraId,number>>; reservation:number; baseManaCost:number;
  blood?: {target:number;stacks:number;remaining:number}; still:number; pulse:number; element:number;
 }
 /** Rebuilt only with character commands/restoration, never from presentation. */
 export function syncAuras(p:Player):void {
- const previous=p.auras;
+ const previous=p.auras,uniques=auraUniques(p.character);
  const powers:Partial<Record<AuraId,number>>={};let reservation=0;
  for(const id of admittedAuras(p.character)){
   const aura=resolveAura(id,auraRank(p.character,id));
@@ -18,18 +25,21 @@ export function syncAuras(p:Player):void {
   if(reservation+aura.reservation>=100)continue;
   reservation+=aura.reservation;powers[id]=aura.power;
  }
- p.auras={powers,reservation,baseManaCost:p.derived.manaCostMultiplier,still:powers.stillwater&&previous?.powers.stillwater?previous.still:0,
+ p.auras={powers,reservation,uniques,rooted:powers.ironroot&&uniques.ironroot?previous?.rooted??0:0,spikePulse:previous?.uniques?.elementalSpikes===uniques.elementalSpikes?previous?.spikePulse??(uniques.elementalSpikes?1.2:.6):(uniques.elementalSpikes?1.2:.6),baseManaCost:p.derived.manaCostMultiplier,still:powers.stillwater&&previous?.powers.stillwater?previous.still:0,
   blood:powers.bloodOath&&previous?.powers.bloodOath?previous.blood:undefined,
   pulse:previous?.pulse??AURA_RULES.pulseInterval,element:previous?.element??0};
  p.derived.manaCostMultiplier*=auraCostMultiplier(p);
  p.mana=Math.min(p.mana,manaCapacity(p));
 }
 export function auraPower(p:Player,id:AuraId):number {return p.dead?0:p.auras?.powers[id]??0;}
+export function ironrootHitMultiplier(p:Player,physical:boolean):number {
+ return physical||p.auras?.uniques?.ironroot&&(p.auras.rooted??0)>=1.2?1-auraPower(p,'ironroot')/800:1;
+}
 export function manaCapacity(p:Player):number {return Math.max(1,Math.floor(p.maxMana*(1-(p.auras?.reservation??0)/100)+1e-9));}
 export function auraCostMultiplier(p:Player):number {return 1-auraPower(p,'stillwater')/100*Math.min(1,(p.auras?.still??0)/AURA_RULES.stillDuration);}
 export function bloodOathHit(p:Player,enemy:Enemy,melee:boolean):number {
  const power=auraPower(p,'bloodOath');if(!power||!melee||!p.auras)return 1;
- const previous=p.auras.blood,stacks=previous?.target===enemy.id&&previous.remaining>0?previous.stacks:0;
+ const previous=p.auras.blood,stacks=previous&&previous.remaining>0&&(previous.target===enemy.id||p.auras.uniques?.bloodOath)?previous.stacks:0;
  p.auras.blood={target:enemy.id,stacks:Math.min(AURA_RULES.bloodStacks,stacks+1),remaining:AURA_RULES.bloodDuration};
  return 1+stacks*power/100;
 }
@@ -38,7 +48,10 @@ export function resonanceHit(p:Player,e:Enemy,style:ProjectileStyle|undefined,pe
  if(!element||element==='physical')return 1;
  const existing=e.auraExposure?.[element],bonus=existing&&existing.remaining>0?existing.power:0;
  const power=auraPower(p,'elementalResonance');
- if(power&&!periodic)(e.auraExposure??={})[element]={power,remaining:AURA_RULES.exposureDuration};
+ if(power&&!periodic){
+  const elements=p.auras?.uniques?.elementalResonance?['fire','frost','lightning','arcane'] as const:[element];
+  for(const channel of elements)(e.auraExposure??={})[channel]={power,remaining:AURA_RULES.exposureDuration};
+ }
  return 1+bonus/100;
 }
 /** Short-range pulses share existing collision, damage/status owners and effect budgets. */
@@ -47,14 +60,20 @@ export function advanceAuras(p:Player,enemies:readonly Enemy[],dt:number,moving:
  hit:(enemy:Enemy,damage:number,style:ProjectileStyle)=>void,
  pulse:(style:ProjectileStyle,radius:number)=>void):void {
  const s=p.auras;if(!s||p.dead)return;
- if(s.blood&&((s.blood.remaining-=dt)<=0||!enemies.some(e=>e.id===s.blood!.target&&e.state!=='dead')))delete s.blood;
- s.still=s.powers.stillwater?(moving?0:Math.min(AURA_RULES.stillDuration,s.still+dt)):0;
+ if(s.blood&&((s.blood.remaining-=dt)<=0||(!s.uniques?.bloodOath&&!enemies.some(e=>e.id===s.blood!.target&&e.state!=='dead'))))delete s.blood;
+ s.rooted=s.powers.ironroot&&s.uniques?.ironroot&&!moving?Math.min(1.2,(s.rooted??0)+dt):0;
+ s.still=s.powers.stillwater?(moving?(s.uniques?.stillwater?Math.max(0,s.still-dt*AURA_RULES.stillDuration/2):0):Math.min(AURA_RULES.stillDuration,s.still+dt)):0;
  p.derived.manaCostMultiplier=s.baseManaCost*auraCostMultiplier(p);
  if(!s.powers.thornbound&&!s.powers.elementalSpikes)return;
- s.pulse-=dt;if(s.pulse>0)return;s.pulse=AURA_RULES.pulseInterval;
+ s.pulse-=dt;s.spikePulse=(s.spikePulse??AURA_RULES.pulseInterval)-dt;
+ const thornDue=s.pulse<=0,spikeDue=s.spikePulse<=0;
+ if(!thornDue&&!spikeDue)return;
+ if(thornDue)s.pulse=AURA_RULES.pulseInterval;
+ if(spikeDue)s.spikePulse=s.uniques?.elementalSpikes?1.2:AURA_RULES.pulseInterval;
  const slow=s.powers.thornbound??0,spikes=s.powers.elementalSpikes??0;
  const weapon=[p.equipment.mainHand,...(p.equipment.offHand?.kind==='weapon'?[p.equipment.offHand.weapon]:[])].find(w=>w.attackKind==='melee');
- const element=(['fire','frost','lightning'] as const)[s.element%3];
+ const elements=s.uniques?.elementalSpikes?['fire','frost','lightning'] as const:[(['fire','frost','lightning'] as const)[s.element%3]];
+ const spikeRadius=s.uniques?.elementalSpikes?90:AURA_RULES.spikeRadius;
  const damage=weapon?deriveAttackStats(p.stats,weapon).damage*spikes/100:0;
  let struck=false;
  for(const e of enemies){
@@ -63,9 +82,9 @@ export function advanceAuras(p:Player,enemies:readonly Enemy[],dt:number,moving:
   // Keep proximity coverage continuous; applySlow halves boss durations too.
   // Boss resistance is expressed by half potency here, not gaps between pulses.
   const boss=isBossKind(e.kind);
-  if(slow)applySlow(e,{duration:(AURA_RULES.pulseInterval+.05)*(boss?2:1),factor:1-slow/100*(boss?.5:1)});
-  if(damage&&range<=AURA_RULES.spikeRadius+e.radius){hit(e,damage,element);struck=true;}
+  if(slow&&thornDue)applySlow(e,{duration:(s.uniques?.thornbound?3:AURA_RULES.pulseInterval+.05)*(boss?2:1),factor:1-slow/100*(boss?.5:1)});
+  if(damage&&spikeDue&&range<=spikeRadius+e.radius){for(const element of elements){if(e.hp<=0)break;hit(e,damage,element);}struck=true;}
  }
- if(struck)pulse(element,AURA_RULES.spikeRadius);
- s.element=(s.element+1)%3;
+ if(struck)for(const element of elements)pulse(element,spikeRadius);
+ if(spikeDue)s.element=(s.element+1)%3;
 }

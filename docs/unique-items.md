@@ -1,6 +1,6 @@
 # Unique items
 
-Published in v0.5.0 · 2026-09-13 · twelve items. Local batch three adds six more (eighteen total); further balance follows gameplay feedback.
+The first twelve items shipped in v0.5.0 on 2026-09-13; six later additions brought the preceding catalog to eighteen. The local October 2 coverage pass adds nineteen, for **37 uniques: one per active skill and aura**. Gameplay balance remains subject to playtest feedback.
 
 Uniques are a separate rarity beside Legendary. Each has a fixed name, base/profile, four fixed affix types, and an equipped signature power. The signature description leads with the affected skill’s shared icon and full name, in both item tooltips and Chronicles. They use red/rose light with violet edges and the ✧ mark in item names, ground labels and tooltips. Legendary items keep their random affixes and Greater Affix rolls.
 
@@ -27,6 +27,31 @@ Uniques are a separate rarity beside Legendary. Each has a fixed name, base/prof
 | Red Harvest | Dagger | Backstab | A natural rear strike marks its victim for four seconds. The next Backstab consumes the mark and receives its Technique’s rear multiplier from any angle. Consuming a mark never renews it. At most sixteen live marks. |
 | Stormglass Reliquary | Orb | Arc Lightning | Place a three-second conductor at the aimed, terrain-clamped point within weapon reach. The first jump uses the Technique’s chain range and line of sight from the conductor; later jumps retain normal rules. Each cast replaces it; it never attacks automatically. |
 
+
+## Complete coverage additions · October 2, 2026
+
+| Unique | Slot | Skill | Equipped power |
+| --- | --- | --- | --- |
+| Horizon’s Edge | Gloves | cleave | Crescent Cleave sends a crescent 280 units along your aim instead of sweeping around you. It carries full weapon damage and hits each enemy once; reach Techniques widen it. Terrain stops it. |
+| Undertow Grasp | Gloves | repulse | Repulse draws ordinary enemies up to 70 units toward you, then deals its normal damage and stun. It cannot pull elites, champions or bosses, or pull through walls. |
+| Oathplate | Chest | brace | Brace replaces its damage reduction with a barrier equal to its mitigation percentage of maximum life, capped at 35%. It lasts for Brace’s duration and never stacks with itself. |
+| War Drummer’s Crown | Head | rallyOfIron | Rally of Iron has no charge limit, but lasts half as long. Each melee action gains the normal Rally bonus; its defensive reduction remains. |
+| Foundation of Kings | Legs | ironCitadel | Iron Citadel’s protection lasts twice as long but only applies inside its original impact circle. Leaving suspends protection; returning restores it until it expires. The opening strike is unchanged. |
+| Frostwake Soles | Boots | sidestep | Sidestep leaves a 65-unit frost patch for 3 seconds, slowing enemies by 45%. It deals no damage and grants no invulnerability. Bosses retain their normal control resistance. |
+| Skystrider Greaves | Legs | vaultingShot | Vaulting Shot moves forward instead of backward and fires a three-arrow fan. Each arrow keeps the skill’s damage and piercing. Ghost Hunt echoes only the central arrow. |
+| Reaper’s Veil | Head | nightReaping | Night Reaping prioritizes the lowest-life enemies. Slowed, staggered or stunned targets receive its rear-strike bonus even from the front. The normal target limit still applies. |
+| Second Sun | Head | meteor | Every Meteor impact is followed by a second full-damage impact at the same location after 0.65 seconds. Shattered Sky repeats each fragment. Burning ground refreshes without stacking. |
+| Faultline Regalia | Chest | cataclysm | Cataclysm arranges its normal impacts in a line from you toward your aimed destination, instead of a scattered circle. Every impact retains its damage, delay sequence and burning ground. Terrain limits the line. |
+| Stormwalker’s Mantle | Cloak | tempest | Tempest travels 300 units along your aim over its lifetime instead of following you. Its damage, duration and mana upkeep remain unchanged. Walls stop its advance. |
+| Winter Prison | Orb | absoluteZero | After its normal damaging waves, Absolute Zero leaves a 6-second field that slows enemies by 75%. The lingering field deals no damage and does not repeatedly freeze. |
+| Roots of the World | Boots | ironroot | After standing still for 1.2 seconds, Ironroot’s physical hit reduction also applies to elemental hits. Moving ends this extra protection immediately; armor remains active. |
+| Unbroken Vow | Amulet | bloodOath | Blood Oath stacks survive changing targets and a target’s death. Melee hits refresh the normal 3-second window. Stacks still expire when you stop attacking. |
+| Farflight Circlet | Head | hawkeye | While Hawkeye is active, arrows gain one extra piercing contact. This also applies to active bow skills; it does not create new arrows or free casts. |
+| Briarkeeper’s Wrap | Legs | thornbound | Thornbound’s slow lingers for 3 seconds after its last pulse, allowing you to kite enemies out of the aura. Bosses still receive half slow potency. |
+| Prismatic Heart | Amulet | elementalResonance | A direct elemental hit exposes Fire, Frost, Lightning and Arcane together at the aura’s normal strength. Exposures refresh without stacking; the triggering hit only benefits from exposure already present. |
+| Stillwater Treads | Boots | stillwater | Moving drains fully built Stillwater focus over 2 seconds instead of clearing it instantly. Standing still rebuilds focus at the normal rate. No extra mana is generated. |
+| Triune Carapace | Chest | elementalSpikes | Elemental Spikes pulses every 1.2 seconds, dealing its normal damage once each as Fire, Frost and Lightning within 90 units. It still needs an equipped melee weapon and reserves the normal mana. |
+
 Skills must still be unlocked, assigned and supported by compatible equipment. Signature powers do not unlock skills or grant ranks. Existing Techniques, purchased ranks and equipment requirements remain authoritative. There is no repeated-hit damage penalty. Returning projectiles return to a static firing position, never home on the player or enemies; terrain can stop the return. Shield throwing does not remove the equipped shield's defensive stats.
 
 Stored Fireballs snapshot damage, source level, status payload and offensive stats when paid for. A full storage rejects another cast before payment. Release waits for room for the entire group if projectile or ground-effect capacity is exhausted. Unequipping the item, losing Fireball/compatible gear, expiration, or death clears stored casts. Temporary combat effects are not saved across sessions/travel checkpoints. Keyboard/mouse and controller holding repeat Whirlwind; touch retains its normal tap-to-cast input.
@@ -35,7 +60,7 @@ Stored Fireballs snapshot damage, source level, status payload and offensive sta
 ## Generation, odds and improvements
 
 - Every Unique drops at the player's level when its reward is generated (before kill XP is awarded for enemy drops). Its level is then fixed. Ordinary equipment remains tied to source level/rank. Claim-time dungeon/event reward generation uses the claiming player's level.
-- All eighteen current designs have equal selection weight. There is no build-based bias, minimum level gate, duplicate protection or pity counter.
+- All 37 current designs have equal selection weight. There is no build-based bias, minimum level gate, duplicate protection or pity counter.
 - Affix types and roll position are fixed at 0.75 within their normal level-scaled ranges. Displayed and actual affix values remain whole numbers. Base power uses the Legendary tier budget; signature powers are not included in the generic gear-power estimate.
 - Unique chance equals the existing Legendary chance at every item-giving source. Legendary odds are preserved; the additional Unique share comes proportionally from Common/Magic/Rare/Epic. Loot quantities remain unchanged. A Unique result is always its authored equipment, never a charm.
 - Enemy item rolls: Normal 0.05%, Veteran 0.15%, Elite 0.5% each for Unique and Legendary. These are per-item probabilities, before each rank's item quantity/first-kill rules.
@@ -48,7 +73,7 @@ Stored Fireballs snapshot damage, source level, status payload and offensive sta
 
 ## Chronicles
 
-The Uniques tab lists all eighteen designs, including unfound items. All/Found/Unfound filters and search cover item names, skills and item types. Hover, focus or tap shows the signature power and fixed affix types. Discovered items also show first finder/date and highest level found; unfound art is dimmed.
+The Uniques tab lists all 37 designs, including unfound items. All/Found/Unfound filters and search cover item names, skills and item types. Hover, focus or tap shows the signature power and fixed affix types. Discovered items also show first finder/date and highest level found; unfound art is dimmed.
 
 Discovery occurs only on successful pickup, never when a drop is generated or rejected by a full inventory. Selling, dropping or later deleting the item does not erase discovery. Re-pickups preserve first discovery and do not inflate completion. Per-character source records merge through the existing Chronicle account/local ledgers; no separate cloud schema or save migration is required. Existing discovery records are retained; new designs start unfound.
 
@@ -98,3 +123,13 @@ Verification: the full 1,356-test suite passed; the final targeted run passed al
 ### Shared effect UI · September 13
 
 All eighteen signatures now separate a concise primary power from nested rules in item comparisons and Chronicles. Stored Fireballs show count and earliest expiry; Patient Bastion shows stored damage; Borrowed Life shows absorption; Lunge shows only its usable return window. Ashen Double and conductor presence show remaining lifetimes. Broken Seal and Pale Huntsman extend the existing Ward/Ghost Hunt cards. Red Harvest belongs to its marked target. Ordinary projectile travel and Piercing Shot's existing charge display do not gain redundant player badges. No signature or drop rule changes.
+
+## Coverage implementation and limits
+
+- `unique-skill-recipes.ts` applies active powers after ranks and Techniques to a fresh resolved recipe. Tooltips, touch targeting and combat consume that same recipe. Base recipes remain immutable.
+- Added damage is paid and bounded at cast commitment: Second Sun reserves both impacts, Skystrider reserves all three arrows, Frostwake reserves its patch, and Horizon reserves its projectile before any mana/cooldown is spent. Repeat hits deal full damage.
+- Horizon uses the shared piercing collision owner with a distinct gold crescent; Undertow moves ordinary enemies in bounded collision probes. Anchored Iron Citadel has a visible world-space boundary and an inactive buff explanation outside it.
+- Brace barriers, unlimited Rally and anchored Citadel clear on removing their unique, losing their skill or death. Released projectiles/ground attacks retain their paid snapshots. Storms retain normal weapon, mana and death cancellation.
+- Aura unique flags are derived on character refresh, not scanned from gear for every enemy. Reservation and purchased-rank power are unchanged. Roots and Stillwater expose buildup through the existing buff row; Blood Oath explains transferable stacks. Neither persistence nor presentation owns combat state.
+- Farflight adds one contact at actual arrow creation (including bow skills); melee crescents, fissures and thrown shields are excluded from Hawkeye. Triune uses a separate 1.2-second pulse timer so it cannot slow Thornbound's coverage.
+- `unique-coverage.test.ts` covers all nineteen powers, capacity rejection, terrain, expiry, gear removal, rank/Technique resolution, generation and Chronicles completeness. Existing `unique-items.test.ts` validates all 37 authored recipes at levels 1–1,000,000, enhancement and save round trips.

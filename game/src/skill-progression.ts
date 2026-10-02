@@ -1,4 +1,5 @@
 import { isAura, resolveAura, auraReservation } from './aura-content.ts';
+import { applyUniqueSkillRecipe } from './unique-skill-recipes.ts';
 import { hasUnique, UNIQUE_RULES } from './unique-content.ts';
 import { AFFIX_COMBAT_RULES } from './equipment-affix-content.ts';
 import type { ActionResult, CharacterSheet, DerivedCharacterStats, SkillId } from './character-types.ts';
@@ -229,6 +230,7 @@ export function resolveSkill(id: SkillId, stats: Pick<DerivedCharacterStats, 'ma
     ...(!recipe.effects.blastRadius && stats.projectilePierce ? { pierce: Math.min(12, (recipe.effects.pierce ?? 0) + stats.projectilePierce) } : {}) };
 
   if(id==='iceNova'&&recipe.kind==='radial'&&sheet&&hasUnique(sheet,'winters-reach'))recipe.targetRange=UNIQUE_RULES.novaRange;
+  if(sheet)applyUniqueSkillRecipe(id,recipe,sheet);
   return { rank, bonusRanks, effectiveRank, variant, damageMultiplier, recipe, reservation:isAura(id)?resolveAura(id,rank).reservation:0, mana: isAura(id)?0:Math.max(1, Math.round(base.manaCost * stats.manaCostMultiplier * multiplier * 10) / 10),
     cooldown, upkeep: id === 'tempest' ? Math.round(18 * stats.manaCostMultiplier * multiplier * 10) / 10 : 0 };
 }

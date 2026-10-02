@@ -838,9 +838,9 @@ export class Simulation {
   private projectile(x: number, y: number, angle: number, definition: ProjectileDefinition, skill?: SkillId, effects?: ProjectileEffects, sourceLevel = this.player.level, sourceKind?: EnemyKind): Projectile | undefined {
     if (this.projectiles.length >= MAX_PROJECTILES) return;
     const { life, radius, damage, owner } = definition;
-    const hawkeye=owner==='player'&&effects?.style==='arrow'?auraPower(this.player,'hawkeye'):0;
+    const hawkeye=owner==='player'&&effects?.style==='arrow'&&!effects.fissureWidth&&!effects.thrownShield?auraPower(this.player,'hawkeye'):0;
     const speed=definition.speed*(1+hawkeye/100);
-    if(hawkeye)effects={...effects!,hawkeye:{x,y,crit:this.player.character.allocatedNodes.includes('keystone:measured-force')?0:hawkeye/200}};
+    if(hawkeye)effects={...effects!,...(this.player.auras?.uniques?.hawkeye?{pierce:(effects?.pierce??0)+1}:{}),hawkeye:{x,y,crit:this.player.character.allocatedNodes.includes('keystone:measured-force')?0:hawkeye/200}};
     const shot: Projectile = { id: this.nextId++, sourceLevel, sourceKind, x, y, prevX: x, prevY: y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, angle, radius, damage, life, maxLife: life, owner, skill,
       effects: effects ? { ...effects, ...(effects.offense ? { offense: { ...effects.offense } } : {}) } : undefined, hitIds: new Set() };

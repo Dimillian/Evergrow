@@ -329,6 +329,7 @@ export interface GroundEffect {
   delay: number; duration: number; interval: number; tick: number;
   damage: number; skill: SkillId; style: ProjectileStyle; offense?: HitSnapshot;
   crystal?: boolean;
+  lingeringFrost?: number;
   slow?: { duration: number; factor: number }; stun?: number; follow?: boolean; upkeep?: number;
   burn?: { readonly duration: number; readonly dps: number };
   scorch?: { readonly duration: number; readonly interval: number; readonly dps: number };

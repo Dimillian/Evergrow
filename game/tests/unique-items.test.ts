@@ -1,3 +1,5 @@
+import { isAura } from '../src/aura-content.ts';
+import { auraPower } from '../src/auras.ts';
 import { advanceChains } from '../src/chain-lightning.ts';
 import { deriveAttackStats } from '../src/equipment.ts';
 import test from 'node:test';
@@ -26,8 +28,8 @@ import type { CombatEvent, Input, WorldQuery } from '../src/model.ts';
 const world:WorldQuery={blocked:()=>false,move:(x,y,dx,dy)=>({x:x+dx,y:y+dy})};
 function fixture(id:string,variant?:string,terrain=world){
  const u=UNIQUES.find(u=>u.id===id)!;const sim=new Simulation(terrain,{spawn:false,startX:0,startY:0});const p=sim.player;
- p.level=25;p.character.equipped.weapon=generateItem(93,25,'weapon',SKILL_DEFINITIONS[u.skill].requirement==='magic'?'cinder-wand':SKILL_DEFINITIONS[u.skill].requirement==='bow'?'crescent-recurve':'longsword','common');
- p.character.equipped.offhand=null;
+ p.level=25;p.character.equipped.weapon=generateItem(93,25,'weapon',SKILL_DEFINITIONS[u.skill].requirement==='magic'?'cinder-wand':SKILL_DEFINITIONS[u.skill].requirement==='bow'?'crescent-recurve':SKILL_DEFINITIONS[u.skill].requirement==='dagger'?'rondel-dagger':'longsword','common');
+ p.character.equipped.offhand=SKILL_DEFINITIONS[u.skill].requirement==='shield'?generateItem(4,25,'shield','iron-buckler','common'):null;
  p.character.equipped[uniqueSlot(u)]=generateUnique(42,25,id);
  p.character.allocatedNodes=['origin',`skill:${u.skill}`];p.character.skillRanks[u.skill]=1;p.character.skillSlots[0]=u.skill;
  if(variant){p.character.allocatedNodes.push(`specialization:${variant}`);p.character.skillSpecializations[u.skill]=variant;}
@@ -69,6 +71,7 @@ test('unique and legendary chances are equal without changing legendary odds; so
 test('every signature activates with Original and each of its three Techniques without changing the base recipe',()=>{
  for(const u of UNIQUES)for(const variant of [undefined,...SKILL_SPECIALIZATIONS.filter(v=>v.skill===u.skill).map(v=>v.id)]){
   const {p,cast}=fixture(u.id,variant);const before=resolveSkill(u.skill,p.derived,p.character);const mana=p.mana;
+  if(isAura(u.skill)){assert.ok(auraPower(p,u.skill)>0);assert.equal(cast(),false);continue;}
   assert.ok(cast(),`${u.id}:${variant}`);assert.equal(p.mana,mana-before.mana);
   assert.deepEqual(resolveSkill(u.skill,p.derived,p.character),before);
  }

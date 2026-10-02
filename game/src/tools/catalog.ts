@@ -30,7 +30,7 @@ export const TOOLS: readonly Tool[] = [
   {id:'enhancement-workbench',group:'equipment',name:'Enhancement workbench',path:'/services.html?operation=enhance&study',description:'Replay, pause and slow the earned rank glow; replay and scrub the actual forge animation. Inspect rank tooltips, weapon/armor/charm fixtures, guaranteed upgrades, gold shortages, maximum rank and save errors.',tags:'enhance enhancement particles animation upgrade blacksmith workbench' },
   {id:'services',group:'equipment',name:'Town services',path:'/services.html',description:'Inspect vendor stock, buyback and item improvements.'},
   {id:'services-phone',group:'equipment',name:'Services · phone',path:'/services-narrow.html',description:'The same enchanting interface at 390 pixels.'},
-  {id:'unique-items',group:'equipment',name:'Unique equipment',path:'/character.html?uniques',description:'The twelve unique items, fixed affixes and signature powers in the inventory.'},
+  {id:'unique-items',group:'equipment',name:'Unique equipment',path:'/character.html?uniques',description:'All 37 unique items, fixed affixes and signature powers in the inventory.'},
   {id:'unique-collection',group:'interface',name:'Unique collection',path:'/chronicle.html?uniques',description:'Found and undiscovered unique items with sample character history.'},
   {id:'unique-loot',group:'equipment',name:'Unique ground loot',path:'/loot.html?uniques',description:'Crimson and violet unique drops with named loot plates.'},
   {id:'drop-motion',group:'equipment',name:'Coins & mana drops',path:'/loot.html?resources',description:'Animated staggered coin hops and glowing mana vials; pause, scrub and compare backdrops at actual and enlarged sizes.',tags:'gold mp potion bounce pickup glow'},

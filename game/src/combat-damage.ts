@@ -1,6 +1,6 @@
 import { riftWardActive } from './rift-tactics.ts';
 import { RIFT_TACTICS } from './rift-encounters.ts';
-import { auraPower, bloodOathHit, resonanceHit } from './auras.ts';
+import { ironrootHitMultiplier, bloodOathHit, resonanceHit } from './auras.ts';
 import type { WardBurst } from './unique-combat.ts';
 import { storeBastion } from './unique-combat.ts';
 import { mitigateSkillHit } from './player-skill-effects.ts';
@@ -129,7 +129,7 @@ export function damagePlayer(amount: number, angle: number, sourceLevel: number,
   const p = context.player;
   if (p.dead || p.invulnerable > 0 || context.world.isSanctuary?.(p.x, p.y)) return false;
   const reduction = damageType === 'physical' ? armorReduction(effectiveArmor(p), sourceLevel) : p.derived.resistances[damageType];
-  amount = Math.max(1, Math.round(amount * (1 - reduction) * (damageType==='physical'?1-auraPower(p,'ironroot')/800:1)));
+  amount = Math.max(1, Math.round(amount * (1 - reduction) * ironrootHitMultiplier(p,damageType==='physical')));
   if (p.equipment.offHand?.kind === 'shield' && (p.guardTime > 0 || context.random() < p.derived.blockChance)) {
     const reduction = p.guardTime > 0 ? Math.max(p.guardReduction, p.derived.blockReduction) : p.derived.blockReduction;
     const blocked = Math.floor(amount * reduction);

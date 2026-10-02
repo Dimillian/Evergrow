@@ -43,7 +43,9 @@ export function drawPlayerSkillEffects(c:CanvasRenderingContext2D,p:Player,x:num
    c.restore();
  }
  const s=p.skillEffects;if(!s)return;c.save();c.translate(x,y);c.lineWidth=1.4;
- for(const [id,b]of Object.entries(s.shelters??{})){c.strokeStyle=id==='smokeVeil'?'#9bbfc6':'#f0d5a2';c.globalAlpha=Math.min(.7,b.remaining*2);for(let i=0;i<6;i++){const a=i*Math.PI/3+time*.1;c.beginPath();c.ellipse(0,-8,27+i%2*3,16+i%2*4,0,a,a+.55);c.stroke();}}
+ for(const [id,b]of Object.entries(s.shelters??{})){
+   if(b.anchor){c.save();c.translate(b.anchor.x-p.x,b.anchor.y-p.y);c.strokeStyle='#f0d5a2';c.globalAlpha=Math.min(.4,b.remaining*.2);c.setLineDash([8,7]);c.beginPath();c.arc(0,0,b.anchor.radius,0,Math.PI*2);c.stroke();c.restore();if(Math.hypot(p.x-b.anchor.x,p.y-b.anchor.y)>b.anchor.radius)continue;}
+   c.strokeStyle=id==='smokeVeil'?'#9bbfc6':'#f0d5a2';c.globalAlpha=Math.min(.7,b.remaining*2);for(let i=0;i<6;i++){const a=i*Math.PI/3+time*.1;c.beginPath();c.ellipse(0,-8,27+i%2*3,16+i%2*4,0,a,a+.55);c.stroke();}}
  if(s.embers?.length){for(let i=0;i<s.embers.length;i++){
    const a=time*1.2+i*Math.PI*2/s.embers.length,ex=Math.cos(a)*27,ey=-22+Math.sin(a)*12;
    c.globalAlpha=.8;c.fillStyle='#bc518b';c.beginPath();c.arc(ex,ey,5,0,Math.PI*2);c.fill();

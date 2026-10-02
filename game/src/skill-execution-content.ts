@@ -4,19 +4,20 @@ import type { ProjectileEffects, ProjectileStyle } from './model.ts';
 import type { SlowEffect } from './combat-status.ts';
 
 export type SkillExecution = (
-  | {kind:'aura'; aura:AuraId; rank:number}
-  | { kind: 'step'; duration: number; speed: number; retreat?: boolean; shot?: boolean; pierce?: number }
+  | {kind:'aura'; aura:AuraId; rank:number; summary?:string}
+  | { kind: 'step'; duration: number; speed: number; retreat?: boolean; shot?: boolean; pierce?: number; offsets?: readonly number[]; frostPatch?: boolean }
   | { kind: 'ward'; duration: number; fraction: number }
-  | { kind: 'stance'; duration: number; reduction: number; charges: number; bonus: number; echo?: boolean }
-  | { kind: 'sweep'; reachMultiplier: number; arc: number }
+  | { kind: 'stance'; duration: number; reduction: number; charges: number; bonus: number; echo?: boolean; unlimited?: boolean; barrier?: number }
+  | { kind: 'sweep'; reachMultiplier: number; arc: number; traveling?: boolean }
   | { kind: 'dash'; duration: number; speed: number; radius: number }
-  | { kind: 'radial'; targetRange?:number; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle; echo?: boolean; shelter?: { duration: number; reduction: number } }
-  | { kind: 'cone'; radius: number; arc: number; stun: number }
+  | { kind: 'radial'; targetRange?:number; radius: number; melee: boolean; stun?: number; slow?: SlowEffect; style?: ProjectileStyle; echo?: boolean; shelter?: { duration: number; reduction: number; anchored?: boolean } }
+  | { kind: 'cone'; radius: number; arc: number; stun: number; pull?: number }
   | { kind: 'guard'; duration: number; reduction: number }
-  | { kind: 'backstab'; minRange: number; reachMultiplier: number; arc: number; rearAngle: number; rearMultiplier: number; targets?: number }
+  | { kind: 'backstab'; minRange: number; reachMultiplier: number; arc: number; rearAngle: number; rearMultiplier: number; targets?: number; controlledRear?: boolean }
   | { kind: 'projectile'; speed: number; radius: number; offsets: readonly number[];
       effects: Readonly<Omit<ProjectileEffects, 'burnDps' | 'groundDps'> & { burnDamageMultiplier?: number; groundDamageMultiplier?: number }> }
   | { kind: 'ground'; effect: 'meteor' | 'arrowRain' | 'storm' | 'frost'; radius: number; delay: number; duration: number; interval: number;
+      repeatDelay?: number; line?: boolean; travelDistance?: number; lingeringFrost?: number;
       style: ProjectileStyle; scatterRadiusMultiplier?: number; scorch?: { readonly duration: number; readonly interval: number; readonly damageMultiplier: number }; scatter?: number; slow?: SlowEffect; stun?: number; follow?: boolean; burn?: { readonly duration: number; readonly damageMultiplier: number } }
   | { kind: 'chain'; travelSpeed: number; jumps: number; range: number; falloff: number; duration: number; style: ProjectileStyle; revisit?: boolean });
 
@@ -83,11 +84,13 @@ export function skillDamageSuffix(id: SkillId, recipe: SkillExecution = SKILL_EX
 }
 export function skillUtilityLabel(id: SkillId, recipe:SkillExecution = SKILL_EXECUTION[id]): string {
   const n=(v:number)=>Number(v.toFixed(2));
-  if(recipe.kind==='aura')return auraSummary(recipe.aura,recipe.rank);
+  if(recipe.kind==='aura')return recipe.summary??auraSummary(recipe.aura,recipe.rank);
   if(recipe.kind==='radial'&&recipe.shelter)return `${n(recipe.shelter.duration)}s · ${n(recipe.shelter.reduction*100)}% less hit damage${recipe.slow?` · ${Math.round((1-recipe.slow.factor)*100)}% slow for ${n(recipe.slow.duration)}s`:''}`;
   if(recipe.kind==='guard')return `${n(recipe.duration)}s · ${n(recipe.reduction*100)}% block`;
   if(recipe.kind==='step')return `${Math.round(recipe.speed*recipe.duration)} units · no invulnerability`;
   if(recipe.kind==='ward')return `${n(recipe.fraction*100)}% max life barrier · ${n(recipe.duration)}s`;
+  if(recipe.kind==='stance'&&recipe.barrier)return `${n(recipe.barrier*100)}% max life barrier · ${n(recipe.duration)}s`;
+  if(recipe.kind==='stance'&&recipe.unlimited)return `${n(recipe.duration)}s · every melee action +${n(recipe.bonus*100)}% damage · ${n(recipe.reduction*100)}% less hit damage`;
   if(recipe.kind==='stance')return `${n(recipe.duration)}s${recipe.reduction?` · ${n(recipe.reduction*100)}% less hit damage`:''}${recipe.charges?` · ${recipe.charges} ${recipe.echo?'echoes at':'actions at +'} ${n(recipe.bonus*100)}% damage`:''}`;
   return '';
 }

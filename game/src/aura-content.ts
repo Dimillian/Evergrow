@@ -1,3 +1,4 @@
+import { UNIQUES, hasUnique } from './unique-content.ts';
 import type { CharacterSheet } from './character-types.ts';
 
 export const AURA_IDS = ['ironroot','bloodOath','hawkeye','thornbound','elementalResonance','stillwater','elementalSpikes'] as const;
@@ -25,7 +26,21 @@ export function resolveAura(id: AuraId, rank=1) {
 }
 export function assignedAuras(sheet: CharacterSheet) { return [...new Set(sheet.skillSlots.filter(isAura))].filter(id=>sheet.allocatedNodes.includes(`skill:${id}`)); }
 export function auraReservation(sheet: CharacterSheet): number { return assignedAuras(sheet).reduce((sum,id)=>sum+resolveAura(id,auraRank(sheet,id)).reservation,0); }
-export function auraSummary(id: AuraId, rank=1): string {
+export function auraSummary(id: AuraId, rank=1, sheet?:CharacterSheet): string {
+ const unique=sheet&&UNIQUES.find(u=>u.skill===id&&hasUnique(sheet,u.id));
+ if(!unique)return baseAuraSummary(id,rank);
+ const {power}=resolveAura(id,rank),n=(v:number)=>Number(v.toFixed(1));
+ switch(id){
+  case 'ironroot': return `${baseAuraSummary(id,rank)} After 1.2s standing still: ${n(power/8)}% less elemental hit damage too.`;
+  case 'bloodOath': return `+${n(power)}% melee damage per stack · 5 stacks · 3s · stacks carry between targets.`;
+  case 'hawkeye': return `${baseAuraSummary(id,rank)} Arrows pierce one additional enemy.`;
+  case 'thornbound': return `${n(power)}% slow within 90 units, lingering for 3s · half potency on bosses.`;
+  case 'elementalResonance': return `Direct elemental hits expose Fire, Frost, Lightning and Arcane for 3s: +${n(power)}% matching damage taken.`;
+  case 'stillwater': return `Up to ${n(power)}% less mana cost after 1.2s standing still. Moving drains full focus over 2s.`;
+  case 'elementalSpikes': return `${n(power)}% melee weapon damage per element every 1.2s within 90 units · Fire, Frost and Lightning together.`;
+ }
+}
+function baseAuraSummary(id: AuraId, rank=1): string {
  const {power}=resolveAura(id,rank),n=(v:number)=>Number(v.toFixed(1));
  switch(id){
   case 'ironroot': return `+${n(power)}% armor · ${n(power/8)}% less physical hit damage.`;

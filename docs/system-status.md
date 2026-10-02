@@ -1,5 +1,7 @@
 # Current system status
 
+Local October 2 unique coverage: nineteen new equipped powers complete one unique per active skill and aura (37 total). All are in the equal-weight Unique loot pool and Chronicles found/unfound collection, with targeted fixed affixes, shared skill-first tooltips and buff explanations. Unique/Legendary odds and aura reservation remain unchanged. See [unique items](unique-items.md) for the complete catalog and bounded execution rules.
+
 Local October 1 rendering pass: scene-aware, memory-budgeted prop caches and zoom raster tiers; compact cached prop shading; conservative scaled prop/enemy render bounds; complete character timings and per-frame visibility/cache telemetry in F3. Data & audits includes frozen forest/water/rift zoom comparisons. No gameplay or save changes. See [world performance](world-performance.md#zoomed-out-rendering-october-1-2026-local) for limits and validation.
 
 October 1 follow-up: zoom-aware precomposed rank outlines, a shared outdoor-light atlas with effect-specific resolution, and exact cached navigation anchors/edges. A 1,260-tick crowd replay matches the preceding simulation with 47% fewer walking-clearance queries. See [follow-up validation](world-performance.md#outline-outdoor-lighting-and-navigation-follow-up-october-1-2026).
