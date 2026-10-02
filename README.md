@@ -12,6 +12,8 @@ A gothic, top-down 2D action RPG built for the browser, inspired by Diablo and P
 
 Play on desktop with keyboard/mouse or a controller, use touch controls, or [run it locally](#run-locally).
 
+**ModRetro Chromatic:** [native Game Boy Color port](chromatic/README.md), with cartridge saves, a compact skill atlas and local ROM/emulator builds. [Coverage and limits](docs/chromatic.md).
+
 **AYN Thor:** [build and install the offline Android app](docs/android-thor.md), with native controls and a matching lower-screen map, compact inventory and character companion.
 
 On the hosted game, sign in with ChatGPT for cloud characters or choose Local for browser-only saves. Download and Import let you transfer a character and its explored map. Local development and Android keep local saves.

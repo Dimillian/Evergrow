@@ -1,0 +1,79 @@
+/* Generated from current Evergrow content. Run npm run chromatic:content. */
+#pragma bank 255
+#include "ev.h"
+static const char * const biomes[] = {"DEADWOOD","VERDANT FOREST","THE MIRE","FROSTPINE REACH","EMBERFALL","AMBERWOOD","HOLLOW HIGHLANDS","WHISPERING STEPPE","SUNSCAR EXPANSE"};
+static const char * const weapons[] = {"LONGSWORD","WARDEN AXE","FLANGED MACE","RONDEL DAGGER","GREATBLADE","GREATAXE","GRAVE MAUL","THORN SHORTBOW","CRESCENT RECURVE","WARDEN LONGBOW","EMBER STAFF","RIME STAFF","STORM STAFF","CINDER WAND","HOARFROST WAND","SPARK WAND","STAR WAND"};
+static const char * const skills[] = {"SHIELD BASH","BULWARK","BRACE","REPULSE","IRON CITADEL","CRESCENT CLEAVE","WHIRLWIND","RIFT LUNGE","EARTHSHATTER","RALLY OF IRON","THORN VOLLEY","PIERCING SHOT","RICOCHET","RAIN OF ARROWS","GHOST HUNT","BACKSTAB","SMOKE VEIL","SIDESTEP","NIGHT REAPING","VAULTING SHOT","FIREBALL","FROST LANCE","ICE NOVA","ARC LIGHTNING","METEOR","SOUL SIPHON","TEMPEST","ABSOLUTE ZERO","RUNIC WARD","CATACLYSM"};
+static const char * const items[] = {"WEAPON","SHIELD","FOCUS","HELM","ARMOR","GLOVES","LEGGINGS","BOOTS","CLOAK","AMULET","RING","CHARM"};
+static const char * const focus_names[] = {"EMBER CODEX","RIME FOLIO","ASTRAL GRIMOIRE","CINDER RELIQUARY","RIMEGLASS ORB","ASTRAL SPHERE"};
+static const char * const affixes[] = {"MIGHT","PRECISION","ARCANA","VITALITY","GUARDING","HASTE","INSIGHT","EMBERS","RIME","STORM","ASTRAL","SIPHONING"};
+static const char * const enemies[] = {"SCRAP GOBLIN","HOLLOW STALKER","GRAVEBOUND BRUTE","MIRE HEXER","BRIAR HOUND","ASHEN RANGER","LANTERN WISP","HOLLOW WARDEN","THORN REAVER","MIRE SPITTER","RIME REVENANT","EMBER ACOLYTE","DUNE SCUTTLER","STORM SENTINEL","BRIAR MATRIARCH","ASHBOUND COLOSSUS","GRAVE MARSHAL"};
+static const char * const territories[] = {"BASTION","FORGE","HUNT","VEIL","CRUCIBLE","WELLSPRING"};
+static const char * const rarities[] = {"COMMON","MAGIC","RARE","EPIC","LEGENDARY"};
+static const EvWeapon weapon_data[17] = {
+ {19,EV_MELEE,1,0,34,18},
+ {24,EV_MELEE,1,0,42,17},
+ {26,EV_MELEE,1,0,45,16},
+ {13,EV_MELEE,1,0,25,13},
+ {33,EV_MELEE,2,0,50,23},
+ {39,EV_MELEE,2,0,58,22},
+ {44,EV_MELEE,2,0,68,20},
+ {18,EV_BOW,2,0,34,100},
+ {24,EV_BOW,2,0,42,100},
+ {31,EV_BOW,2,0,54,100},
+ {28,EV_STAFF,2,1,50,100},
+ {24,EV_STAFF,2,2,45,100},
+ {17,EV_STAFF,2,3,33,100},
+ {16,EV_WAND,1,1,31,100},
+ {14,EV_WAND,1,2,29,100},
+ {11,EV_WAND,1,3,24,100},
+ {17,EV_WAND,1,4,33,100},
+};
+static const EvSkill skill_data[30] = {
+ {0,EV_REQ_SHIELD,EV_NOVA,8,14,24,0,0},
+ {480,EV_REQ_SHIELD,EV_GUARD,24,0,32,0,1},
+ {480,EV_ANY,EV_GUARD,11,0,32,0,1},
+ {300,EV_REQ_SHIELD,EV_NOVA,18,17,32,0,1},
+ {1680,EV_REQ_SHIELD,EV_NOVA,34,24,42,0,2},
+ {0,EV_REQ_MELEE,EV_SWEEP,9,18,24,0,0},
+ {0,EV_REQ_MELEE,EV_NOVA,9,16,24,0,0},
+ {240,EV_REQ_BLADE,EV_DASH,18,15,32,0,1},
+ {360,EV_REQ_HEAVY,EV_NOVA,27,26,32,0,1},
+ {1440,EV_REQ_MELEE,EV_RALLY,32,0,42,0,2},
+ {0,EV_REQ_BOW,EV_FAN,8,8,24,0,0},
+ {210,EV_REQ_BOW,EV_PIERCE,21,16,32,0,1},
+ {0,EV_REQ_BOW,EV_CHAIN,9,12,24,0,0},
+ {360,EV_REQ_BOW,EV_RAIN,27,7,32,0,1},
+ {1440,EV_REQ_BOW,EV_GHOST,30,0,42,0,2},
+ {0,EV_REQ_DAGGER,EV_THRUST,8,21,24,0,0},
+ {540,EV_ANY,EV_SMOKE,15,0,32,0,1},
+ {210,EV_ANY,EV_STEP,6,0,32,0,1},
+ {1680,EV_REQ_DAGGER,EV_NOVA,36,22,42,0,2},
+ {360,EV_REQ_BOW,EV_VAULT,17,12,32,0,1},
+ {0,EV_REQ_MAGIC,EV_BOLT,12,15,24,1,0},
+ {108,EV_REQ_MAGIC,EV_PIERCE,28,17,32,2,1},
+ {0,EV_REQ_MAGIC,EV_NOVA,14,15,24,2,0},
+ {0,EV_REQ_MAGIC,EV_CHAIN,12,13,24,3,0},
+ {420,EV_REQ_MAGIC,EV_METEOR,40,34,32,1,1},
+ {270,EV_REQ_MAGIC,EV_SIPHON,30,17,32,4,1},
+ {1440,EV_REQ_MAGIC,EV_STORM,35,7,42,3,2},
+ {1680,EV_REQ_MAGIC,EV_NOVA,75,24,42,2,2},
+ {600,EV_REQ_MAGIC,EV_WARD,17,0,32,4,1},
+ {1800,EV_REQ_MAGIC,EV_METEOR,80,28,42,1,2},
+};
+void ev_name(UINT8 kind,UINT8 id,char *out) BANKED {
+ const char *p="UNKNOWN";
+ switch(kind){
+ case EV_NAME_BIOME: if(id<9)p=biomes[id];break;
+ case EV_NAME_WEAPON: if(id<17)p=weapons[id];else if(id<23)p=focus_names[id-17];break;
+ case EV_NAME_SKILL: if(id<30)p=skills[id];break;
+ case EV_NAME_ITEM: if(id<12)p=items[id];break;
+ case EV_NAME_AFFIX: if(id<12)p=affixes[id];break;
+ case EV_NAME_ENEMY: if(id<17)p=enemies[id];break;
+ case EV_NAME_TERRITORY: if(id<6)p=territories[id];break;
+ case EV_NAME_RARITY: if(id<5)p=rarities[id];break;
+ }
+ {UINT8 i=0;while(p[i]&&i<20){out[i]=p[i];i++;}out[i]=0;}
+}
+void ev_weapon(UINT8 profile,EvWeapon *out) BANKED { *out=weapon_data[profile<17?profile:0]; }
+void ev_skill(UINT8 id,EvSkill *out) BANKED { *out=skill_data[id<30?id:0]; }

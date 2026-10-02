@@ -22,6 +22,8 @@ Updated 2026-09-07. Use the current guides for implementation. Proposed designs 
 
 ## Start here
 
+- [Native Chromatic port](chromatic.md): editable GBC cartridge project, current feature coverage, hardware limits, SRAM recovery and build/test commands.
+
 - [Player changelog](../CHANGELOG.md) and [release workflow](releases.md): update, commit and verify player-facing notes before each Sites publication.
 
 - [Current system status](system-status.md): implemented features, source/content counts, limits, verification and recent checkpoints.

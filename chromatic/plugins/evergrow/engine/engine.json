@@ -1,0 +1,25 @@
+{
+  "version": "4.3.0-e1",
+  "sceneTypes": [
+    {
+      "key": "evergrow",
+      "label": "Evergrow native action RPG",
+      "files": [
+        "include/ev.h",
+        "include/states/evergrow.h",
+        "src/states/evergrow.c",
+        "src/ev_content.c",
+        "src/ev_character.c",
+        "src/ev_world.c",
+        "src/ev_combat.c",
+        "src/ev_render.c",
+        "src/ev_menu.c",
+        "src/ev_save.c",
+        "src/ev_audio.c",
+        "src/ev_art.c",
+        "src/ev_input.c",
+        "src/ev_screen.c"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "source": "Genuine binjgb framebuffer from the plugin native-ROM capture_state API",
+  "frame": 1824,
+  "createdAt": "2026-10-02T14:32:11.185Z",
+  "identity": {
+    "romSha256": "3d03a71aff74d88953f32832ccf0989241b71fb98b39f67f32bf5c17e3a5763d",
+    "runtimeSha256": "69aa17be45fec5fde585af4f39ed850b5d64107ec094a6482f316fef2fe7c945",
+    "sourceRevision": "4459fc826ac6e09ec31a5be86f6b757c804932ccb345562671697c878e0b98b4",
+    "cartridgeType": 30
+  },
+  "width": 160,
+  "height": 144,
+  "transformation": "Raw RGBA encoded as PNG; no scene staging, inputs or pixel changes"
+}
