@@ -1,5 +1,26 @@
 # Evergrow changelog
 
+## v0.7.4 — 2026-10-02T16:43:00Z
+
+### New
+
+- Nineteen new Unique items bring the collection to 37, with a signature power for every active skill and aura.
+- Discover the new Uniques in normal loot and track found and unfound designs in Chronicles.
+- Legendary and Unique drops announce themselves with distinct sounds, colored light and stained-glass beacons.
+- Killing blows produce directional falls, frozen shattering, rising embers or blue-white electrical recoil.
+
+### Tweaks
+
+- Trees, rocks and equipment gain richer volume, surface shading and highlights that respond to nearby lights.
+- Crimson Rift portals have flowing currents, pulsing glow and shorter animated tendrils around a more compact opening.
+- Approaching a rift softens surrounding sound and music while its otherworldly hum grows.
+- Dropped equipment hops, turns and settles with material-specific landing sounds; precious drops take priority in crowded loot showers.
+
+### Fixes
+
+- Removed overlapping character shadows while keeping contact with the ground clear.
+- Short elemental death effects now begin fully visible, and frost shards and their cracking sound follow the freeze.
+
 ## v0.7.3 — 2026-10-02T06:50:00Z
 
 ### New
