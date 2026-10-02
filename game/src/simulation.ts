@@ -328,7 +328,7 @@ export class Simulation {
   announceNewLootDrops(drops: readonly GroundItem[]): void {
     const existing = new Set(this.groundItems.map(drop => drop.id));
     for (const drop of drops) if (!existing.has(drop.id)) {
-      const cue = lootDropEvent(drop); if (cue) this.emit(cue);
+      this.emit(lootDropEvent(drop));
     }
   }
 
@@ -738,6 +738,7 @@ export class Simulation {
 
   private damageEnemy(enemy: Enemy, damage: number, angle: number, melee: boolean, periodic = false, style?: ProjectileStyle, elementalDamage?: number, offense?: HitSnapshot, authoredBurn = false): void {
     damageEnemy(enemy, damage, angle, melee, {
+      time: this.time,
       player: this.player, enemies: this.enemies, random: () => this.random(),
       visible: (ax, ay, bx, by) => this.lineOfSight(ax, ay, bx, by), emit: event => this.emit(event),
       killed: actor => {

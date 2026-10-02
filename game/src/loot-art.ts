@@ -19,18 +19,29 @@ export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly Grou
   for (const { drop, x, y } of lootPositions(drops)) {
     if(drop.flight&&worldTime<drop.flight.at+drop.flight.delay)continue;
     const flight=treasurePose(drop,worldTime,reducedMotion);
+    const arrival = arrivals?.pose(drop.id, worldTime, reducedMotion);
+    if (arrival && !drop.flight) { flight.x = x; flight.y = y; flight.height = arrival.height; flight.spin = arrival.spin; flight.landed = arrival.landed; }
     const anchorX = flight.landed ? x : flight.x, anchorY = flight.landed ? y : flight.y - flight.height;
     if (view && (anchorX + 80 < view.left || anchorX - 80 > view.left + view.width
       || anchorY + 40 < view.top || anchorY - 150 > view.top + view.height)) continue;
     const color = TIER_COLORS[drop.item.tier];
     const precious = ['rare', 'epic', 'legendary','unique'].includes(drop.item.tier);
-    c.fillStyle = '#040a10b0'; c.beginPath(); c.ellipse(flight.landed?x:flight.x, (flight.landed?y:flight.y) + 2, 12, 4, -.12, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#040a10b0'; c.beginPath(); c.ellipse(flight.landed?x:flight.x, (flight.landed?y:flight.y) + 2, 12 * (1-flight.height/140), 4 * (1-flight.height/140), -.12, 0, Math.PI * 2); c.fill();
     if (flight.landed && specialLootTier(drop.item.tier))
       drawLootBeacon(c, x, y, drop.item.tier, drop.id, time, reducedMotion, arrivals?.flare(drop.id, worldTime) ?? 0);
     // The equipment silhouette stays grounded beneath its beacon.
     c.save(); c.translate(flight.landed?x:flight.x, (flight.landed?y:flight.y)-3-flight.height); c.rotate(flight.spin); c.rotate(Math.sin(drop.item.seed) * .18); c.scale(1.2, .95);
     drawGearShapes(c, itemDropShapes(drop.item), value => value, undefined, weaponEnhancementRank(drop.item), reducedMotion ? 0 : time); c.restore();
     if(!flight.landed)continue;
+    const flare = reducedMotion ? 0 : arrivals?.flare(drop.id, worldTime) ?? 0;
+    if (flare > .68 && !specialLootTier(drop.item.tier)) {
+      const t = (1-flare)/.32;
+      c.save(); c.globalAlpha *= (1-t) * .7; c.strokeStyle=color; c.lineWidth=.8;
+      c.beginPath(); c.ellipse(x,y+2,7+t*17,2+t*5,0,0,Math.PI*2); c.stroke();
+      c.fillStyle=color;
+      for(let i=0;i<4;i++){const a=i*2.4+drop.id;c.fillRect(x+Math.cos(a)*(5+t*15),y+Math.sin(a)*t*7-Math.sin(t*Math.PI)*6,1.5,1.5);}
+      c.restore();
+    }
     c.strokeStyle = color + (precious ? 'ae' : '65'); c.lineWidth = .7;
     for (const side of [-1, 1]) {
       c.beginPath(); c.moveTo(x + side * 12, y - 2); c.lineTo(x + side * 15, y + 1);

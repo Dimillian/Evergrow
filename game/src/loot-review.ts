@@ -87,14 +87,15 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 let previewDt = 0;
 const controls = document.createElement('div');
 if (rarityView) {
-  controls.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20';
-  for (const tier of ['legendary', 'unique'] as const) {
+  controls.style.cssText = 'position:fixed;flex-wrap:wrap;justify-content:center;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20';
+  for (const tier of ['all', 'legendary', 'unique'] as const) {
     const button = document.createElement('button');
     button.textContent = `Replay ${tier}`;
     button.className = 'ui-button';
     button.style.cssText = 'padding:10px 14px;color:' + (tier === 'unique' ? '#ef91bd' : '#efb776');
     button.onclick = async () => {
       await previewAudio.unlock();
+      if(tier==='all'){renderer.lootDrops.reset();for(const drop of drops)delete drop.flight;renderer.handleEvents(drops.map(lootDropEvent),reduced.matches);return;}
       const drop = drops.find(drop => drop.item.tier === tier)!;
       drop.flight = { x: drop.x - 35, y: drop.y - 10, at: sim.time, delay: 0 };
       const event = lootDropEvent(drop)!;

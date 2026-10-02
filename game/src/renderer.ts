@@ -839,7 +839,7 @@ export class Renderer {
       entries.push({ y: decor.y, draw: () => drawSiteDecor(c, site, decor, settings.reducedMotion ? 0 : this.visualTime, destroyedNest ? 'emptied' : this.siteAftermath.get(site.id)) });
     }
     for (const remains of this.deaths.remains)
-      entries.push({ y: deathDepth(remains), draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
+      entries.push({ y: deathDepth(remains, settings.reducedMotion), draw: () => drawEnemyRemains(c, remains, settings.reducedMotion) });
     if(p.skillEffects?.conductor)entries.push({y:p.skillEffects.conductor.y,draw:()=>drawConductor(c,p)});
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
@@ -968,7 +968,7 @@ export class Renderer {
     for (const light of environmentLights) light.stationary = true;
     environmentLights.sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     const view = this.view;
-    return [...lights, ...lootBeaconLights(sim.groundItems, sim.time, { x: px, y: py }), ...environmentLights].filter(light => light.x + light.radius >= view.left
+    return [...lights, ...lootBeaconLights(sim.groundItems, sim.time, { x: px, y: py }, this.lootDrops), ...environmentLights].filter(light => light.x + light.radius >= view.left
       && light.x - light.radius <= view.left + view.width && light.y + light.radius >= view.top
       && light.y - light.radius <= view.top + view.height).slice(0, 18).map(light => this.cryptFloor
         ? { ...light, clip: cryptLightMask(this.cryptFloor, light) } : light);

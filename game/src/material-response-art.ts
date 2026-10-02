@@ -2,6 +2,7 @@ import { MATERIALS } from './material-content.ts';
 import { fragmentPose, type MaterialBurst } from './material-response.ts';
 /** Geometry and shading consume the same material/trajectory recipes as the response manager. */
 export function drawMaterialBurst(c: CanvasRenderingContext2D, burst: MaterialBurst, reducedMotion: boolean): void {
+  if (burst.age < 0) return;
   const recipe = MATERIALS[burst.material];
   c.save(); c.translate(burst.x, burst.y);
   if (!reducedMotion && burst.age < .6) {
@@ -32,7 +33,7 @@ export function drawMaterialBurst(c: CanvasRenderingContext2D, burst: MaterialBu
         case 'spark': c.moveTo(-l, 0); c.lineTo(l * .3, -w); c.lineTo(l * .5, 0); c.lineTo(l * .3, w); break;
         case 'ember': c.ellipse(0, 0, l * .5, w * .5, 0, 0, Math.PI * 2); break;
       }
-      c.closePath(); c.fill(); c.strokeStyle = recipe.edge; c.lineWidth = .6; c.globalAlpha *= .6;
+      c.closePath(); c.fill(); c.strokeStyle = burst.style === 'lightning' ? '#e3f4ff' : recipe.edge; c.lineWidth = .6; c.globalAlpha *= .6;
       c.beginPath(); c.moveTo(-l * .4, 0); c.lineTo(l * .35, -w * .2); c.stroke();
     }
     c.restore();

@@ -79,3 +79,34 @@ test('ground labels show only material and kind while preserving full item ident
   assert.ok(shortened.endsWith('…')); assert.ok(measure(shortened) <= 90);
   assert.equal(fitLootName('Signet', 0, measure), '');
 });
+
+
+test('captured momentum is bounded and front/back impacts select coherent collapses', () => {
+  const deaths=new EnemyDeaths(()=>.1);
+  const event={type:'kill' as const,x:0,y:0,angle:Math.PI,facing:0,targetId:1,remainingHp:0 as const,enemyKind:'stalker' as const,
+    motion:{vx:1000,vy:0,attack:.4,attackAngle:0,phase:2,scale:1.28}};
+  deaths.handle(event);const r=deaths.remains[0];
+  assert.equal(r.variant,1);assert.equal(r.motion?.scale,1.28);assert.equal(deathPose(r).x,0);
+  deaths.update(.6);assert.ok(Math.abs(deathPose(r).x)<16);
+  deaths.handle({...event,targetId:2,angle:0});assert.equal(deaths.remains[1].variant,2);
+  assert.equal(deaths.remains[1].motion?.attack,.4);
+});
+test('short elemental remains begin opaque and lightning delays only its visual collapse', () => {
+  for(const style of ['fire','frost','lightning'] as const){
+    const deaths=new EnemyDeaths(()=>0);
+    deaths.handle({type:'kill',style,x:0,y:0,angle:0,facing:0,targetId:1,remainingHp:0,enemyKind:'goblin'});
+    assert.equal(deathPose(deaths.remains[0]).opacity,1);
+    deaths.update(.1);
+    if(style==='lightning')assert.equal(deathPose(deaths.remains[0]).age,0);
+    deaths.update(15);assert.equal(deaths.remains.length,0);
+  }
+});
+
+
+test('frost stays solid until fracture and finishes fading with the shard release', () => {
+  const deaths=new EnemyDeaths(()=>0);
+  deaths.handle({type:'kill',style:'frost',x:0,y:0,angle:0,facing:0,targetId:1,remainingHp:0,enemyKind:'stalker'});
+  const r=deaths.remains[0];deaths.update(.19);assert.equal(deathPose(r).opacity,1);
+  deaths.update(.12);assert.ok(deathPose(r).opacity>0&&deathPose(r).opacity<1);
+  deaths.update(.12);assert.equal(deathPose(r).opacity,0);
+});

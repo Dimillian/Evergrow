@@ -1,11 +1,16 @@
+import { isBossKind } from './wilderness-boss-content.ts';
+import { MaterialResponses } from './material-response.ts';
+import { drawMaterialBurst } from './material-response-art.ts';
+import type { EnemyRemains } from './death-presentation.ts';
+import type { ProjectileStyle } from './model.ts';
 import { isRegionalEnemy } from './combat-content.ts';
 import './death-study.css';
 import { loadGameFont } from './font.ts';
 import { randomFromSeed, polygon, line } from './art-primitives.ts';
 import { drawHumanoid } from './art.ts';
 import { PostFX } from './postfx.ts';
-import { DEATH_KINDS, DEATH_VARIANTS, ENEMY_DEATHS } from './death-content.ts';
-import { drawDeathFigure } from './death-art.ts';
+import { DEATH_RESPONSE_TIMING, DEATH_KINDS, DEATH_VARIANTS, ENEMY_DEATHS } from './death-content.ts';
+import { drawEnemyRemains, resetDeathArt, drawDeathFigure } from './death-art.ts';
 import { ENEMY_DEFINITIONS } from './combat-content.ts';
 import { EnemyDeaths } from './death-presentation.ts';
 import { DEATH_MATERIALS } from './death-humanoid-art.ts';
@@ -15,12 +20,28 @@ if (!import.meta.env.DEV) throw new Error('Local review only');
 await loadGameFont();
 // Isolated art playback: no Simulation, gameplay input, audio, storage or saves.
 const host=document.querySelector<HTMLElement>('#study')!;
-const requested=new URLSearchParams(location.search).get('creature');
+const params=new URLSearchParams(location.search);
+const effects=params.has('effects');
+const requested=params.get('creature');
+const elements: Array<ProjectileStyle|undefined>=[undefined,'frost','fire','lightning'];
+const effectNames=['Directional impact','Freeze & fracture','Cinders & ash','Electrical recoil'];
+let specimens:EnemyRemains[]=[];
+let materials:MaterialResponses[]=[];
+function resetSpecimens(){
+  resetDeathArt();
+  specimens=elements.map((style,i)=>{const deaths=new EnemyDeaths(()=>.3);deaths.handle({type:'kill',x:0,y:0,angle:facing+Math.PI,facing,targetId:70+i,remainingHp:0,enemyKind:kind,style,motion:{vx:38,vy:16,attack:0,attackAngle:facing,phase:1,scale:1}});return deaths.remains[0];});
+  materials=elements.map((style,i)=>{const m=new MaterialResponses();m.handle({type:'kill',x:0,y:0,angle:facing+Math.PI,facing,targetId:70+i,remainingHp:0,enemyKind:kind,style});return m;});
+}
+function drawResponse(c:CanvasRenderingContext2D,i:number,age:number){
+  if(age===0){drawHumanoid(c,{kind,angle:facing,time:1,moving:0,attack:0,attackAngle:facing,hitFlash:0,dodging:false});return;}
+  const r=specimens[i];r.age=age;drawEnemyRemains(c,r,reduced.matches);
+  for(const burst of materials[i].bursts){burst.age=age-(r.element==='frost'?DEATH_RESPONSE_TIMING.frostHold:0);if(burst.age<burst.duration)drawMaterialBurst(c,burst,reduced.matches);}
+}
 let kind:EnemyKind=DEATH_KINDS.find(k=>k===requested)??'stalker';
 let designs=ENEMY_DEATHS[kind],facing=1.05;
 host.innerHTML=`<header><div><p class="eyebrow">EVERGROW / MOTION STUDIES</p><h1>How should they fall?</h1>
-<p class="intro">Nine creatures. Four deaths each. One random choice on every kill.</p></div>
-<span class="badge">36 ANIMATIONS · SHARED WITH GAMEPLAY</span></header>
+<p class="intro">${effects?'A killing blow leaves its mark. Same creature, four distinct finishes.':`${DEATH_KINDS.length} creatures. Four articulated deaths each.`}</p></div>
+<span class="badge">${effects?'KILL RESPONSE · SHARED WITH GAMEPLAY':`${DEATH_KINDS.length*4} ANIMATIONS · SHARED WITH GAMEPLAY`}</span></header>
 <nav class="creatures" aria-label="Creature">${DEATH_KINDS.map(k=>`<button data-creature="${k}" aria-pressed="${k===kind}">${ENEMY_DEFINITIONS[k].name}</button>`).join('')}</nav>
 <section class="transport" aria-label="Animation playback">
 <button id="play" class="primary">Pause</button><button id="replay">Replay all</button>
@@ -35,8 +56,9 @@ host.innerHTML=`<header><div><p class="eyebrow">EVERGROW / MOTION STUDIES</p><h1
 <div class="filmstrip" aria-label="Frozen poses at impact, fall, landing and rest">${['Impact','Fall','Landing','Rest'].map((label,j)=>`<button class="pose" data-design="${i}" data-pose="${j}"><canvas id="pose-${i}-${j}" width="120" height="68" aria-hidden="true"></canvas><span>${label}</span></button>`).join('')}</div>
 <p class="detail">Ground contact ${design.contact.toFixed(2)} s · Settled ${design.settle.toFixed(2)} s</p></article>`).join('')}</section>
 <footer><span>Loop: ready → death → hold. Click a pose to inspect that moment across all four.</span>
-<span>Save-free preview · Same 36 animations as gameplay</span></footer>`;
+<span>Save-free preview · Runtime renderers</span></footer>`;
 const query=<T extends Element>(id:string)=>document.querySelector<T>(id)!;
+if(effects){query<HTMLElement>('#roll').hidden=true;query<HTMLElement>('#choice').hidden=true;}
 const source=document.createElement('canvas'), filtered=document.createElement('canvas');
 source.width=filtered.width=960;source.height=filtered.height=584;
 const ctx=source.getContext('2d')!,fx=new PostFX(filtered);
@@ -67,7 +89,7 @@ for(let i=0;i<65;i++) {
   if(i%4===0) polygon(bg,[[x,y],[x+5,y-1],[x+7,y+1],[x+2,y+3]],'#53604a');
 }
 function setRunning(value:boolean) { running=value;play.textContent=running?'Pause':'Play';dirty=true; }
-function poseTime(i:number,j:number) { const d=designs[i];return [.09,d.contact*.58,d.contact,d.settle][j]; }
+function poseTime(i:number,j:number) { if(effects)return [.1,.26,.52,1.3][j];const d=designs[i];return [.09,d.contact*.58,d.contact,d.settle][j]; }
 function updateCreature() {
   designs=ENEMY_DEATHS[kind];
   document.querySelectorAll<HTMLButtonElement>('[data-creature]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.creature===kind)));
@@ -77,6 +99,8 @@ function updateCreature() {
     article.querySelector('.detail')!.textContent=`Ground contact ${d.contact.toFixed(2)} s · Settled ${d.settle.toFixed(2)} s`;
     article.classList.remove('chosen');canvases[i].setAttribute('aria-label',`Animated ${ENEMY_DEFINITIONS[kind].name}: ${d.title}`);
   });
+  resetSpecimens();
+  if(effects)document.querySelectorAll<HTMLElement>('article').forEach((a,i)=>{a.querySelector('h2')!.textContent=effectNames[i];a.querySelector('.detail')!.textContent=['Directional momentum · Articulated collapse','0.20 s freeze · Shared ice shards','Rising embers · Charred remains fade','0.12 s recoil · Cool electrical filaments'][i];canvases[i].setAttribute('aria-label',effectNames[i]);a.querySelector('.sequence')!.textContent=['Momentum follows the strike.','Ice holds, cracks, then bursts.','The body fades beneath rising embers.','A brief jolt, then a grounded collapse.'][i];});
   query('#choice').textContent='';clock=reduced.matches?2.9:0;dirty=true;
 }
 function draw() {
@@ -87,9 +111,9 @@ function draw() {
     ctx.save();ctx.translate(x,y);ctx.drawImage(readyBackground,0,0);
     // Equal scale and brightness expose detail loss between the live and posed art.
     const artScale=kind==='hound'||kind==='wisp'||isRegionalEnemy(kind)?1:DEATH_MATERIALS[kind].scale;
-    const zoom=kind==='warden'?1.05:kind==='goblinChief'||kind==='brute'?2.55:2.9;
+    const zoom=isBossKind(kind)?1.05:kind==='goblinChief'||kind==='brute'?2.55:2.9;
     for(const [px,py,scale] of [[305,143,zoom]]) {
-      ctx.save();ctx.translate(px,py);ctx.scale(scale,scale);drawDeathFigure(ctx,kind,DEATH_VARIANTS[i],age,facing);ctx.restore();
+      ctx.save();ctx.translate(px,py);ctx.scale(scale,scale);if(effects)drawResponse(ctx,i,age);else drawDeathFigure(ctx,kind,DEATH_VARIANTS[i],age,facing);ctx.restore();
     }
     // Existing live art provides an honest silhouette reference, not an animated replacement.
     ctx.save();ctx.translate(100,143);ctx.scale(zoom,zoom);
@@ -97,7 +121,7 @@ function draw() {
     for(let j=0;j<4;j++) {
       ctx.fillStyle='#111e19';ctx.fillRect(j*120,224,120,68);
       ctx.save();ctx.translate(j*120+52,275);ctx.scale(1.05/artScale,1.05/artScale);
-      drawDeathFigure(ctx,kind,DEATH_VARIANTS[i],poseTime(i,j),facing);ctx.restore();
+      if(effects)drawResponse(ctx,i,[.1,.26,.52,1.3][j]);else drawDeathFigure(ctx,kind,DEATH_VARIANTS[i],poseTime(i,j),facing);ctx.restore();
     }
     ctx.restore();
   });
@@ -107,7 +131,7 @@ function draw() {
     const canvas=canvases[i],out=canvas.getContext('2d')!;
     out.drawImage(filtered,x,y,480,224,0,0,canvas.width,canvas.height);
     strips[i].forEach((strip,j)=>strip.getContext('2d')!.drawImage(filtered,x+j*120,y+224,120,68,0,0,strip.width,strip.height));
-    phases[i].textContent=age===0?'Alive':age<.12?'Impact':age<design.contact?'Falling':age<design.settle?'Settling':'At rest';
+    phases[i].textContent=effects&&age>0&&i===1?(age<.2?'Frozen':age<.42?'Fracturing':'Shards'):age===0?'Alive':age<.12?'Impact':age<design.contact?'Falling':age<design.settle?'Settling':'At rest';
     phases[i].dataset.rest=String(age>=design.settle);
     canvases[i].parentElement!.querySelector('.scale-label')!.textContent='LIVE ART';
     canvases[i].parentElement!.querySelector('.native-label')!.textContent='DEATH · SAME SCALE';
@@ -125,7 +149,7 @@ play.addEventListener('click',()=>setRunning(!running),{signal:events.signal});
 query('#replay').addEventListener('click',()=>{clock=0;setRunning(!reduced.matches);},{signal:events.signal});
 query<HTMLSelectElement>('#speed').addEventListener('change',e=>{speed=Number((e.target as HTMLSelectElement).value);},{signal:events.signal});
 slider.addEventListener('input',()=>{clock=.65+Number(slider.value);setRunning(false);},{signal:events.signal});
-query<HTMLSelectElement>('#facing').addEventListener('change',e=>{facing=Number((e.target as HTMLSelectElement).value);dirty=true;},{signal:events.signal});
+query<HTMLSelectElement>('#facing').addEventListener('change',e=>{facing=Number((e.target as HTMLSelectElement).value);resetSpecimens();dirty=true;},{signal:events.signal});
 document.querySelectorAll<HTMLButtonElement>('[data-creature]').forEach(b=>b.addEventListener('click',()=>{kind=b.dataset.creature as EnemyKind;updateCreature();},{signal:events.signal}));
 query('#roll').addEventListener('click',()=>{
   rolls.reset();rolls.handle({type:'kill',x:0,y:0,angle:facing,facing,targetId:++rollId,remainingHp:0,enemyKind:kind});
@@ -138,7 +162,7 @@ document.querySelectorAll<HTMLButtonElement>('.pose').forEach(button=>button.add
   clock=.65+poseTime(Number(button.dataset.design),Number(button.dataset.pose));setRunning(false);
 },{signal:events.signal}));
 reduced.addEventListener('change',()=>{if(reduced.matches) {clock=2.9;setRunning(false);}}, {signal:events.signal});
-setRunning(running);raf=requestAnimationFrame(frame);
+updateCreature();setRunning(running);raf=requestAnimationFrame(frame);
 function dispose() { cancelAnimationFrame(raf);events.abort();fx.dispose(); }
 window.addEventListener('pagehide',dispose,{once:true,signal:events.signal});
 if(import.meta.hot) import.meta.hot.dispose(dispose);

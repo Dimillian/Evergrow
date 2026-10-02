@@ -1,8 +1,9 @@
+import { DEATH_RESPONSE_TIMING } from './death-content.ts';
 import { MATERIALS, type MaterialId } from './material-content.ts';
-import type { CombatEvent, EnemyKind } from './model.ts';
+import type { CombatEvent, EnemyKind, ProjectileStyle } from './model.ts';
 export const MATERIAL_LIMITS = Object.freeze({ bursts: 48, fragments: 384 });
 export interface MaterialFragment { angle: number; spread: number; flight: number; lift: number; spin: number; length: number; thickness: number; color: string; hoop: boolean; }
-export interface MaterialRequest { x: number; y: number; angle: number; seed: number; material: MaterialId; strength: number; count: number; hoops?: number; height?: number; }
+export interface MaterialRequest { x: number; y: number; angle: number; seed: number; material: MaterialId; strength: number; count: number; hoops?: number; height?: number; style?: ProjectileStyle; }
 export interface MaterialBurst extends MaterialRequest { age: number; duration: number; fragments: readonly MaterialFragment[]; }
 export const ENEMY_MATERIAL: Readonly<Record<EnemyKind, MaterialId>> = Object.freeze({
   thornReaver: 'wood', mireSpitter: 'bone', frostRevenant: 'ice', emberAcolyte: 'ember', duneScuttler: 'bone', stormSentinel: 'glass',
@@ -39,9 +40,9 @@ export function createMaterialBurst(request: MaterialRequest): MaterialBurst {
     flight: recipe.flight * (.65 + random(request.seed, i + 20) * .5),
     lift: recipe.lift * (.4 + random(request.seed, i + 60) * .6) * strength,
     spin: (random(request.seed, i + 120) - .5) * 8,
-    length: recipe.length * (.3 + random(request.seed, i + 80) * .7),
+    length: recipe.length * (request.style === 'lightning' ? .5 : 1) * (.3 + random(request.seed, i + 80) * .7),
     thickness: recipe.thickness * (.5 + random(request.seed, i + 100) * .5),
-    color: recipe.colors[i % recipe.colors.length], hoop: i < (request.hoops ?? 0),
+    color: request.style === 'lightning' ? ['#bfeeff','#739fe8','#eee9ff'][i%3] : recipe.colors[i % recipe.colors.length], hoop: i < (request.hoops ?? 0),
   })) };
 }
 /** Analytic trajectories, independent of render frequency. Motion reduction shows settled fragments. */
@@ -73,15 +74,17 @@ export class MaterialResponses {
     const meteor = event.type === 'blast' && event.groundKind === 'meteor';
     const big = meteor || event.type === 'kill' || event.type === 'container-break';
     const seed = event.type === 'container-break' ? event.seed : ('targetId' in event ? event.targetId : Math.round(event.x * 31 + event.y * 17)) ^ Math.round(event.x + event.y);
-    this.add({ x: event.x, y: event.y, angle: 'angle' in event ? event.angle : 0, seed, material,
+    this.add({ x: event.x, y: event.y, angle: 'angle' in event ? event.angle : 0, seed, material, style: event.style,
       height: event.type === 'kill' ? 24 : 12, count: big ? 18 : event.type === 'block' ? 7 : 5, strength: big ? 1 : .5,
       ...(event.type === 'container-break' ? { count: 14, hoops: event.kind === 'barrel' ? 2 : 0 } : {}) });
+    // Freeze reads as a solid silhouette before it fractures into the shared shard budget.
+    if (event.type === 'kill' && event.style === 'frost') this.bursts[this.bursts.length-1].age = -DEATH_RESPONSE_TIMING.frostHold;
     if (meteor) this.add({ x: event.x, y: event.y, angle: 0, seed: seed + 17, material: 'ember', strength: 1.5, count: 14 });
   }
   lights(reducedMotion: boolean): Array<{ x: number; y: number; radius: number; color: string; power: number }> {
     if (reducedMotion) return [];
-    return this.bursts.filter(b => MATERIALS[b.material].glow > 0 && b.age < .5).slice(-6).map(b => ({
-      x: b.x, y: b.y - 12, radius: 40 + b.strength * 28, color: MATERIALS[b.material].edge,
+    return this.bursts.filter(b => MATERIALS[b.material].glow > 0 && b.age >= 0 && b.age < .5).slice(-6).map(b => ({
+      x: b.x, y: b.y - 12, radius: 40 + b.strength * 28, color: b.style === 'lightning' ? '#a7d8ff' : MATERIALS[b.material].edge,
       power: MATERIALS[b.material].glow * .35 * (1 - b.age / .5),
     }));
   }

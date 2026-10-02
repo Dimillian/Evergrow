@@ -374,3 +374,12 @@ September 14 random-equipment tuning narrows weapon material premiums, strengthe
 Optional Veteran, Nightmare and Cataclysm tiers add snapshotted combat XP, gold and Epic+ rarity weighting. Normal preserves these baseline tables. Quality adjusts relative weights, preserves Legendary/Unique parity and does not add item-roll slots or source levels. Monster, event and dungeon rewards retain the lowest difficulty used for an existing encounter; partial chest deliveries lock their recipe independently. See [World difficulty](world-difficulty.md).
 
 Legendary ground drops have a narrow amber beacon, a warm pool of light and a bell-like arrival phrase. Unique drops use a taller rose-violet beacon and a deeper layered chime. Both retain their normal grounded equipment silhouette and remain visible when nameplates are hidden. Fresh monster and committed event/dungeon/rift reward drops trigger a brief landing ripple; chest cues wait for their treasure flight to land. Loaded items and manually discarded equipment keep the beacon but do not replay reward sounds. Treasure showers coalesce nearby cues (Unique takes priority), with at most three nearby loot lights inside the existing 18-light scene budget; combat lights take priority. Reduced motion keeps steady beacons without rising particles or landing ripples.
+
+
+## Item arrival feedback — October 2, 2026 (local)
+
+Every newly awarded equipment drop emits an arrival event. Ordinary monster drops have a 0.46–0.535-second visual hop, modest rotation and a 0.16-second settling bounce. Their position, pickup availability, item RNG and save data are unchanged. Chest rewards retain their existing saved flight and use its landing time. Loaded and manually discarded items do not replay arrivals.
+
+Material sounds distinguish metal weapons, wooden bows/staves, armor, cloth and small enchanted accessories. Ordinary landings coalesce within 0.18 seconds; legendary/unique cues retain their higher-priority 0.65-second throttle and Unique upgrade rule. Picked-up drops cancel pending cues. A maximum of 64 transient arrivals gives pending precious drops priority over ordinary showers. Common through Epic receive a brief ground glint, not a persistent light. Legendary/Unique beacons and up to three existing lights begin at landing. Reduced motion skips the hop, bounce and landing flare.
+
+Preview: `/loot.html?rarities`, **Replay all** for a monster drop shower; individual precious buttons retain the chest-flight comparison.

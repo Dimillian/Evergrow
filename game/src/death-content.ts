@@ -1,5 +1,10 @@
 import type { EnemyKind } from './model.ts';
 
+export const DEATH_RESPONSE_TIMING = Object.freeze({
+  frostHold: .20, frostFade: .22, frostLifetime: .85,
+  fireFadeStart: .4, fireLifetime: 2.1, lightningHold: .12, lightningArcs: .32,
+});
+
 export type DeathVariant = 0 | 1 | 2 | 3;
 export type DeathFamily = 'kneel' | 'back' | 'front' | 'sit' | 'chest' | 'roll' | 'haunch' | 'curl' | 'drop' | 'tumble' | 'spiral' | 'snuff';
 export interface DeathAnimation {

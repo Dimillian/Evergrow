@@ -204,3 +204,10 @@ The sale fraction applies uniformly to loot value; it does not simulate rarity-b
 The Crimson Rifts portal study (`/tools/rifts.html?view=portal`) presents the animated shared portal beside a frozen town scene using the actual renderer and lighting. It has a motion toggle, an opt-in runtime sound mix with a listening-distance slider, follows reduced motion and suspends animation/audio in hidden tabs. It never advances gameplay or accesses playable saves.
 
 Ground loot rarities (`/loot.html?rarities`) compares all six rarity tiers with the runtime ground art, nameplates and scene lighting. Legendary/Unique replay buttons stage a disposable treasure flight and play the shared arrival sound after landing. Only presentation time advances; it never ticks gameplay or accesses saves. Hidden tabs stop advancing and reduced motion follows the OS.
+
+
+### Kill and loot feedback study
+
+Skills & combat → **Killing blow effects** (`/deaths.html?effects`) compares directional collapse, frost fracture, fire embers and lightning recoil using runtime renderers. Equipment → **Ground loot rarities** (`/loot.html?rarities`) adds **Replay all** for ordinary monster hops and material landing sounds. Both are disposable presentation timelines without gameplay or save access.
+
+`CANVAS_MODULE=/installed/@napi-rs/canvas node --expose-gc --experimental-strip-types game/scripts/render-impact-feedback.mjs /output` exports a 24 FPS shared-art filmstrip and a CPU stress report with 45 corpses, 64 drops and the existing 384-fragment ceiling. `IMPACT_BENCH_ONLY=1` omits images; `IMPACT_SOURCE=/absolute/game/src` supports comparison with a committed source snapshot. This measures native CPU raster only, excluding WebGL, terrain, browser, audio and simulation; it is not a gameplay FPS result.

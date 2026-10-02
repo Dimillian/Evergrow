@@ -1,3 +1,4 @@
+import { enemyVisualScale } from './enemy-modifiers.ts';
 import { riftWardActive } from './rift-tactics.ts';
 import { RIFT_TACTICS } from './rift-encounters.ts';
 import { ironrootHitMultiplier, bloodOathHit, resonanceHit } from './auras.ts';
@@ -17,6 +18,7 @@ import { armorReduction } from './progression-content.ts';
 import { alertEnemy, transitionEnemy, interruptStaggeredEnemy } from './enemy-state.ts';
 
 export interface EnemyDamageContext {
+  time?: number;
   player: Player; enemies: readonly Enemy[];
   random(): number; visible(ax: number, ay: number, bx: number, by: number): boolean;
   emit(event: CombatEvent): void; killed(enemy: Enemy): void;
@@ -114,9 +116,12 @@ export function damageEnemy(enemy: Enemy, damage: number, angle: number, melee: 
   context.emit({ ...(style ? { style } : {}), type: 'hit', actualValue, elementalValue:actualValue*elementFraction, melee, periodic, ...(offense?.skill?{skill:offense.skill}:{}), ...(reaction ? { reaction: reaction.type, color: reaction.color } : {}), x: enemy.x, y: enemy.y, angle, value: damage,
     targetId: enemy.id, remainingHp: enemy.hp, enemyKind: enemy.kind, heavy: critical || !!reaction });
   if (enemy.hp <= 0) {
+    const motion = { vx: enemy.vx, vy: enemy.vy, attackAngle: enemy.attackAngle, scale: enemyVisualScale(enemy), phase: (context.time ?? 0) + enemy.id,
+      attack: enemy.state === 'windup' ? -Math.max(.001, enemy.stateTime / enemy.stateDuration)
+        : enemy.state === 'attack' ? Math.min(1, enemy.stateTime / enemy.stateDuration) : 0 };
     transitionEnemy(enemy, 'dead', ENCOUNTER_RULES.corpseDuration);
     context.killed(enemy);
-    context.emit({ ...(style ? { style } : {}), type: 'kill', x: enemy.x, y: enemy.y, angle, facing: enemy.angle,
+    context.emit({ ...(style ? { style } : {}), type: 'kill', motion, x: enemy.x, y: enemy.y, angle, facing: enemy.angle,
       targetId: enemy.id, remainingHp: 0, enemyKind: enemy.kind });
   } else if (definition.interruptible && melee) {
     applyStun(enemy, COMBAT_TIMING.staggerDuration, 'stagger');

@@ -71,7 +71,7 @@ test('released projectiles preserve their element after weapon changes; death ef
   const events = sim.drainEvents(), death = events.find(e => e.type === 'kill'); assert.ok(death); assert.equal(death.style, 'frost');
   const checkpoint = sim.captureCheckpoint(), effects = new MaterialResponses(), corpses = new EnemyDeaths();
   for (const e of events) { effects.handle(e); corpses.handle(e); }
-  effects.update(2); corpses.update(.6); assert.equal(corpses.remains.length, 0);
+  effects.update(2); corpses.update(.9); assert.equal(corpses.remains.length, 0);
   assert.deepEqual(sim.captureCheckpoint(), checkpoint); assert.equal(sim.kills, 1);
 });
 
@@ -82,4 +82,13 @@ test('surface classification follows actual scenery while leaving it solid', () 
     assert.equal(world.impactMaterial(prop.x, prop.y, 1), material); assert.ok(world.blocked(prop.x, prop.y, 1));
   }
   world.dispose();
+});
+
+
+test('frost shards wait for the frozen silhouette; lightning fragments use a cool palette', () => {
+  const effects=new MaterialResponses();effects.handle({...kill,style:'frost'});
+  assert.equal(effects.bursts[0].age,-.2);assert.equal(effects.lights(false).length,0);
+  effects.update(.21);assert.ok(effects.bursts[0].age>0);
+  effects.handle({...kill,style:'lightning'});
+  assert.ok(effects.bursts.at(-1)!.fragments.every(f=>['#bfeeff','#739fe8','#eee9ff'].includes(f.color)));
 });

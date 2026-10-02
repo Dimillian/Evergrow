@@ -1,3 +1,5 @@
+import { DEATH_RESPONSE_TIMING } from './death-content.ts';
+import type { LootLandingCue } from './loot-drop-presentation.ts';
 import { DEFAULT_AUDIO, audioVolume, type AudioChannel } from './audio-preferences.ts';
 import { MusicPolicy, type MusicIntent, type MusicScene } from './music-policy.ts';
 import { RiftHum } from './rift-audio.ts';
@@ -92,8 +94,25 @@ export class GameAudio {
     this.tone(open ? 125 : 105, 65, .085, .07, 1, 'sine', open ? .025 : .07, .008);
   }
   /** Rare drops ring above combat, through the existing bounded SFX voice pool. */
-  lootDrop(tier: 'legendary' | 'unique') {
+  lootDrop(tier: LootLandingCue) {
     if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || this.ctx.state !== 'running' || this.disposed) return;
+    if (tier !== 'legendary' && tier !== 'unique') {
+      // A compact material impact, with no long tail to obscure combat cues.
+      if (tier === 'cloth') this.hiss({duration:.09,frequency:480,endFrequency:150,volume:.07,body:true,type:'lowpass'},1);
+      else if (tier === 'armor') {
+        this.hiss({duration:.10,frequency:800,endFrequency:180,volume:.10,body:true},1);
+        this.tone(145,55,.11,.10,1,'sine'); this.tone(730,610,.08,.025,1,'triangle',.025);
+      } else if (tier === 'wood') {
+        this.hiss({duration:.06,frequency:700,endFrequency:180,volume:.07,body:true},1);
+        this.tone(220,95,.08,.065,1,'triangle');
+      } else if (tier === 'charm') {
+        this.tone(1568,1558,.25,.055,1,'sine');this.tone(2352,2348,.18,.022,1,'sine',.012);
+      } else {
+        this.hiss({duration:.055,frequency:2600,endFrequency:750,volume:.055},1);
+        this.tone(1260,1170,.15,.06,1,'sine');this.tone(2130,2070,.09,.02,1,'sine',.018);
+      }
+      return;
+    }
     const unique = tier === 'unique';
     this.hiss({ duration: .36, frequency: 1100, endFrequency: 4200, volume: .11, attack: .025, type: 'bandpass' }, 3);
     this.tone(unique ? 98 : 130.81, unique ? 65.41 : 87.31, .48, .20, 3, 'sine', 0, .006);
@@ -296,7 +315,7 @@ export class GameAudio {
     if (material && (event.type === 'kill' || event.type === 'block' || event.type === 'hit' && !!event.style && event.remainingHp > 0)) {
       const texture = MATERIALS[material].sound;
       noise({ duration: texture.duration * .7, frequency: texture.crack, endFrequency: texture.body,
-        volume: texture.gain * .3, q: .6 }, 1);
+        volume: texture.gain * .3, q: .6, delay: event.type === 'kill' && event.style === 'frost' ? DEATH_RESPONSE_TIMING.frostHold : 0 }, 1);
     }
     const family = skillSoundFamily(event), signature = SKILL_SOUNDS[family];
     if (event.type === 'cast' && event.skill || event.type === 'swing' && event.skill) {

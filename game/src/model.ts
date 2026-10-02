@@ -210,6 +210,13 @@ export interface Player {
 export type EnemyKind = 'thornReaver' | 'mireSpitter' | 'frostRevenant' | 'emberAcolyte' | 'duneScuttler' | 'stormSentinel' | 'stalker' | 'brute' | 'caster' | 'hound' | 'archer' | 'wisp' | 'goblin' | 'goblinChief' | 'warden' | 'briarMatriarch' | 'ashColossus' | 'graveMarshal';
 export type EnemyState = 'idle' | 'patrol' | 'return' | 'chase' | 'windup' | 'attack' | 'recover' | 'dead';
 
+/** Captured before the dead-state transition; presentation never reads a later actor pose. */
+export interface EnemyDeathMotion {
+  readonly vx: number; readonly vy: number;
+  readonly attack: number; readonly attackAngle: number;
+  readonly scale: number; readonly phase: number;
+}
+
 export interface Enemy {
   difficulty?: import('./world-difficulty.ts').WorldDifficulty;
   rewardDifficulty?: import('./world-difficulty.ts').WorldDifficulty;
@@ -363,7 +370,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'swing'; readonly angle: number }
   | { readonly type: 'hit'; actualValue?: number; elementalValue?: number; melee?: boolean; periodic?: boolean; readonly angle: number; readonly value: number; readonly targetId: number;
       readonly remainingHp: number; readonly enemyKind: EnemyKind; readonly heavy: boolean }
-  | { readonly type: 'kill'; readonly angle: number; readonly facing: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
+  | { readonly type: 'kill'; readonly motion?: EnemyDeathMotion; readonly angle: number; readonly facing: number; readonly targetId: number; readonly remainingHp: 0; readonly enemyKind: EnemyKind }
   | { readonly type: 'cast'; readonly angle: number; readonly launch?: WeaponLaunch; readonly enemyKind?: EnemyKind }
   | { readonly type: 'hurt'; readonly actualValue?: number; readonly angle: number; readonly value: number; readonly remainingHp: number;
       readonly enemyKind?: EnemyKind; readonly heavy: boolean }
@@ -376,7 +383,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'journey'; readonly id: string; readonly name: string; readonly xp: number }
   | { readonly type: 'experience'; readonly amount: number }
   | { readonly type: 'loot'; readonly item: Item }
-  | { readonly type: 'item-drop'; readonly dropId: number; readonly tier: 'legendary' | 'unique'; readonly landAt: number | null }
+  | { readonly type: 'item-drop'; readonly dropId: number; readonly tier: import('./character-types.ts').ItemTier; readonly landAt: number | null }
   | { readonly type: 'level'; readonly level: number; readonly skillPoints: number; readonly statPoints: number }
   | { readonly type: 'notice'; readonly message: string }
   | { readonly type: 'blast'; readonly groundKind?: GroundEffect['kind']; readonly radius: number; readonly duration?: number; readonly enemyKind?: EnemyKind }

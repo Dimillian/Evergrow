@@ -40,7 +40,7 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
     biome: enemy.biome, kind: enemy.kind, difficulty:enemy.rewardDifficulty, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
     const drop = { id: context.nextId(), x: enemy.x, y: enemy.y, item };
     addGroundItem(context.groundItems, drop);
-    const cue = lootDropEvent(drop); if (cue) context.emit(cue);
+    context.emit(lootDropEvent(drop));
   }
   recharge++;
   if (recharge >= PLAYER_ABILITIES.potion.killsPerCharge) {
