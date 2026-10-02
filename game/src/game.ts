@@ -3,6 +3,7 @@ import { activityStatus } from './activity-status.ts';
 import { executeSkillRespec } from './skill-respec-command.ts';
 import { MapIconVisibility } from './map-legend-content.ts';
 import { dungeonInteractionChests, dungeonRunExit } from './dungeon-locations.ts';
+import { RIFT_AUDIO_RADIUS, riftAudioStrength } from './rift-audio.ts';
 import { RiftPanel } from './rift-panel.ts';
 import { RiftWorld } from './rift-world.ts';
 import { drawRiftHUD } from './rift-hud.ts';
@@ -1505,9 +1506,24 @@ export class Game {
       && Math.hypot(e.x - p.x, e.y - p.y) < 1000);
     const trial = this.sim.eventState.trial;
     const event = trial ? this.sim.eventState.sites[trial.siteId] : undefined;
+    let portalDistance = Infinity;
+    const floor = this.sim.dungeonFloor, run = currentDungeon(this.sim.expeditions);
+    if (floor?.rift && run?.rift) {
+      portalDistance = Math.hypot(floor.entry.x - p.x, floor.entry.y - p.y);
+      if (run.rift.phase === 'complete') {
+        const exit = dungeonRunExit(floor, run);
+        portalDistance = Math.min(portalDistance, Math.hypot(exit.x - p.x, exit.y - p.y));
+      }
+    } else if (!floor) {
+      const r = RIFT_AUDIO_RADIUS;
+      for (const building of this.world.getBuildings(p.x - r, p.y - r, r * 2, r * 2)) {
+        if (building.kind === 'rift') portalDistance = Math.min(portalDistance,
+          Math.hypot(building.x + building.width / 2 - p.x, building.y + building.height - p.y));
+      }
+    }
     this.audio.score(now / 1000, { phase: this.panels.mapHeld ? 'playing' : this.phase, biome: this.world.sampleBiome(p.x, p.y).id,
       town, dungeon: !!this.sim.dungeonFloor,
-      encounter: boss ? 'boss' : event?.phase === 'active' && Math.hypot(event.x - p.x, event.y - p.y) < EVENT_RULES.abandonRadius ? 'event' : 'none' });
+      encounter: boss ? 'boss' : event?.phase === 'active' && Math.hypot(event.x - p.x, event.y - p.y) < EVENT_RULES.abandonRadius ? 'event' : 'none' }, riftAudioStrength(portalDistance));
   }
   private setAudioVolume(channel: AudioChannel, value: number) {
     this.audio.setVolume(channel, value); this.savePreferences();

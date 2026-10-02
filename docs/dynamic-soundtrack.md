@@ -54,3 +54,9 @@ Audio starts after an accepted pointer/key/controller interaction. Both persiste
 Each MP3 has matching provenance JSON. Lossless masters and models remain outside the repository. These extended pieces are new companion compositions in the approved directions, not edits or seamless continuations of the original recordings.
 
 Headless checks cover region hysteresis, panel ducking, boss priority/release, non-repetition, range validation, controller sliders, the two-stream limit, late playback promises, background/mute behavior, autoplay refusal and network retry bounds. Typechecking and the production build validate integration. Listening, subjective balance, Safari/device acceptance and real gameplay remain user-tested.
+
+## Rift proximity
+
+At four updates per second, the player’s distance to the nearest crimson town/entry/return portal drives a smooth local mix. Influence starts at 260 world units and reaches full strength at 45 units: music fades to 35% and ordinary effects to 75% of their chosen levels. Music keeps its current track and position. Moving away restores the mix; paused panels, death and the character hall release the rift influence. Camera zoom and additional portals do not amplify it.
+
+`rift-audio.ts` supplies one procedural low harmonic hum with filtered air and a slow breath, routed independently of that ducking but through SFX volume and master mute. Five bounded sources are allocated lazily, reused while nearby and released two seconds after fading out. Muting, zero SFX, backgrounding and teardown stop them immediately. No new asset downloads, simulation state, save data or gameplay RNG. The portal art study has an opt-in sound button and listening-distance slider using the actual runtime mix.

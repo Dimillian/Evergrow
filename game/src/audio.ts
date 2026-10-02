@@ -1,5 +1,6 @@
 import { DEFAULT_AUDIO, audioVolume, type AudioChannel } from './audio-preferences.ts';
 import { MusicPolicy, type MusicIntent, type MusicScene } from './music-policy.ts';
+import { RiftHum } from './rift-audio.ts';
 import { MusicPlayer } from './music-player.ts';
 import { skillSoundFamily, SKILL_SOUNDS } from './skill-audio-content.ts';
 import { MATERIALS } from './material-content.ts';
@@ -41,6 +42,9 @@ export class GameAudio {
   private intent: MusicIntent = { mood: 'home', duck: 1 };
   private sfxGain: GainNode | null = null;
   private panelAt = -Infinity;
+  private riftStrength = 0;
+  private riftHum?: RiftHum;
+  private sceneGain: GainNode | null = null;
   getVolumes() { return { ...this.volumes }; }
   setVolume(channel: AudioChannel, value: number) {
     this.volumes[channel] = audioVolume(value, DEFAULT_AUDIO[channel]);
@@ -49,15 +53,27 @@ export class GameAudio {
       this.master.gain.setTargetAtTime(this.enabled ? this.volumes.master : 0, this.ctx.currentTime, .03);
     }
     if (this.ctx && this.sfxGain) this.sfxGain.gain.setTargetAtTime(MASTER_VOLUME * this.volumes.sfx, this.ctx.currentTime, .03);
+    this.updateRift();
     this.updateMusic();
   }
-  score(now: number, scene: MusicScene) {
+  score(now: number, scene: MusicScene, riftProximity = 0) {
     this.intent = this.musicPolicy.update(now, scene);
+    this.riftStrength = scene.phase === 'playing' && Number.isFinite(riftProximity) ? Math.max(0, Math.min(1, riftProximity)) : 0;
+    this.updateRift();
     this.updateMusic();
   }
-  private updateMusic() { this.music?.update(this.intent, this.volumes.music, this.enabled && this.foreground); }
+  private updateMusic() { this.music?.update({ ...this.intent, duck: this.intent.duck * (1 - .65 * this.riftStrength) }, this.volumes.music, this.enabled && this.foreground); }
+  private updateRift() {
+    if (!this.ctx || this.disposed) return;
+    this.sceneGain?.gain.setTargetAtTime(1 - .25 * this.riftStrength, this.ctx.currentTime, .3);
+    if (!this.enabled || !this.foreground || this.volumes.sfx <= 0) { this.riftHum?.dispose(); return; }
+    if (!this.riftHum && this.riftStrength > 0 && this.sfxGain && this.bodyNoise)
+      this.riftHum = new RiftHum(this.ctx, this.sfxGain, this.bodyNoise);
+    this.riftHum?.update(this.riftStrength);
+  }
   setForeground(value: boolean) {
     this.foreground = value;
+    this.updateRift();
     this.music?.setRunning(value && this.enabled && this.volumes.music > 0);
     if (this.ctx && !this.disposed) {
       if (!value) void this.ctx.suspend().catch(() => {});
@@ -129,7 +145,8 @@ export class GameAudio {
       this.sfxGain = ctx.createGain(); this.sfxGain.gain.value = MASTER_VOLUME * this.volumes.sfx;
       this.bus.connect(this.compressor);
       this.compressor.connect(this.peakGuard);
-      this.peakGuard.connect(this.sfxGain); this.sfxGain.connect(this.master);
+      this.sceneGain = ctx.createGain();
+      this.peakGuard.connect(this.sceneGain); this.sceneGain.connect(this.sfxGain); this.sfxGain.connect(this.master);
       this.master.connect(ctx.destination);
       if (Object.keys(this.musicFiles).length) this.music = new MusicPlayer(ctx, this.master, this.musicFiles);
       this.noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
@@ -144,12 +161,14 @@ export class GameAudio {
     }
     if (this.enabled && this.volumes.music > 0) this.music?.prime();
     this.music?.activate();
+    this.updateRift();
     this.updateMusic();
     if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') await this.ctx.resume();
   }
 
   setEnabled(value: boolean) {
     this.enabled = value;
+    this.updateRift();
     this.updateMusic();
     if (this.master && this.ctx && !this.disposed) {
       this.master.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -388,8 +407,9 @@ export class GameAudio {
     if (this.disposed) return;
     this.disposed = true;
     this.music?.dispose(); this.music = undefined;
+    this.riftHum?.dispose(); this.riftHum = undefined;
     for (const voice of [...this.voices]) this.finish(voice, true);
-    for (const node of [this.bus, this.compressor, this.peakGuard, this.sfxGain, this.master]) node?.disconnect();
+    for (const node of [this.bus, this.compressor, this.peakGuard, this.sceneGain, this.sfxGain, this.master]) node?.disconnect();
     const ctx = this.ctx;
     this.ctx = null; this.bus = null; this.compressor = null; this.peakGuard = null; this.master = null;
     this.noise = null; this.bodyNoise = null; this.bursts.clear();
