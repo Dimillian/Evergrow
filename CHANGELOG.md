@@ -1,5 +1,12 @@
 # Evergrow changelog
 
+## v0.7.5 — 2026-10-02T20:00:12Z
+
+### Fixes
+
+- Sunlight rays now drift gently as the day progresses, instead of racing sideways when exploring far from the world center.
+- Light rays blend smoothly across the landscape while following the sun's changing angle.
+
 ## v0.7.4 — 2026-10-02T16:43:00Z
 
 ### New
