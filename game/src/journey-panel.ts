@@ -3,7 +3,7 @@ import { settlementBenefits } from './settlement-services.ts';
 import { formatWorldDistance } from './world-distance.ts';
 import { journeyXP } from './journey-rewards.ts';
 import { escapeUI, trapDialogFocus, uiIcon } from './ui-components.ts';
-import { miniJourneys, journalJourneys, journeyLevelFit, JOURNEY_CONTENT, type JourneyState, type JourneyGoal, type JourneyCommand } from './journey-state.ts';
+import { pinnedJourney, miniJourneys, journalJourneys, journeyLevelFit, JOURNEY_CONTENT, type JourneyState, type JourneyGoal, type JourneyCommand } from './journey-state.ts';
 import { journeyObjective, type JourneyFacts } from './journey-director.ts';
 import { getJourneyLogAnchor } from './map-view.ts';
 import { journeyHUDPreferences } from './control-preferences.ts';
@@ -47,7 +47,7 @@ export class JourneyPanel {
       if(b.dataset.collapse!==undefined||b.dataset.pin)b.blur();
       if(b.dataset.collapse!==undefined)void command({type:'collapse',value:!this.state.collapsed});
       else if(b.dataset.pin){
-        const pinned=this.state.townPin?.id??this.state.tracked;
+        const pinned=pinnedJourney(this.state)?.id;
         void command({type:b.dataset.pin===pinned?'untrack':'track',id:b.dataset.pin});
       }else hooks.open(b.dataset.goal);
     },{signal:this.abort.signal});
@@ -147,7 +147,7 @@ export class JourneyPanel {
     this.mini.classList.toggle('is-collapsed',collapsed);
     const list=miniJourneys(state,this.hudPreferences.settings,this.origin());
     const header=`<header><button class="journey-mini-title" data-open>Journeys<kbd class="journey-mini-key">J</kbd></button><button data-collapse aria-label="${collapsed?'Expand':'Collapse'} journeys" aria-expanded="${!collapsed}">${uiIcon('chevron')}</button></header>`;
-    const pinnedId=state.townPin?.id??state.tracked;
+    const pinnedId=pinnedJourney(state)?.id;
     const outdoorBody=collapsed?'':!list.length?'<p class="journey-mini-empty">Accept quests in the Journal &lt;J&gt; to track them.</p>':list.map(g=>{
       const pinned=g.id===pinnedId;
       const disabled=g.finishedAt!==undefined;
@@ -203,7 +203,7 @@ export class JourneyPanel {
     const focus=this.element.contains(document.activeElement)?(document.activeElement as HTMLElement).dataset:undefined;
     const scroll=this.element.querySelector('.journey-list');if(scroll&&!this.element.hidden)this.listScroll=scroll.scrollTop;
     const detailScroll=this.element.querySelector('.journey-detail');if(detailScroll&&!this.element.hidden)this.detailScroll=detailScroll.scrollTop;
-    const pinned=state.townPin?.id??state.tracked,accepted=!!g&&state.accepted.some(v=>v.id===g.id);
+    const pinned=pinnedJourney(state)?.id,accepted=!!g&&state.accepted.some(v=>v.id===g.id);
     const currentDungeon=!!dungeon&&g?.id===dungeon.id;
     const done=g?.finishedAt!==undefined&&!this.townNavigation;
     const status=currentDungeon?'Current expedition':done?'Completed':this.townNavigation?'Town navigation':accepted?'Accepted':'Nearby';
@@ -233,7 +233,7 @@ export class JourneyPanel {
       <div class="journey-area-bar"><div><label class="journey-area-label" for="journey-area">Area</label><select id="journey-area" class="ui-select journey-area-select" data-area aria-label="Browse activities by area"><option value="nearby" ${this.scope==='nearby'?'selected':''}>Around you${facts.areaName?' · '+e(facts.areaName):''}</option><option value="all" ${this.scope==='all'?'selected':''}>All known areas</option>${regions.map(r=>`<option value="${e(r)}" ${r===this.scope?'selected':''}>${e(r)}</option>`).join('')}</select><div class="journey-area-count">${lists.completed.length} of ${total} known activities completed</div><div class="journey-area-progress" role="progressbar" aria-label="Known activities completed" aria-valuemin="0" aria-valuemax="${Math.max(1,total)}" aria-valuenow="${lists.completed.length}"><span style="width:${total?lists.completed.length/total*100:0}%"></span></div></div><div class="journey-toolbar-actions"><button type="button" class="ui-button" data-action="hudSettings" aria-controls="journey-hud-settings" aria-haspopup="dialog" aria-expanded="${this.hudSettingsOpen}">${uiIcon('options')}HUD Settings</button><button class="ui-button ui-button--primary" data-action="acceptAll" ${!lists.nearby.length||this.commandPending?'disabled':''}>Accept all nearby${lists.nearby.length?' · '+lists.nearby.length:''}</button>${hudPopup}</div></div>
       <div class="journey-columns"><nav class="journey-list ui-scroll-area" aria-label="Activities by status">${dungeonGoal?rows('Current expedition',[dungeonGoal]):''}${rows('Accepted',lists.accepted)}${rows('Nearby',lists.nearby)}${rows('Completed',lists.completed)}${cities.length?rows('Town navigation',cities,true):''}</nav>
       <article class="journey-detail ui-scroll-area">${g?`<div class="journey-detail-top"><span>${e(JOURNEY_CONTENT[g.kind].category)} · Level ${g.level}</span><span class="journey-status ${done?'is-complete':accepted?'is-accepted':''}">${done?'✓ ':''}${status}</span></div><h3>${e(g.name)}</h3><div class="journey-objective"><small>${done?'Completed':'Objective'}</small>${e(objective)}</div><dl><div><dt>Location</dt><dd>${e(g.region)}${known?'':' · Search area'}</dd></div><div><dt>Distance</dt><dd>${formatWorldDistance(Math.hypot(g.x-origin.x,g.y-origin.y))}</dd></div><div><dt>${done?'Rewards claimed':'Rewards'}</dt><dd>${e(JOURNEY_CONTENT[g.kind].reward)}${!this.townNavigation&&(!done||g.rewardXP!==undefined)?` · +${(done?g.rewardXP!:journeyXP(g.kind,g.level,facts.level)).toLocaleString()} XP`:''}</dd></div><div><dt>Level</dt><dd class="journey-detail-level" data-fit="${journeyLevelFit(g.level,facts.level)}">${g.level} (${journeyLevelFit(g.level,facts.level)})</dd></div></dl>
-      <div class="journey-actions">${!done&&!this.townNavigation&&!currentDungeon?`<button class="ui-button ${accepted?'':'ui-button--primary'}" data-action="${accepted?'dismiss':'accept'}" ${busy}>${accepted?'Dismiss':'Accept'}</button>`:''}${!done&&!currentDungeon?`<button class="ui-button ${g.id===pinned?'journey-pin-active':''}" data-action="${g.id===pinned?'untrack':'track'}" aria-pressed="${g.id===pinned}" ${busy}>${uiIcon('pin')}${g.id===pinned?'Pinned':'Pin'}</button>`:''}<button class="ui-button" data-action="map" ${busy}>${uiIcon('map')}Show on Map</button></div><p class="journey-action-hint">${currentDungeon?'Complete this expedition to record it in your journal.':done?'Retained in your area completion history.':this.townNavigation?'Pin this town as your navigation destination.':accepted?'Dismiss returns this activity to Nearby. Pin only sets your destination.':'Accept adds this activity to your list. Pin only sets your destination.'}</p>`:'<p class="ui-muted">Explore to find activities in this area.</p>'}<p class="journey-command-status" role="status" aria-live="polite">${e(this.message)}</p></article></div>
+      <div class="journey-actions">${!done&&!this.townNavigation&&!currentDungeon?`<button class="ui-button ${accepted?'':'ui-button--primary'}" data-action="${accepted?'dismiss':'accept'}" ${busy}>${accepted?'Dismiss':'Accept'}</button>`:''}${!done&&!currentDungeon&&(accepted||this.townNavigation)?`<button class="ui-button ${g.id===pinned?'journey-pin-active':''}" data-action="${g.id===pinned?'untrack':'track'}" aria-pressed="${g.id===pinned}" ${busy}>${uiIcon('pin')}${g.id===pinned?'Pinned':'Pin'}</button>`:''}<button class="ui-button" data-action="map" ${busy}>${uiIcon('map')}Show on Map</button></div><p class="journey-action-hint">${currentDungeon?'Complete this expedition to record it in your journal.':done?'Retained in your area completion history.':this.townNavigation?'Pin this town as your navigation destination.':accepted?'Dismiss returns this activity to Nearby and removes its pin.':'Accept adds this activity to your list and pins it as your destination.'}</p>`:'<p class="ui-muted">Explore to find activities in this area.</p>'}<p class="journey-command-status" role="status" aria-live="polite">${e(this.message)}</p></article></div>
       <footer class="ui-window-footer"><span>${lists.nearby.length} nearby · ${lists.accepted.length} accepted · ${lists.completed.length} completed</span></footer></section>`;
     this.element.querySelector('.journey-list')!.scrollTop=this.listScroll;
     this.element.querySelector('.journey-detail')!.scrollTop=this.detailScroll;

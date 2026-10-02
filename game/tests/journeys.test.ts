@@ -12,24 +12,25 @@ import { World } from '../src/world.ts';
 const goal=(id='camp:1',kind:JourneyGoal['kind']='camp',level=1):JourneyGoal=>({id,kind,name:'Test activity',x:700,y:300,level,region:'Briarwatch'});
 const facts=():JourneyFacts=>({events:freshEvents(),expeditions:freshExpeditions(),x:0,y:0,level:1,time:0,discovered:()=>false,campCleared:()=>false});
 const simulation=()=>new Simulation({blocked:()=>false,move:(x,y,dx,dy)=>({x:x+dx,y:y+dy})},{spawn:false});
-test('accepting, pinning and dismissing are independent without an acceptance cap',()=>{
+test('acceptance pins quests and only accepted quests can be pinned, without an acceptance cap',()=>{
   let state=freshJourneys();state.offers=Array.from({length:40},(_,i)=>goal(`quest:${i}`));const before=JSON.stringify(state);
-  const first=planJourney(state,{type:'track',id:'quest:0'})!;
-  assert.equal(JSON.stringify(state),before);assert.equal(first.tracked,'quest:0');assert.equal(first.accepted.length,0);
-  state=planJourney(first,{type:'acceptAll',ids:first.offers.map(g=>g.id)})!;
+  assert.equal(planJourney(state,{type:'track',id:'quest:0'}),null);
+  assert.equal(JSON.stringify(state),before);
+  state=planJourney(state,{type:'acceptAll',ids:state.offers.map(g=>g.id)})!;
+  assert.equal(state.tracked,'quest:0');
   assert.equal(state.accepted.length,40);assert.equal(state.offers.length,0);assert.ok(validJourneys(state));
   state=planJourney(state,{type:'untrack',id:'quest:0'})!;assert.equal(state.accepted.length,40);
   state=planJourney(state,{type:'dismiss',id:'quest:1'})!;
   assert.equal(state.accepted.length,39);assert.equal(state.offers[0].id,'quest:1');
-  state=planJourney(state,{type:'accept',id:'quest:1'})!;assert.equal(state.accepted.length,40);assert.equal(state.tracked,null);
+  state=planJourney(state,{type:'accept',id:'quest:1'})!;assert.equal(state.accepted.length,40);assert.equal(state.tracked,'quest:1');
   state=planJourney(state,{type:'collapse',value:true})!;assert.equal(state.collapsed,true);assert.ok(validJourneys(state));
   assert.ok(miniJourneys(state).length<=3,'only the HUD projection is short');
 });
 test('failed persistence leaves accepted goals, progression and resources untouched',async ()=>{
   const sim=simulation();sim.journeys.offers=[goal()];const before=sim.captureCheckpoint();
-  const result=await executeJourneyCommand(sim,{type:'track',id:'camp:1'},()=>({ok:false,message:'Storage full'}),facts());
+  const result=await executeJourneyCommand(sim,{type:'accept',id:'camp:1'},()=>({ok:false,message:'Storage full'}),facts());
   assert.equal(result.ok,false);assert.deepEqual(sim.captureCheckpoint(),before);
-  assert.ok((await executeJourneyCommand(sim,{type:'track',id:'camp:1'},c=>({ok:!!c.journeys?.tracked,message:''}),facts())).ok);
+  assert.ok((await executeJourneyCommand(sim,{type:'accept',id:'camp:1'},c=>({ok:!!c.journeys?.tracked,message:''}),facts())).ok);
   assert.equal(sim.journeys.tracked,'camp:1');assert.deepEqual(sim.player.character,before.character);
 });
 test('completion uses claimed site and final chest ledgers, never missing actors or a boss kill alone',()=>{
@@ -151,19 +152,31 @@ test('HUD shows only accepted work and stays empty without unfinished accepted q
 });
 
 
-test('navigation only follows an explicit pin, never accepted work or recommendations',()=>{
+test('acceptance replaces navigation, while unpinning and recommendations never choose another quest',()=>{
   let state=freshJourneys();const road=goal('frontier:next','frontier'),camp=goal('next-camp');
   state.offers=[road,camp];state.recommended=road.id;
-  assert.equal(pinnedJourney(state),undefined);assert.equal(state.tracked,null);assert.equal(state.accepted.length,0);
-  state.recommended=camp.id;assert.equal(pinnedJourney(state),undefined);
+  assert.equal(pinnedJourney(state),undefined);
   state=planJourney(state,{type:'accept',id:camp.id})!;
-  assert.equal(pinnedJourney(state),undefined,'accepting a quest does not start navigation');
-  state=planJourney(state,{type:'track',id:road.id})!;
+  assert.equal(pinnedJourney(state)?.id,camp.id);
+  assert.equal(planJourney(state,{type:'track',id:road.id}),null);
+  state=planJourney(state,{type:'accept',id:road.id})!;
   assert.equal(pinnedJourney(state)?.id,road.id);
   state=planJourney(state,{type:'untrack',id:road.id})!;
-  assert.equal(pinnedJourney(state),undefined,'unpinning does not navigate to the first accepted quest');
-  state=planJourney(state,{type:'track',id:road.id})!;
-  assert.equal(pinnedJourney(state)?.id,road.id);assert.ok(validJourneys(state));
+  assert.equal(pinnedJourney(state),undefined,'unpinning does not select another accepted quest');
+  state=planJourney(state,{type:'track',id:camp.id})!;
+  state=planJourney(state,{type:'dismiss',id:road.id})!;
+  assert.equal(pinnedJourney(state)?.id,camp.id,'dismissing another quest preserves the current pin');
+  assert.ok(validJourneys(state));
+});
+test('unaccepted pin commands never save and old unaccepted destinations are cleared safely',async()=>{
+  const sim=simulation(),g=goal();sim.journeys.offers=[g];
+  let writes=0;
+  const result=await executeJourneyCommand(sim,{type:'track',id:g.id},()=>{writes++;return {ok:true,message:''};},facts());
+  assert.equal(result.ok,false);assert.equal(writes,0);assert.equal(sim.journeys.tracked,null);
+  sim.journeys.tracked=g.id;
+  assert.equal(pinnedJourney(sim.journeys),undefined);
+  const reconciled=reconcileJourneys(sim.journeys,facts(),false);
+  assert.equal(reconciled.tracked,null);assert.deepEqual(reconciled.offers,[g]);
 });
 test('finishing a pinned road lead clears navigation and arrival rewards stay exactly once',()=>{
   const sim=simulation(),road={...goal('frontier:arrival','frontier'),x:sim.player.x,y:sim.player.y},next=goal('next-camp');
@@ -203,10 +216,10 @@ test('nearest city remains pinnable after completion without changing accepted w
   restored.journeys=reconcileJourneys(restored.journeys,{...f,x:city.x,y:city.y},true);
   assert.equal(restored.journeys.townPin,undefined);assert.equal(restored.journeys.nearestTown?.id,'town:closer');
 });
-test('city navigation pins cannot carry completion rewards or replace another explicit pin silently',()=>{
+test('accepting an activity replaces city navigation and pins cannot carry completion rewards',()=>{
   let s=freshJourneys();s.nearestTown=goal('town:nearest','town');s.offers=[goal('activity')];
   s=planJourney(s,{type:'track',id:s.nearestTown.id})!;
-  s=planJourney(s,{type:'track',id:'activity'})!;
+  s=planJourney(s,{type:'accept',id:'activity'})!;
   assert.equal(s.townPin,undefined);assert.equal(s.tracked,'activity');
   assert.ok(validJourneys(s));
   s.townPin=goal('town:nearest','town');assert.equal(validJourneys(s),false);
@@ -228,7 +241,7 @@ test('area journal retains all groups and dismissal returns the same activity to
   state.accepted=[g,far];state.history=Array.from({length:90},(_,i)=>({...goal(`done:${i}`),finishedAt:i}));
   state.tracked=g.id;
   state=planJourney(state,{type:'dismiss',id:g.id})!;
-  assert.equal(state.tracked,g.id,'dismiss does not silently change a separate pin');
+  assert.equal(state.tracked,null,'dismissing the pinned quest removes its destination');
   const local=journalJourneys(state,{x:0,y:0});assert.equal(local.nearby[0].id,g.id);assert.equal(local.completed.length,90);
   assert.equal(local.accepted.length,0);assert.equal(journalJourneys(state,{x:0,y:0},'all').accepted[0].id,far.id);
   assert.equal(journalJourneys(state,{x:0,y:0},'Far Reach').accepted.length,1);
@@ -236,7 +249,7 @@ test('area journal retains all groups and dismissal returns the same activity to
 
 test('bulk acceptance is atomic, save-backed and rejects stale completed goals',async()=>{
   const sim=simulation(),f=facts();sim.journeys.offers=Array.from({length:20},(_,i)=>goal(`q:${i}`));
-  const ids=sim.journeys.offers.map(g=>g.id),before=sim.captureCheckpoint();
+  const ids=sim.journeys.offers.map(g=>g.id).reverse(),before=sim.captureCheckpoint();
   assert.equal((await executeJourneyCommand(sim,{type:'acceptAll',ids},()=>({ok:false,message:'Storage full'}),f)).ok,false);
   assert.deepEqual(sim.captureCheckpoint(),before);
   assert.equal(planJourney(sim.journeys,{type:'acceptAll',ids:[ids[0],ids[0]]}),null);
@@ -247,9 +260,9 @@ test('bulk acceptance is atomic, save-backed and rejects stale completed goals',
   assert.equal(writes,0);
   delete f.events.sites[stale.id];
   assert.ok((await executeJourneyCommand(sim,{type:'acceptAll',ids},checkpoint=>{
-    writes++;assert.equal(sim.journeys.accepted.length,0);assert.equal(checkpoint.journeys!.accepted.length,20);return{ok:true,message:''};
+    writes++;assert.equal(sim.journeys.accepted.length,0);assert.equal(checkpoint.journeys!.accepted.length,20);assert.equal(checkpoint.journeys!.tracked,ids[0]);return{ok:true,message:''};
   },f)).ok);
-  assert.equal(writes,1);assert.equal(sim.journeys.accepted.length,20);assert.equal(sim.journeys.tracked,null);
+  assert.equal(writes,1);assert.equal(sim.journeys.accepted.length,20);assert.equal(sim.journeys.tracked,ids[0]);
 });
 
 test('catalogue refresh keeps known activities and completed history beyond old limits',()=>{

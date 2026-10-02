@@ -47,7 +47,7 @@ class Surface extends EventTarget {
 }
 const goal=(id:string):JourneyGoal=>({id,name:`Quest ${id}`,kind:'camp',level:3,x:500,y:100,region:'Forest'});
 
-test('Area journal buttons separate acceptance from pinning and preserve selected details after map inspection',async t=>{
+test('Area journal acceptance pins quests and hides pinning for unaccepted activities and preserve selected details after map inspection',async t=>{
   const originals=new Map(['document','CSS'].map(k=>[k,Object.getOwnPropertyDescriptor(globalThis,k)]));
   const doc=Object.assign(new Surface(),{activeElement:null as Surface|null,defaultView:{getComputedStyle:()=>({visibility:'visible'})},createElement:()=>{const s=new Surface();s.ownerDocument=doc;return s;}});
   Object.defineProperty(globalThis,'document',{value:doc,configurable:true});
@@ -83,18 +83,21 @@ test('Area journal buttons separate acceptance from pinning and preserve selecte
   await click({collapse:''},true);assert.ok(!panel.mini.innerHTML.includes(emptyHint),'collapsed HUD hides the empty message');
   await click({collapse:''},true);assert.ok(panel.mini.innerHTML.includes(emptyHint));
   panel.open('3');
-  await click({action:'track'});assert.equal(state.tracked,'3');assert.equal(state.accepted.length,0);
-  await click({action:'accept'});assert.equal(state.accepted[0].id,'3');assert.match(panel.element.innerHTML,/>Dismiss<\/button>/);
+  assert.ok(!panel.element.innerHTML.includes('data-action="track"'),'unaccepted quests have no Pin action');
+  await click({action:'accept'});assert.equal(state.accepted[0].id,'3');assert.equal(state.tracked,'3');
+  assert.ok(panel.element.innerHTML.includes('data-action="untrack"'));assert.match(panel.element.innerHTML,/>Dismiss<\/button>/);
   assert.ok(!panel.mini.innerHTML.includes(emptyHint));assert.ok(panel.mini.innerHTML.includes('data-goal="3"'));
   panel.close();panel.update(state,facts,true,960,600);
   await click({pin:'3'},true);assert.equal(state.tracked,null);
-  assert.ok(!panel.mini.innerHTML.includes('journey-mini-row is-tracked'),'accepted quests are not automatically highlighted');
+  assert.ok(!panel.mini.innerHTML.includes('journey-mini-row is-tracked'),'unpinning removes the accepted quest highlight');
   await click({pin:'3'},true);assert.equal(state.tracked,'3');
   assert.ok(panel.mini.innerHTML.includes('journey-mini-row is-tracked'),'only explicit pinning highlights the row');
   panel.open('3');
-  await click({action:'dismiss'});assert.equal(state.accepted.length,0);assert.ok(state.offers.some(g=>g.id==='3'));
+  await click({action:'dismiss'});assert.equal(state.accepted.length,0);assert.equal(state.tracked,null);
+  assert.ok(!panel.element.innerHTML.includes('data-action="track"'));assert.ok(state.offers.some(g=>g.id==='3'));
   assert.ok(panel.mini.innerHTML.includes(emptyHint),'dismissing the last accepted quest restores the message');
-  await click({action:'acceptAll'});assert.equal(state.accepted.length,8);assert.equal(state.offers.length,0);
+  await click({action:'acceptAll'});assert.equal(state.accepted.length,8);assert.equal(state.offers.length,0);assert.equal(state.tracked,'0');
+  await click({action:'track'});assert.equal(state.tracked,'3');
   await click({action:'map'});assert.equal(mapId,'3');assert.equal(panel.element.hidden,true);
   panel.open(mapId);assert.match(panel.element.innerHTML,/<h3>Quest 3<\/h3>/);
   await click({select:'done:0',town:'false'});assert.match(panel.element.innerHTML,/<h3>Quest done:0<\/h3>/);

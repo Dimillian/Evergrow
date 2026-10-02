@@ -55,6 +55,7 @@ export function reconcileJourneys(state:JourneyState,facts:JourneyFacts,safe:boo
     if(safe&&goal.finishedAt!==undefined&&facts.time-goal.finishedAt>=2)next.history.push(goal);
     else next[collection].push(goal);
   }
+  if(next.tracked&&!next.accepted.some(g=>g.id===next.tracked&&g.finishedAt===undefined))next.tracked=null;
   if(next.townPin&&journeyComplete(next.townPin,facts))delete next.townPin;
   if(next.recommended&&!next.offers.some(g=>g.id===next.recommended&&g.finishedAt===undefined))next.recommended=null;return next;
 }

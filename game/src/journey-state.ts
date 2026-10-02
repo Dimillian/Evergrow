@@ -25,7 +25,7 @@ export const JOURNEY_CONTENT:Readonly<Record<JourneyKind,{reward:string;category
   frontier:{reward:'New activities',category:'Exploration'},
 });
 export type JourneyCommand={type:'accept'|'track'|'untrack'|'dismiss';id:string}|{type:'acceptAll';ids:string[]}|{type:'collapse';value:boolean};
-/** Pure plan; accepting, navigation pins and completion are independent. */
+/** Pure plan; acceptance pins the new activity, while completion remains independent. */
 export function planJourney(state:JourneyState,command:JourneyCommand):JourneyState|null {
   const next:JourneyState=JSON.parse(JSON.stringify(state));
   if(command.type==='collapse'){next.collapsed=command.value;return next;}
@@ -35,6 +35,7 @@ export function planJourney(state:JourneyState,command:JourneyCommand):JourneySt
     const goals=next.offers.filter(g=>ids.has(g.id)&&g.finishedAt===undefined);
     if(goals.length!==ids.size)return null;
     next.accepted.push(...goals);next.offers=next.offers.filter(g=>!ids.has(g.id));
+    delete next.townPin;next.tracked=command.ids[0];
     if(next.recommended&&ids.has(next.recommended))next.recommended=null;
     return next;
   }
@@ -47,19 +48,22 @@ export function planJourney(state:JourneyState,command:JourneyCommand):JourneySt
   const goal=[...next.accepted,...next.offers].find(g=>g.id===command.id);
   if(!goal||goal.finishedAt!==undefined)return null;
   if(command.type==='track'){
+    if(!next.accepted.some(g=>g.id===goal.id))return null;
     delete next.townPin;next.tracked=goal.id;
   }else if(command.type==='accept'){
     if(!next.offers.some(g=>g.id===goal.id))return null;
     next.accepted.push(goal);next.offers=next.offers.filter(g=>g.id!==goal.id);
+    delete next.townPin;next.tracked=goal.id;
     if(next.recommended===goal.id)next.recommended=null;
   }else{
     if(!next.accepted.some(g=>g.id===goal.id))return null;
     next.accepted=next.accepted.filter(g=>g.id!==goal.id);next.offers.push(goal);
+    if(next.tracked===goal.id)next.tracked=null;
   }
   return next;
 }
 export function pinnedJourney(state:JourneyState):JourneyGoal|undefined {
-  return state.townPin??[...state.accepted,...state.offers].find(g=>g.id===state.tracked&&g.finishedAt===undefined);
+  return state.townPin??state.accepted.find(g=>g.id===state.tracked&&g.finishedAt===undefined);
 }
 /** Area browsing never removes entries from the saved catalogue. */
 export function journalJourneys(state:JourneyState,position:{x:number;y:number},scope='nearby') {
