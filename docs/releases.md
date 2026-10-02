@@ -37,6 +37,17 @@ The user approved the next major prototype milestone, **0.7.0**, on 2026-09-20 f
 
 ## Last verified publication
 
+- Game v0.7.5 / Sites version 67, publicly deployed on 2026-10-02 at 20:02:38 UTC.
+- Published source: `fa7e628a7377332d199499cf744466d49763637a`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_893852da3ea88191b8d968fc4bbf3e4f`.
+- Deployment: `appgdep_6ac00dc707dc81918afcf78bb3b0fe65`; Sites returned `succeeded`.
+- Fixes rapid sideways sunlight-ray sweeps far from the world origin, retaining smooth sun-angle changes and geographic transitions.
+- All nine targeted outdoor-lighting, world-clock and architecture tests passed, alongside application/core type checking, local and cloud-enabled client/Worker builds, archive validation and clean-source release validation. No automated browser gameplay was run for publication.
+- No character reset or required player action. Development tools remain excluded; the local server remains available.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.7.4 / Sites version 66, publicly deployed on 2026-10-02 at 16:45:23 UTC.
 - Published source: `26e32a9d6f9be49318186f7194ec588b063cecfe`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_92b40ff8b3288191aa6c0c860256fad5`.
