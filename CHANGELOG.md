@@ -1,5 +1,24 @@
 # Evergrow changelog
 
+## v0.7.3 — 2026-10-02T06:50:00Z
+
+### New
+
+- A refined stained-glass Everflame emblem brings a shared identity to the character hall, menus and browser icon.
+- Moving the pointer over the title casts warm flame light through the logo and lettering.
+
+### Tweaks
+
+- Character-hall attributes use jewel-colored glass bars with smooth fills and a subtle traveling glint.
+- World difficulty uses a compact comparison table, keeping tier bonuses and the apply action together.
+- Accepting a Journey automatically pins it; only accepted activities can be pinned.
+
+### Fixes
+
+- Brood-event objectives now sit on visible nests, making the target needed to advance the next wave clear.
+- Nest interaction and objective markers now share the same position and reach checks.
+- Dismissing a pinned Journey clears its marker, and older pins on unaccepted activities are removed.
+
 ## v0.7.2 — 2026-10-01T13:09:00Z
 
 ### Tweaks
