@@ -501,7 +501,7 @@ export class Renderer {
     if (outdoorDetail) {
       const start = this.profiler?.start() ?? 0; this.outdoorLightEffects.draw(c, this.view, false); this.profiler?.end('lighting', start);
     }
-    // All extended actor shadows belong to the ground, before depth-sorted silhouettes.
+    // One unified contact/cast shadow per actor, beneath all depth-sorted silhouettes.
     this.drawActorShadow(px, py, p.radius, 44 * PLAYER_ART_SCALE);
     for (const enemy of sim.enemies) {
       if (enemy.hp <= 0) continue;
@@ -509,7 +509,7 @@ export class Renderer {
       if (x < left - 70 || x > left + worldWidth + 70 || y < top - 70 || y > top + worldHeight + 70) continue;
       this.drawActorShadow(x, y, enemy.radius, enemy.kind === 'brute' ? 55 : 38);
     }
-    // Civilians share the character's contact and directional shadows, beneath all scenery.
+    // Civilians use the same unified ground shadow.
     for (const resident of this.residents) this.drawNPCShadow(resident.x, resident.y, npcArtScale(resident));
     for (const building of this.cachedBuildings) {
       const npc = buildingNPC(building);
@@ -883,19 +883,11 @@ export class Renderer {
 
   private drawNPCShadow(x: number, y: number, scale: number) {
     this.drawActorShadow(x, y, 11 * PLAYER_ART_SCALE * scale, 44 * PLAYER_ART_SCALE * scale);
-    this.drawContactShadow(x, y, 11 * PLAYER_ART_SCALE * scale, 5 * scale);
-  }
-
-  private drawContactShadow(x: number, y: number, radius: number, depth: number) {
-    const c = this.ctx;
-    c.fillStyle = this.water.fluid.wetAt(x, y) > .5 ? '#02091128' : '#02091190'; c.beginPath();
-    c.ellipse(x, y + 2, radius, depth, 0, 0, TAU); c.fill();
   }
 
   private enemyOutlines=new EnemyOutlineArt();
   private actor(x: number, y: number, pose: CharacterPose, scale=1,rankColor?:string) {
     const c = this.ctx;
-    this.drawContactShadow(x, y, pose.kind === 'brute' ? 17 : pose.kind === 'player' ? 11 * PLAYER_ART_SCALE : 11, pose.kind === 'brute' ? 8 : 5);
     c.save(); c.translate(x, y); c.scale(scale,scale); if (pose.dead) c.globalAlpha = .4;
     const light=sampleGearLight(x,y-24,this.materialLights,this.materialKey);
     const paint=(target:CanvasRenderingContext2D)=>withGearLight(target,light,()=>drawHumanoid(target,pose));

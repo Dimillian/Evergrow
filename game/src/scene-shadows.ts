@@ -9,7 +9,20 @@ import type { GearLight } from './gear-material.ts';
 /** Low-resolution silhouettes are reused; no pixel readback or per-frame blur. */
 export class SceneShadows {
   private silhouettes = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-  reset() { this.silhouettes = new WeakMap(); }
+  private actorStamp?: HTMLCanvasElement;
+  reset() { this.silhouettes = new WeakMap(); this.actorStamp = undefined; }
+  private actorMask() {
+    if (this.actorStamp) return this.actorStamp;
+    const stamp = document.createElement('canvas'); stamp.width = 128; stamp.height = 64;
+    const c = stamp.getContext('2d')!;
+    c.translate(64, 32); c.scale(64, 32);
+    // One continuous footprint: dense at the feet, feathered along the cast tail.
+    const gradient = c.createRadialGradient(-.4, 0, 0, 0, 0, 1);
+    gradient.addColorStop(0, '#030a138c'); gradient.addColorStop(.3, '#030a135c');
+    gradient.addColorStop(.7, '#030a1324'); gradient.addColorStop(1, '#030a1300');
+    c.fillStyle = gradient; c.fillRect(-1, -1, 2, 2);
+    this.actorStamp = stamp; return stamp;
+  }
   private mask(source: HTMLCanvasElement) {
     let mask = this.silhouettes.get(source);
     if (mask) return mask;
@@ -54,12 +67,11 @@ export class SceneShadows {
   drawActor(c: CanvasRenderingContext2D, x: number, y: number, radius: number, height: number, light: GearLight, wet: boolean) {
     const p = shadowProjection(light.direction), dx = p.x * height, dy = p.y * height;
     c.save(); c.translate(x, y + 2); c.rotate(Math.atan2(dy, dx));
-    // Contact stays dense; the directional body shadow broadens and fades away from the feet.
-    const length = Math.hypot(dx, dy);
-    for (const [spread, opacity] of [[1.35, .06], [1, .13]]) {
-      c.globalAlpha = opacity * (wet ? .3 : 1) * Math.min(1, .3 + light.power);
-      c.fillStyle = '#030a13'; c.beginPath(); c.ellipse(length * .42, 0, Math.max(radius, length * .62), radius * .56 * spread, 0, 0, Math.PI * 2); c.fill();
-    }
+    const length = Math.hypot(dx, dy), width = Math.max(radius * 2, length * 1.15 + radius);
+    c.globalAlpha *= (wet ? .3 : 1) * Math.min(1, .3 + light.power);
+    c.imageSmoothingEnabled = true;
+    // The stamp's dense focus is at 30% of its width, exactly on the feet.
+    c.drawImage(this.actorMask(), -width * .3, -radius * .65, width, radius * 1.3);
     c.restore();
   }
 }

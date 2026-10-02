@@ -10,7 +10,7 @@ import { sampleBiome } from '../src/biomes.ts';
 function fixture(t: TestContext) {
   let allocations = 0;
   const transforms: number[][] = [], draws: number[][] = [];
-  const context = { globalAlpha: 1, save() {}, restore() {}, translate() {}, scale() {},
+  const context = { globalAlpha: 1, save() {}, restore() {}, translate() {}, scale() {}, rotate() {},
     transform(...args: number[]) { transforms.push(args); }, fillRect() {},
     drawImage(_image: unknown, ...args: number[]) { draws.push(args); },
     createRadialGradient() { return { addColorStop() {} }; },
@@ -54,4 +54,24 @@ test('atmosphere freezes world anchors, avoids interiors and never touches simul
   f.draws.length = 0;
   atmosphere.drawLayer(f.context, { ...world, blocked:() => true } as unknown as World, view, 0, false, 0, 0, false, true, 0);
   assert.equal(f.draws.length, 0, 'no fog is painted on solid dungeon walls');
+});
+
+test('actors draw one cached feathered shadow with a grounded focus and water attenuation', t => {
+  const f = fixture(t), shadows = new SceneShadows();
+  const light = { direction: [-.6, -.5, .7] as const, color: '#ffffff', power: 1 };
+  shadows.drawActor(f.context, 30, 40, 10, 50, light, false);
+  assert.equal(f.draws.length, 1, 'contact and cast shade share a single stamp');
+  const [x, y, width, height] = f.draws[0];
+  assert.equal(x + width * .3, 0, 'the dense focus stays at the feet');
+  assert.equal(y + height / 2, 0);
+  const allocations = f.allocations();
+  f.context.globalAlpha = 1;
+  shadows.drawActor(f.context, 30, 40, 10, 50, light, true);
+  assert.equal(f.context.globalAlpha, .3);
+  assert.equal(f.allocations(), allocations, 'all actors reuse one small stamp');
+  f.context.globalAlpha = 1;
+  shadows.drawActor(f.context, 30, 40, 10, 50, { ...light, direction: [0, 0, 1] }, false);
+  assert.equal(f.draws[2][2], 20, 'overhead light keeps a single compact footprint');
+  shadows.reset(); shadows.drawActor(f.context, 30, 40, 10, 50, light, false);
+  assert.equal(f.allocations(), allocations + 1, 'renderer teardown releases the cached stamp');
 });

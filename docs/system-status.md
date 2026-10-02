@@ -239,3 +239,5 @@ Supersedes the historical atlas counts and three-/four-point school rules above.
 ## Local Unique batch three · 2026-09-13
 
 Six new signatures bring the current catalog to eighteen: Heartwood Draw, Briarfall Mantle, Thread of Pursuit, The Patient Bastion, Red Harvest and Stormglass Reliquary. They cover charged piercing shots, advancing arrow rain, finite returning ricochets, stored guard counterattacks, rear-strike marks and aimed lightning conductors. Loot and Chronicles use the shared catalog; rarity odds and valid saves remain unchanged. Combat/Technique, cleanup, terrain and resource regression checks live in `unique-items.test.ts`. See [Unique items](unique-items.md). This addition has not been published to Sites.
+
+Actor shadow correction (October 2, 2026): players, enemies and town civilians use one cached, feathered contact/cast shadow in the ground pass. The separate hard foot oval is removed; the unified shadow remains anchored to the feet, follows scene lighting and fades on water.
