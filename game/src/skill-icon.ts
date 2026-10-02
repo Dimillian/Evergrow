@@ -101,7 +101,12 @@ let svgInstance = 0;
 /** Instance-local gradients and clips; no bitmap, animation, filter or external asset. */
 export function skillIconSVG(id: SkillId, size = 36): string {
   const dimension = Number.isFinite(size) ? Math.max(8, Math.min(256, size)) : 36;
-  const drawing = skillIconDrawing(id, dimension >= 40), prefix = `skill-glass-${svgInstance++}`;
+  return glassDrawingSVG(skillIconDrawing(id, dimension >= 40), dimension);
+}
+/** Shared vector output for skill, utility and title glass compositions. */
+export function glassDrawingSVG(drawing: readonly SkillIconDraw[], size = 36): string {
+  const dimension = Number.isFinite(size) ? Math.max(8, Math.min(256, size)) : 36;
+  const prefix = `skill-glass-${svgInstance++}`;
   const paints = new Map<string, string>(), clips = new Map<string, string>();
   for (const op of drawing) {
     if (op.clip && !clips.has(op.clip)) clips.set(op.clip, `${prefix}-clip-${clips.size}`);

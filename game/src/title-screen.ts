@@ -1,4 +1,5 @@
 import { titleCharacterDetails, titleCharacterLoading } from './title-character-details.ts';
+import { gameEmblemSVG } from './game-emblem.ts';
 import { drawTitlePlinth } from './title-plinth.ts';
 import { ItemTooltip } from './item-tooltip.ts';
 import type { EquipmentSlot } from './character-types.ts';
@@ -80,7 +81,7 @@ export class TitleScreen {
     this.motion.addEventListener('change', () => { this.portraitDirty = true; }, { signal: this.abort.signal });
     this.element = document.createElement('div'); this.element.className = 'title-screen'; this.element.hidden = true;
     this.element.innerHTML = `<details class="title-audio"><summary aria-label="Audio options">Sound <kbd class="audio-pad-key">Y</kbd></summary>${audioControlsMarkup(true)}</details><div class="title-vignette" aria-hidden="true"></div>
-      <header class="title-brand"><span aria-hidden="true">${uiIcon('skilltree')}</span><h1>EVERGROW</h1><nav class="title-home-nav" aria-label="Home">${homePages.map(page=>`<button data-home-page="${page}" aria-current="${page==='characters'?'page':'false'}">${homeLabels[page]}${page==='changelog'?'<i class="home-unread" aria-label="Unread update" hidden></i>':''}</button>`).join('')}</nav><span class="home-pad-hint">LB / RB</span></header>
+      <header class="title-brand"><div class="title-identity"><div class="title-emblem" aria-hidden="true">${gameEmblemSVG()}</div><h1>EVERGROW</h1></div><nav class="title-home-nav" aria-label="Home">${homePages.map(page=>`<button data-home-page="${page}" aria-current="${page==='characters'?'page':'false'}">${homeLabels[page]}${page==='changelog'?'<i class="home-unread" aria-label="Unread update" hidden></i>':''}</button>`).join('')}</nav><span class="home-pad-hint">LB / RB</span></header>
       <section class="title-hero" aria-label="Selected character"><div class="title-halo" aria-hidden="true"></div><canvas width="560" height="720" aria-label="Selected character wearing their saved equipment"></canvas></section>
       <section class="title-roster ui-window" aria-labelledby="roster-title"><header class="title-roster-header"><h2 id="roster-title">Characters</h2><div class="title-sources" role="group" aria-label="Save location" hidden><button data-source="cloud">Cloud</button><button data-source="local">Local</button></div><span class="title-controller-hint"><kbd>A</kbd> Continue</span><span class="title-slot-count"></span></header>
       <div class="title-hall-body"><div class="title-slot-grid" role="group" aria-label="Eight character slots"></div></div></section><section class="title-dossier ui-window" aria-label="Character details"><div class="title-selection"></div>

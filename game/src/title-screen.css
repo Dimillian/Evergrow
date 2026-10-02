@@ -1,6 +1,11 @@
 .title-brand { grid-column:1/-1; display:flex; align-items:center; gap:16px; align-self:center; }
-.title-brand > span { display:grid; place-items:center; width:36px; height:36px; border:1px solid #879c9455; color:#b6c8c5; transform:rotate(45deg); }
-.title-brand .ui-icon { transform:rotate(-45deg); width:23px; height:23px; }
+.title-identity { display:flex; align-items:center; gap:8px; min-width:0; flex:none; font-size:clamp(26px,2.5vw,34px); }
+.title-emblem { width:1em; height:1.18em; flex:none; opacity:.85; }
+.title-emblem svg { display:block; width:100%; height:100%; overflow:visible; }
+.title-brand .title-identity h1 { font-size:1em; line-height:1; letter-spacing:.11em; color:#e5f0dc; text-shadow:0 2px 2px #061019; padding:0; margin:0 -.11em 0 0; }
+@supports (background-clip:text) {
+ .title-brand .title-identity h1 { background:linear-gradient(175deg,#f4f0d6 10%,#d8efdc 45%,#88bcae 75%,#dfd5b0); background-clip:text; -webkit-background-clip:text; color:transparent; text-shadow:none; filter:drop-shadow(0 2px 1px #07131e); }
+}
 .title-roster-header { display:flex; align-items:center; gap:16px; padding:14px 18px; border-bottom:1px solid #84999730; }
 .title-roster-header h2 { margin:0; font-size:18px; font-weight:400; color:#d6dfd8; }
 .title-slot-count { margin-left:auto; color:#9aafa9; font-size:14px; white-space:nowrap; }
@@ -174,8 +179,7 @@
 /* Handheld landscape: keep the portrait and primary action, switch secondary detail panes. */
 @media (max-height:650px) and (min-width:701px), (max-width:1100px) and (min-width:701px) {
  .title-screen { grid-template-columns:minmax(115px,.55fr) minmax(90px,.75fr) minmax(380px,1.9fr); grid-template-rows:40px minmax(0,1fr) 44px; gap:10px; padding:10px 14px; }
- .title-brand h1 { font-size:27px; }
- .title-brand > span { width:24px; height:24px; }
+ .title-identity { font-size:27px; }
  .title-home-nav button { font-size:13px; padding:8px 10px; }
  .title-roster-header { padding:10px; }
  .title-roster-header h2 { font-size:15px; }
@@ -247,6 +251,7 @@
 }
 /* Portrait phones/tablets retain a scrollable roster strip and full readable detail. */
 @media (max-width:700px) {
+ .title-identity { font-size:25px; gap:7px; }
  .title-screen { grid-template-columns:1fr; grid-template-rows:80px 94px minmax(0,1fr) 44px; padding:12px; gap:10px; }
  .title-brand { grid-column:1; grid-row:1; }
  .title-hero { display:none; }
@@ -283,6 +288,9 @@
  .title-screen .title-audio { grid-row:4; }
 }
 @media (max-height:350px) { .title-screen { overflow:auto; } .title-dossier.ui-window,.title-roster.ui-window { min-height:280px; } }
+@media (max-height:440px) and (min-width:701px) {
+ .title-identity { font-size:25px; gap:7px; }
+}
 /* A stable desktop row keeps the frame and portrait fixed as details arrive. */
 @media (min-width:1101px) and (min-height:651px) {
  .title-screen { grid-template-rows:64px minmax(0,min(720px,calc(100% - 132px))) 44px; align-content:center; row-gap:12px; }

@@ -212,6 +212,10 @@ The equipment heading displays a compact Gear power score using the same equippe
 
 Shared control hover uses a thin translucent silver edge and a slight surface lift. Keyboard focus retains a distinct 1px silver outline; semantic danger, rarity and valid-drop colors remain separate.
 
+### Title identity
+
+The character hall uses the **Everflame** emblem in `game-emblem.ts`: a slender split flame of jade and pale glass around a small amber ember, with an open seam and no enclosing frame. It replaces the old skill-tree glyph and diamond. The emblem shares `glassIconDrawing` and `glassDrawingSVG` with the skill artwork, including bounded backlight, pane clipping and instance-local paint IDs. It needs no bitmap, blur filter or animation loop. The EVERGROW heading retains bundled Pixelify Sans and accessible real text, with a pale ivory/jade face. The unframed mark and lettering scale together in one aligned lockup, without an underline. Compact layouts reduce the emblem and lettering together; portrait navigation retains its own row. The existing save-free character hall study (`/title.html`) previews the runtime identity.
+
 ### Active-skill stained glass
 
 `skill-icon-content.ts` owns all 30 active-skill compositions in a 64-unit space: reusable blades, shields, arrows, crystals and greaves, with skill-specific motion silhouettes. Gold, jade and elemental glass use an interior radial backlight, saturated panes, dark lead seams and a faint colored halo. Neutral weapon and shield surfaces pick a presentation palette from the skill’s domain or authored theme; this never changes its damage element. `skill-icon.ts` compiles the same bounded drawing list for SVG controls and Canvas. SVG paint and clipping IDs are instance-local. Shared clipped polygons divide each silhouette into six irregular panes for inspection, or three below 40px; fine engraving is omitted at small sizes. Light uses bounded radial gradients and translucent edge strokes, without blur filters or animation.
