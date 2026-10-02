@@ -30,6 +30,8 @@ Three small geographic textures pack all nine biome weights, dampness, indoor ex
 
 A two-channel 512×512 canopy atlas contains real foliage silhouettes: red follows the shared sky-shadow projection; green follows the standing canopy and its wind deformation. The shaft shader samples along the current sky direction. `prop-surface-light.ts` adds cached silhouette-clipped leaf edges and stone sheen while retaining the painted facets and original wind/occlusion transforms.
 
+Ray ribbons use overlapping, fixed 256-unit geographic strips. Sun-angle changes shear only each strip's local height, rather than rotating absolute world coordinates around the origin. Smooth blending keeps strip crossings continuous, and camera movement/zoom never reanchors the pattern. This bounds sun-driven ribbon travel to about 1.25 world units per second at the normal day rate, independent of distance from home; slow noise evolution remains decorative. The air pass evaluates two ribbon noise samples instead of one, without extra passes, canopy samples, textures or lights.
+
 Limits: half world-render resolution capped at 640 pixels on either axis, four physical local lights, 80 canopy props, a 10 Hz wind upload cadence and 4,096 cached ground cells. Sun changes also invalidate canopy projection at bounded time increments, including when wind motion is disabled. Geographic texture uploads happen only when coverage changes, reusing overlapping cells. No per-frame pixel readback. Context loss/unsupported WebGL retains the established atmosphere, shared day/night ambient lighting and Canvas shadows. Reduced motion freezes decorative wind, dust, glints, cloud drift and fog; the slow world clock still follows active play.
 
 ## Preview and verification

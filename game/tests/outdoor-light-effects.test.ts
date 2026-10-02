@@ -1,11 +1,45 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { outdoorLightCell, OUTDOOR_LIGHT_RULES, type OutdoorLightWorld } from '../src/outdoor-light-content.ts';
 import { OutdoorLightEffects, outdoorLightLayout } from '../src/outdoor-light-effects.ts';
 import { skyAtHour } from '../src/world-time.ts';
 import { BIOME_IDS, type BiomeWeights } from '../src/biomes.ts';
 import { cameraView } from '../src/camera.ts';
 import type { World } from '../src/world.ts';
+
+test('production ray coordinates stay slow far from origin and continuous across geographic strips',()=>{
+  // Evaluate the scalar GLSL helper itself, not a separately maintained copy of
+  // its coordinate formula. This checks motion without a browser/GPU playtest.
+  const source=readFileSync(new URL('../src/outdoor-light-effects.ts',import.meta.url),'utf8');
+  const body=source.match(/float lightRibbon\(vec2 world,vec2 sun\)\{([\s\S]*?)\n\}/)?.[1];
+  assert.ok(body,'the air shader must keep its bounded ribbon-coordinate helper');
+  assert.match(source,/float ribbon=lightRibbon\(world,sun\)/,'the rendered rays use the checked field');
+  type Vec={x:number;y:number};
+  let samples:Vec[]=[];
+  const noise=(p:Vec)=>{samples.push(p);return .5+.25*Math.sin(p.x)+.25*Math.cos(p.y);};
+  const mix=(a:number,b:number,t:number)=>a+(b-a)*t;
+  const smoothstep=(a:number,b:number,x:number)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
+  const ribbon=new Function('noise','vec2','mix','smoothstep','floor',
+    `return (world,sun,time)=>{${body.replace(/\bfloat\s+/g,'let ')}}`)(noise,
+      (x:number,y:number)=>({x,y}),mix,smoothstep,Math.floor) as (world:Vec,sun:Vec,time:number)=>number;
+  const sun=(hour:number):Vec=>{const [x,y]=skyAtHour(hour).direction;const length=Math.hypot(x,y);return {x:-x/length,y:-y/length};};
+  const dt=1/60,hourStep=dt*24/(36*60);
+  let maxSpeed=0;
+  for(let hour=0;hour<24;hour+=.1){
+    for(const x of [-100000,0,100000])for(const y of [-100000,-256.01,-.01,0,255.99,100000]){
+      samples=[];ribbon({x,y},sun(hour),0);const before=samples;
+      samples=[];ribbon({x,y},sun(hour+hourStep),0);
+      for(let i=0;i<2;i++)maxSpeed=Math.max(maxSpeed,Math.abs(samples[i].x-before[i].x)/.047/dt);
+    }
+  }
+  assert.ok(maxSpeed>1 && maxSpeed<1.25,`sun-driven travel is bounded everywhere: ${maxSpeed}`);
+  for(const y of [-100096,-256,0,256,100096])for(const hour of [0,6,9,12,15,18,24]){
+    const a=ribbon({x:417,y:y-1e-5},sun(hour),31);
+    const b=ribbon({x:417,y:y+1e-5},sun(hour),31);
+    assert.ok(Math.abs(a-b)<1e-6,`continuous strip boundary at ${y}, hour ${hour}`);
+  }
+});
 
 const weights = (verdant:number,swamp:number):BiomeWeights=>Object.fromEntries(BIOME_IDS.map(id=>[id,id==='verdant'?verdant:id==='swamp'?swamp:id==='deadwood'?1-verdant-swamp:0])) as BiomeWeights;
 function ground(w:BiomeWeights,indoors=false,simulatedWater=false):OutdoorLightWorld {

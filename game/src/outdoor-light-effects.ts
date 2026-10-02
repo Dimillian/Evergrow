@@ -22,6 +22,18 @@ float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
 float cover(vec2 p){return texture2D(crowns,(p-bounds.xy)/bounds.zw).r;}
 float overhead(vec2 p){return texture2D(crowns,(p-bounds.xy)/bounds.zw).g;}
+float lightRibbon(vec2 world,vec2 sun){
+  // Fixed geographic strips, not a rotating projection of absolute world
+  // coordinates. Only the bounded local height responds to the sun angle.
+  // Both neighbours overlap smoothly: crossing a strip or moving the camera
+  // never resets the field. The sky's nonzero north component bounds shear.
+  float strip=floor(world.y/256.);
+  float localY=world.y-strip*256.;
+  float shear=sun.x/sun.y;
+  float a=noise(vec2((world.x-localY*shear)*.047,strip*7.+time*.018));
+  float b=noise(vec2((world.x-(localY-256.)*shear)*.047,(strip+1.)*7.+time*.018));
+  return mix(a,b,smoothstep(0.,256.,localY));
+}
 void main(){
   // Extrude one edge texel around each atlas crop so Canvas upsampling cannot
   // blend a neighbouring effect into the viewport's outermost pixels.
@@ -88,7 +100,7 @@ void main(){
       shaft+=1.-overhead(world-sun*travel);
     }
     shaft/=8.;
-    float ribbon=noise(vec2(dot(world,vec2(-sun.y,sun.x))*.047,time*.018));
+    float ribbon=lightRibbon(world,sun);
     float rays=pow(shaft,4.)*pow(ribbon,3.5)*(1.-overhead(world)*.97);
     // Banked air around damp ground; keep clear paths legible instead of a uniform screen veil.
     vec3 haze=vec3(.26,.36,.27)*climate.r+vec3(.20,.40,.43)*mire+vec3(.34,.40,.48)*dead
