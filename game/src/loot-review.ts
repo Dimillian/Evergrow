@@ -1,3 +1,5 @@
+import { GameAudio } from './audio.ts';
+import { lootDropEvent } from './loot-drop-presentation.ts';
 import { UNIQUES } from './unique-content.ts';
 import { generateUnique } from './items.ts';
 import { drawMaterialBurst } from './material-response-art.ts';
@@ -26,6 +28,7 @@ await loadGameFont(); installUITheme();
 const canvas = document.querySelector<HTMLCanvasElement>('#review')!;
 const highlight = new GroundLootHighlight(document.body, canvas);
 let labels: GroundLootLabel[] = [];
+let previewPointer: { x: number; y: number } | null = null;
 const world = new World(7319), sim = new Simulation(world, { spawn: false }), renderer = new Renderer();
 sim.player.level = 10;
 const stage = document.createElement('canvas'), fx = new PostFX(stage);
@@ -79,6 +82,28 @@ if (pickupView) {
   renderer.cameraX = x; renderer.cameraY = y;
   sim.player.angle = .5;
 }
+const previewAudio = new GameAudio();
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+let previewDt = 0;
+const controls = document.createElement('div');
+if (rarityView) {
+  controls.style.cssText = 'position:fixed;top:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20';
+  for (const tier of ['legendary', 'unique'] as const) {
+    const button = document.createElement('button');
+    button.textContent = `Replay ${tier}`;
+    button.className = 'ui-button';
+    button.style.cssText = 'padding:10px 14px;color:' + (tier === 'unique' ? '#ef91bd' : '#efb776');
+    button.onclick = async () => {
+      await previewAudio.unlock();
+      const drop = drops.find(drop => drop.item.tier === tier)!;
+      drop.flight = { x: drop.x - 35, y: drop.y - 10, at: sim.time, delay: 0 };
+      const event = lootDropEvent(drop)!;
+      renderer.handleEvents([event], reduced.matches);
+    };
+    controls.append(button);
+  }
+  document.body.append(controls);
+}
 const draw = () => {
   canvas.width = innerWidth * devicePixelRatio; canvas.height = innerHeight * devicePixelRatio;
   stage.width = canvas.width; stage.height = canvas.height;
@@ -89,7 +114,9 @@ const draw = () => {
     for(const [i,drop]of drops.entries()){drop.x=sim.player.x+(i%columns-(columns-1)/2)*gapX;drop.y=sim.player.y+(Math.floor(i/columns)-(rows-1)/2)*gapY;}
   }
   renderer.resize(viewWidth, viewHeight);
-  renderer.render(sim, world, 0, { phase: 'ready', reducedMotion: true });
+  const cue = renderer.lootDrops.advance(drops, sim.time, sim.player);
+  if (cue) previewAudio.lootDrop(cue);
+  renderer.render(sim, world, previewDt, { phase: 'ready', reducedMotion: rarityView ? reduced.matches : true });
   const c = renderer.ctx;
   if (!pickupView) { c.fillStyle = '#071118d8'; c.fillRect(0, 0, 1000, 600); }
   if (!containersView && !materialsView && !pickupView) {
@@ -130,7 +157,7 @@ const draw = () => {
     }));
     const focus = labels.find(b => b.id === 301)!;
     highlight.update(sim.player, drops, labels, canvas.width, canvas.height,
-      params.get('state') === 'hovered' ? { x: focus.x + focus.width / 2, y: focus.y + focus.height / 2 } : null, sim.time,
+      params.get('state') === 'hovered' ? { x: focus.x + focus.width / 2, y: focus.y + focus.height / 2 } : previewPointer, sim.time,
       params.get('state') === 'collecting' ? 301 : null);
   } else if (!containersView && !materialsView) {
   text(ui, 'Death & ground loot', 35, 20, 1.7, '#d9e4de');
@@ -152,10 +179,20 @@ const draw = () => {
 };
 const hover = (event: PointerEvent) => {
   const rect = canvas.getBoundingClientRect();
-  highlight.update(sim.player, drops, labels, canvas.width, canvas.height,
-    event.pointerType === 'touch' ? null : { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height });
+  previewPointer = event.pointerType === 'touch' ? null : { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
+  highlight.update(sim.player, drops, labels, canvas.width, canvas.height, previewPointer);
 };
-const leave = () => highlight.hide();
+const leave = () => { previewPointer = null; highlight.hide(); };
 canvas.addEventListener('pointermove', hover); canvas.addEventListener('pointerleave', leave);
 draw(); window.addEventListener('resize', draw);
-if (import.meta.hot) import.meta.hot.dispose(() => { window.removeEventListener('resize', draw); canvas.removeEventListener('pointermove', hover); canvas.removeEventListener('pointerleave', leave); highlight.dispose(); fx.dispose(); world.dispose(); });
+let animation = 0, lastFrame = performance.now();
+const animate = (now: number) => {
+  if (!document.hidden && now - lastFrame >= 1000 / 30) {
+    previewDt = Math.min(.05, (now - lastFrame) / 1000); sim.time += previewDt; lastFrame = now; draw();
+  } else if (document.hidden) lastFrame = now;
+  animation = requestAnimationFrame(animate);
+};
+if (rarityView) animation = requestAnimationFrame(animate);
+const visibility = () => previewAudio.setForeground(!document.hidden);
+document.addEventListener('visibilitychange', visibility);
+if (import.meta.hot) import.meta.hot.dispose(() => { cancelAnimationFrame(animation); previewAudio.dispose(); controls.remove(); document.removeEventListener('visibilitychange', visibility); window.removeEventListener('resize', draw); canvas.removeEventListener('pointermove', hover); canvas.removeEventListener('pointerleave', leave); highlight.dispose(); fx.dispose(); world.dispose(); });

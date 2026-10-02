@@ -376,6 +376,7 @@ export type CombatEvent = EventAppearance & (
   | { readonly type: 'journey'; readonly id: string; readonly name: string; readonly xp: number }
   | { readonly type: 'experience'; readonly amount: number }
   | { readonly type: 'loot'; readonly item: Item }
+  | { readonly type: 'item-drop'; readonly dropId: number; readonly tier: 'legendary' | 'unique'; readonly landAt: number | null }
   | { readonly type: 'level'; readonly level: number; readonly skillPoints: number; readonly statPoints: number }
   | { readonly type: 'notice'; readonly message: string }
   | { readonly type: 'blast'; readonly groundKind?: GroundEffect['kind']; readonly radius: number; readonly duration?: number; readonly enemyKind?: EnemyKind }

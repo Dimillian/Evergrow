@@ -230,6 +230,7 @@ export async function claimDungeonChest(sim: Simulation, index: number, persist:
     if (!result.ok)
         return result;
     sim.expeditions = checkpoint.expeditions!;
+    sim.announceNewLootDrops(checkpoint.groundItems);
     sim.groundItems = checkpoint.groundItems;
     sim.groundGold = checkpoint.groundGold!;
     sim.reserveIdentity(next);

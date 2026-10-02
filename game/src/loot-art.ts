@@ -1,3 +1,5 @@
+import { lootPositions, specialLootTier, type LootDropPresentation } from './loot-drop-presentation.ts';
+import { drawLootBeacon } from './loot-beacon-art.ts';
 import { weaponEnhancementRank } from './enhancement-art.ts';
 import { hasGreaterAffix } from './item-roll-content.ts';
 import { dropIdleHop } from './drop-idle-motion.ts';
@@ -12,32 +14,20 @@ import { polygon } from './art-primitives.ts';
 import { layoutLootLabels, groundLootName, fitLootName, LOOT_LABEL_STYLE } from './loot-label-layout.ts';
 import { groundLootVisibility, type GroundLootVisibility } from './ground-loot-hover.ts';
 
-/** Separate silhouettes in a multi-item drop without changing pickup/save positions. */
-function lootPositions(drops: readonly GroundItem[]) {
-  const groups = new Map<string, GroundItem[]>();
-  for (const drop of drops) {
-    const key = `${drop.x}:${drop.y}`;
-    const group = groups.get(key) ?? []; group.push(drop); groups.set(key, group);
-  }
-  return [...groups.values()].flatMap(group => group.sort((a, b) => a.id - b.id).map((drop, i) => ({
-    drop, x: drop.x + (i - (group.length - 1) / 2) * 19,
-    y: drop.y + (group.length > 1 ? Math.sin(i * 2.4) * 5 : 0),
-  })));
-}
-
-export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly GroundItem[], time: number, reducedMotion = false, worldTime = time): void {
+export function drawGroundLoot(c: CanvasRenderingContext2D, drops: readonly GroundItem[], time: number, reducedMotion = false, worldTime = time, arrivals?: LootDropPresentation, view?: { left: number; top: number; width: number; height: number }): void {
   c.save();
   for (const { drop, x, y } of lootPositions(drops)) {
     if(drop.flight&&worldTime<drop.flight.at+drop.flight.delay)continue;
     const flight=treasurePose(drop,worldTime,reducedMotion);
+    const anchorX = flight.landed ? x : flight.x, anchorY = flight.landed ? y : flight.y - flight.height;
+    if (view && (anchorX + 80 < view.left || anchorX - 80 > view.left + view.width
+      || anchorY + 40 < view.top || anchorY - 150 > view.top + view.height)) continue;
     const color = TIER_COLORS[drop.item.tier];
     const precious = ['rare', 'epic', 'legendary','unique'].includes(drop.item.tier);
     c.fillStyle = '#040a10b0'; c.beginPath(); c.ellipse(flight.landed?x:flight.x, (flight.landed?y:flight.y) + 2, 12, 4, -.12, 0, Math.PI * 2); c.fill();
-    if(drop.item.tier==='unique'){
-      const glow=c.createRadialGradient(x,y,2,x,y,36);glow.addColorStop(0,'#e04b8970');glow.addColorStop(.5,'#9e60cf35');glow.addColorStop(1,'#9e60cf00');
-      c.fillStyle=glow;c.beginPath();c.ellipse(x,y,36,17,0,0,Math.PI*2);c.fill();
-    }
-    // Equipment rests on the floor, not suspended inside a beam of light.
+    if (flight.landed && specialLootTier(drop.item.tier))
+      drawLootBeacon(c, x, y, drop.item.tier, drop.id, time, reducedMotion, arrivals?.flare(drop.id, worldTime) ?? 0);
+    // The equipment silhouette stays grounded beneath its beacon.
     c.save(); c.translate(flight.landed?x:flight.x, (flight.landed?y:flight.y)-3-flight.height); c.rotate(flight.spin); c.rotate(Math.sin(drop.item.seed) * .18); c.scale(1.2, .95);
     drawGearShapes(c, itemDropShapes(drop.item), value => value, undefined, weaponEnhancementRank(drop.item), reducedMotion ? 0 : time); c.restore();
     if(!flight.landed)continue;

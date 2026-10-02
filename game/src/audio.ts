@@ -91,6 +91,18 @@ export class GameAudio {
     this.hiss({ duration: .045, frequency: 1600, endFrequency: 450, volume: .035, delay: open ? 0 : .065 }, 1);
     this.tone(open ? 125 : 105, 65, .085, .07, 1, 'sine', open ? .025 : .07, .008);
   }
+  /** Rare drops ring above combat, through the existing bounded SFX voice pool. */
+  lootDrop(tier: 'legendary' | 'unique') {
+    if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || this.ctx.state !== 'running' || this.disposed) return;
+    const unique = tier === 'unique';
+    this.hiss({ duration: .36, frequency: 1100, endFrequency: 4200, volume: .11, attack: .025, type: 'bandpass' }, 3);
+    this.tone(unique ? 98 : 130.81, unique ? 65.41 : 87.31, .48, .20, 3, 'sine', 0, .006);
+    const notes = unique ? [392, 466.16, 587.33, 784] : [523.25, 659.25, 783.99];
+    notes.forEach((pitch, i) => {
+      this.tone(pitch, pitch * .998, unique ? 1.5 : 1.12, .11 / (1 + i * .35), 3, 'sine', .04 + i * .07, .008);
+      this.tone(pitch * 2.003, pitch * 2, .7, .023, 3, 'sine', .04 + i * .07, .003);
+    });
+  }
   private goldSoundAt = -Infinity;
   /** Short forge cues use the normal master/SFX mix and bounded voice pool. */
   enhancement(cue: 'charge' | 'success' | 'error') {
@@ -261,7 +273,7 @@ export class GameAudio {
 
   play(event: CombatEvent) {
     if (!this.enabled || !this.foreground || this.volumes.sfx <= 0 || !this.ctx || !this.bus || this.disposed || this.ctx.state !== 'running') return;
-    if (event.type === 'spawn' || event.type === 'engagement') return;
+    if (event.type === 'spawn' || event.type === 'engagement' || event.type === 'item-drop') return;
     const now = this.ctx.currentTime;
     if (event.type === 'gold') {
       if (now - this.goldSoundAt < .075) return;

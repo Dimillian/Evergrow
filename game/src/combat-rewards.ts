@@ -1,3 +1,4 @@
+import { lootDropEvent } from './loot-drop-presentation.ts';
 import { worldDifficulty } from './world-difficulty.ts';
 import { manaCapacity } from './auras.ts';
 import { manaVialAmount } from './mana-content.ts';
@@ -37,7 +38,9 @@ export function awardKillRewards(enemy: Enemy, kills: number, recharge: number, 
     level: player.level, skillPoints: levels, statPoints: levels * 5, color: '#c0acf0' });
   for (const item of context.suppressDrops || isBossKind(enemy.kind) ? [] : rollEnemyLoot({ playerLevel: dropPlayerLevel, seed: enemy.lootSeed, level: enemy.level, rank: enemy.rank,
     biome: enemy.biome, kind: enemy.kind, difficulty:enemy.rewardDifficulty, encounter: enemy.bossPhases!==undefined||enemy.kind==='goblinChief'?'boss':undefined, firstKill: kills === 1 })) {
-    addGroundItem(context.groundItems, { id: context.nextId(), x: enemy.x, y: enemy.y, item });
+    const drop = { id: context.nextId(), x: enemy.x, y: enemy.y, item };
+    addGroundItem(context.groundItems, drop);
+    const cue = lootDropEvent(drop); if (cue) context.emit(cue);
   }
   recharge++;
   if (recharge >= PLAYER_ABILITIES.potion.killsPerCharge) {

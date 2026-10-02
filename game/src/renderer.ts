@@ -1,3 +1,4 @@
+import { LootDropPresentation, lootBeaconLights } from './loot-drop-presentation.ts';
 import { RiftAtmosphereArt } from './rift-atmosphere-art.ts';
 import { AreaBanner } from './area-banner.ts';
 import { drawAreaBanner } from './area-banner-art.ts';
@@ -285,6 +286,7 @@ export class Renderer {
   }
 
   reset() {
+    this.lootDrops.reset();
     this.areaBanner.clear();
     this.eventProgressPresentation.reset();
     this.outdoorLightEffects.reset();
@@ -307,7 +309,10 @@ export class Renderer {
     this.art.reset(); this.environmentArt.reset(); this.visibleProps = []; this.visibleEnemies = 0;
   }
 
+  readonly lootDrops = new LootDropPresentation();
+
   handleEvents(events: CombatEvent[], reducedMotion: boolean) {
+    this.lootDrops.handle(events);
     this.water.handleEvents(events, reducedMotion);
     this.effects.handleEvents(events);
     this.rewards.handleEvents(events, reducedMotion);
@@ -567,7 +572,7 @@ export class Renderer {
     drawGroundGold(c, sim.groundGold, this.visualTime, settings.reducedMotion);
     drawLevelCelebration(c, this.rewards.level, px, py, settings.reducedMotion);
     if(!this.cryptFloor)drawEventObjectives(c,sim.eventState,settings.reducedMotion?0:this.visualTime,world);
-    drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion, sim.time);
+    drawGroundLoot(c, sim.groundItems, this.visualTime, settings.reducedMotion, sim.time, this.lootDrops, this.view);
     this.effects.drawSword(c);
     for (const effect of sim.groundEffects) {
       if (effect.x + effect.radius < left || effect.x - effect.radius - 180 > left + worldWidth
@@ -955,7 +960,7 @@ export class Renderer {
     for (const light of environmentLights) light.stationary = true;
     environmentLights.sort((a, b) => Math.hypot(a.x - px, a.y - py) - Math.hypot(b.x - px, b.y - py));
     const view = this.view;
-    return [...lights, ...environmentLights].filter(light => light.x + light.radius >= view.left
+    return [...lights, ...lootBeaconLights(sim.groundItems, sim.time, { x: px, y: py }), ...environmentLights].filter(light => light.x + light.radius >= view.left
       && light.x - light.radius <= view.left + view.width && light.y + light.radius >= view.top
       && light.y - light.radius <= view.top + view.height).slice(0, 18).map(light => this.cryptFloor
         ? { ...light, clip: cryptLightMask(this.cryptFloor, light) } : light);

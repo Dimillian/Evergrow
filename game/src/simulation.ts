@@ -1,3 +1,4 @@
+import { lootDropEvent } from './loot-drop-presentation.ts';
 import { worldDifficulty, lesserDifficulty } from './world-difficulty.ts';
 import { advanceChains, type ChainFlight } from './chain-lightning.ts';
 import { RiftTactics } from './rift-tactics.ts';
@@ -101,6 +102,7 @@ export class Simulation {
   commitEventCheckpoint(saved: CharacterCheckpoint, xp: number, levels: number, completion: JourneyCompletion | null = null): void {
     this.expeditions = saved.expeditions ?? freshExpeditions(); this.dungeonFloor = dungeonFromState(this);
     this.eventState = saved.events!;
+    this.announceNewLootDrops(saved.groundItems);
     this.groundItems = saved.groundItems; this.groundGold = saved.groundGold!;
     this.nextId = Math.max(this.nextId, ...this.groundItems.map(i => i.id + 1), ...this.groundGold.map(i => i.id + 1));
     this.commitJourneyCheckpoint(saved,completion,xp,levels);
@@ -320,6 +322,14 @@ export class Simulation {
   /** Fraction between the two most recent fixed-tick positions for rendering. */
   get interpolationAlpha(): number {
     return Math.max(0, Math.min(1, this.accumulator / FIXED_STEP));
+  }
+
+  /** Only newly committed rewards call this; restoring saves and discarding gear stay silent. */
+  announceNewLootDrops(drops: readonly GroundItem[]): void {
+    const existing = new Set(this.groundItems.map(drop => drop.id));
+    for (const drop of drops) if (!existing.has(drop.id)) {
+      const cue = lootDropEvent(drop); if (cue) this.emit(cue);
+    }
   }
 
   private emit(event: CombatEvent): void { trackChronicleEvent(this.player,this.enemies,event); this.events.push(event); }

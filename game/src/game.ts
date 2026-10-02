@@ -1266,6 +1266,8 @@ export class Game {
       this.performance.end('simulation', simulationStart);
       const events = this.sim.drainEvents();
       this.renderer.handleEvents(events, this.reducedMotion);
+      const lootCue = this.renderer.lootDrops.advance(this.sim.groundItems, this.sim.time, this.sim.player);
+      if (lootCue) this.audio.lootDrop(lootCue);
       for (const event of events) {
         if (event.type === 'loot') this.shell.notifications.push({ kind: 'loot', item: event.item });
         else if (event.type === 'journey') this.shell.notifications.announce(`${event.name} complete. Gained ${event.xp} XP.`);
