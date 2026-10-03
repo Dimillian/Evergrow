@@ -29,6 +29,8 @@ test('standing on loot never picks it up; selecting one item leaves its neighbor
   advance(sim,1);
   assert.deepEqual(sim.groundItems.map(d=>d.id),[902]);
   assert.equal(sim.player.character.inventory.filter(i=>i?.id===generateItem(901,1).id).length,1);
+  assert.equal(sim.player.character.inventory.find(i=>i?.id===generateItem(901,1).id)?.newPickup,true);
+  assert.equal(sim.groundItems[0].item.newPickup,undefined);
   assert.equal(sim.drainEvents().filter(e=>e.type==='loot').length,1);
 });
 
@@ -69,6 +71,7 @@ test('too-distant, airborne and full-bag items reject pickup without loss',()=>{
   assert.equal(sim.requestGroundItem(901),'Bag full. Make room for this item.');
   assert.equal(sim.groundItems.length,1);
   assert.equal(sim.groundPickup.id,null);
+  assert.equal(drop.item.newPickup,undefined);
 });
 
 test('pickup routes around obstacles and gives up when no route exists',()=>{

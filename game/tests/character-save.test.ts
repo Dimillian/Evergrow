@@ -103,6 +103,34 @@ test('pickup history and sorted bag round trip; malformed histories are rejected
   }
 });
 
+test('uninspected pickups survive saves and sorting; inspection clears only the chosen item', async () => {
+  const { session, repo, sim } = await setup();
+  const first = { ...generateItem(921, 1, 'ring'), newPickup: true as const };
+  const second = { ...generateItem(922, 1, 'ring'), newPickup: true as const };
+  addInventoryItem(sim.player.character, first); addInventoryItem(sim.player.character, second);
+  executeCharacterCommand(sim.player, { type: 'sortInventory', mode: 'rarity' });
+  assert.ok(await session.save(sim.captureCheckpoint(), 200));
+  sim.restoreCheckpoint(decodeCharacterSave(JSON.stringify(repo.read(0).record))!.checkpoint);
+  const history = [...sim.player.character.recentItems!];
+  const before = sim.captureCheckpoint();
+  assert.equal(executeCharacterCommand(sim.player, { type: 'inspectItem', id: 'missing' }).ok, false);
+  assert.deepEqual(sim.captureCheckpoint(), before);
+  assert.ok(sim.player.character.inventory.find(i => i?.id === first.id)?.newPickup);
+  assert.ok(executeCharacterCommand(sim.player, { type: 'inspectItem', id: first.id }).ok);
+  assert.ok(executeCharacterCommand(sim.player, { type: 'inspectItem', id: first.id }).ok);
+  assert.deepEqual(sim.player.character.recentItems, history);
+  assert.equal(sim.player.hp, before.hp); assert.equal(sim.player.mana, before.mana);
+  assert.ok(await session.save(sim.captureCheckpoint(), 300));
+  const saved = decodeCharacterSave(JSON.stringify(repo.read(0).record))!;
+  assert.equal(saved.checkpoint.character.inventory.find(i => i?.id === first.id)?.newPickup, undefined);
+  assert.equal(saved.checkpoint.character.inventory.find(i => i?.id === second.id)?.newPickup, true);
+  for (const value of [false, 'true', 1, null]) {
+    const bad = structuredClone(saved);
+    Object.assign(bad.checkpoint.character.inventory.find(i => i?.id === first.id)!, { newPickup: value });
+    assert.equal(decodeCharacterSave(JSON.stringify(bad)), null);
+  }
+});
+
 test('all eight slots create independent identical starters with leather armor and empty inventories', async () => {
   const { repo, session, sim } = (await setup());
   for (let i = 1; i < CHARACTER_SLOT_COUNT; i++) assert.ok((await session.create(i, `Wayfarer ${i}`, 7319, sim.captureCheckpoint(), `character-${i}`, 100)));
@@ -401,5 +429,4 @@ test('roll quality repricing reaches equipped, carried, stored, buyback and both
   assert.equal(d.level,p.level);assert.equal(d.xp,p.xp);assert.equal(c.gold,s.gold);assert.deepEqual(c.allocatedNodes,s.allocatedNodes);
   assert.equal(JSON.stringify(save),raw);assert.deepEqual(decodeCharacterSave(JSON.stringify(decoded)),decoded);
 });
-
 

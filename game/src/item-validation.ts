@@ -23,6 +23,7 @@ const oneOf = (v: unknown, values: readonly unknown[]) => values.includes(v);
 const modifiers = (v: unknown) => object(v) && Object.keys(v).every(key => Object.hasOwn(STAT_LABELS, key) && number(v[key], -1e9, 1e9));
 
 export function validItem(v: unknown): v is Item {
+  if (object(v) && v.newPickup !== undefined && v.newPickup !== true) return false;
   if (object(v) && v.kind === 'riftKey') return validRiftKey(v);
   if (!object(v) || v.locked !== undefined && typeof v.locked !== 'boolean' || !text(v.id, 160) || !integer(v.seed, -2147483648, 4294967295) || !text(v.name)
     || !text(v.baseName) || !oneOf(v.kind, ITEM_KINDS) || !Object.hasOwn(TIER_NAMES, String(v.tier))
