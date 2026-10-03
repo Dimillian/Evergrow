@@ -98,6 +98,9 @@ export class Exploration {
     return coordinate(x) && coordinate(y) && this.isCellRevealed(Math.floor(x / EXPLORATION_CELL_SIZE), Math.floor(y / EXPLORATION_CELL_SIZE));
   }
   isDiscovered(id: string) { return this.pois.has(id); }
+  getDiscoveredPOI(id: string): MapPOI | undefined {
+    const poi = this.pois.get(id); return poi ? { ...poi } : undefined;
+  }
   getChunkRevision(x: number, y: number) {
     return this.chunks.get(key(Math.floor(x / EXPLORATION_CHUNK_SIZE), Math.floor(y / EXPLORATION_CHUNK_SIZE)))?.revision ?? 0;
   }

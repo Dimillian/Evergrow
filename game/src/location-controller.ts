@@ -1,5 +1,5 @@
 import { planDungeonTravel, type DungeonAction, type PersistDungeon } from './dungeon-command.ts';
-import { executePortalTravel } from './travel-command.ts';
+import { executePortalTravel, executeMapTravel, type TravelDiscoveries } from './travel-command.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Simulation } from './simulation.ts';
 import type { WorldQuery } from './model.ts';
@@ -16,6 +16,12 @@ export interface LocationHost {
 export class LocationController {
     private host: LocationHost;
     constructor(host: LocationHost) { this.host = host; }
+    async map(id: string, discoveries: TravelDiscoveries): Promise<{ ok: boolean; message: string }> {
+        const result = await executeMapTravel(this.host.simulation(), discoveries, id, this.host.persist);
+        if (result.ok) this.host.arrived();
+        this.host.notify(result.message);
+        return result;
+    }
     async dungeon(action: DungeonAction): Promise<boolean> {
         const host = this.host, sim = host.simulation();
         const result = await planDungeonTravel(sim, action, host.surface(), host.persist);

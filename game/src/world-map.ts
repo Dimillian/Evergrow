@@ -192,6 +192,14 @@ export class WorldMap {
   private tooltipName: HTMLElement;
   private tooltipKind: HTMLElement;
   private tooltipDescription: HTMLElement;
+  private travelCard: HTMLDivElement;
+  private travelName: HTMLElement;
+  private travelDescription: HTMLElement;
+  private travelButton: HTMLButtonElement;
+  private selectedTravel: MapPOI | null = null;
+  private travelBusy = false;
+  private travelActions?: { problem(id: string): string | null; travel(id: string): Promise<{ ok: boolean; message: string }> };
+  setTravel(actions: NonNullable<WorldMap['travelActions']>) { this.travelActions = actions; }
   private areaInfo: HTMLDivElement;
   private areaName: HTMLElement;
   private areaBiome: HTMLElement;
@@ -221,7 +229,7 @@ export class WorldMap {
   private portalMarkers: () => MapPOI[] = () => [];
   setPortalMarkers(reader: () => MapPOI[]) { this.portalMarkers = reader; this.render(); }
   private minimapPointer: { x: number; y: number } | null = null;
-  private drag: { id: number; x: number; y: number; centerX: number; centerY: number } | null = null;
+  private drag: { id: number; x: number; y: number; centerX: number; centerY: number; moved: boolean } | null = null;
   private hovered: MapPOI | null = null;
   private returnFocus: HTMLElement | null = null;
   private ratio = 1;
@@ -265,6 +273,11 @@ export class WorldMap {
         </div>
         <div class="world-map-tooltip ui-tooltip" role="status" aria-live="polite" aria-atomic="true" hidden>
           <p class="world-map-poi-kind ui-kicker"></p><h3 class="ui-title"></h3><p class="world-map-poi-description ui-body"></p></div>
+        <div class="world-map-travel ui-tooltip" role="region" aria-label="Travel destination" hidden>
+          <div><p class="ui-kicker">Travel destination</p><h3 class="ui-title"></h3><p class="ui-body" role="status"></p></div>
+          <button type="button" class="ui-button ui-button--primary" data-travel-go>Teleport</button>
+          <button type="button" class="ui-button ui-button--quiet ui-button--icon" data-travel-close aria-label="Dismiss destination">${uiIcon('close')}</button>
+        </div>
       </div></div>
       <footer class="world-map-footer ui-window__footer">
         <div class="world-map-progress"><span class="world-map-discoveries"></span><span class="world-map-status ui-muted" role="status"></span></div>
@@ -282,6 +295,10 @@ export class WorldMap {
     this.tooltipName = this.tooltip.querySelector('h3')!;
     this.tooltipKind = this.tooltip.querySelector('.world-map-poi-kind')!;
     this.tooltipDescription = this.tooltip.querySelector('.world-map-poi-description')!;
+    this.travelCard = this.element.querySelector<HTMLDivElement>('.world-map-travel')!;
+    this.travelName = this.travelCard.querySelector('h3')!;
+    this.travelDescription = this.travelCard.querySelector('.ui-body')!;
+    this.travelButton = this.travelCard.querySelector<HTMLButtonElement>('[data-travel-go]')!;
     this.areaInfo = this.element.querySelector<HTMLDivElement>('.world-map-area')!;
     this.areaName = this.areaInfo.querySelector('.world-map-area-name')!;
     this.areaBiome = this.areaInfo.querySelector('.world-map-area-biome')!;
@@ -315,6 +332,7 @@ export class WorldMap {
     this.chartLayer = undefined; this.visiblePOIs = [];
     this.clearTouch?.(); this.opened = false; this.element.hidden = true; this.drag = null; this.pointer = null;
     this.canvas.classList.remove('world-map-dragging'); this.hideTooltip(); this.exploration.save();
+    this.selectedTravel = null; this.travelCard.hidden = true;
     if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
   }
   update(player: MapPlayer, _dt: number) {
@@ -454,11 +472,15 @@ export class WorldMap {
 
   private bind() {
     const signal = this.abort.signal;
+    this.travelButton.addEventListener('click', () => { void this.travelToSelected(); }, { signal });
+    this.travelCard.querySelector('[data-travel-close]')!.addEventListener('click', () => {
+      this.selectedTravel = null; this.travelCard.hidden = true; this.canvas.focus();
+    }, { signal });
     this.clearTouch = bindTouchCanvas(this.canvas,signal,{
       start:()=>{this.cancelRecenter();this.pointer=null;this.hideTooltip();},
       pan:(dx,dy)=>{this.pointer=null;this.view.centerX=clampMapCoordinate(this.view.centerX-dx/this.view.zoom);this.view.centerY=clampMapCoordinate(this.view.centerY-dy/this.view.zoom);this.invalidate();},
       zoom:(factor,p)=>{this.view=zoomMapAt(this.view,p.x,p.y,this.view.zoom*factor, this.zoomLimits);this.invalidate();},
-      tap:p=>{this.pointer=p;this.invalidate(false);},
+      tap:p=>{this.pointer=p;this.selectTravel(p);this.invalidate(false);},
     });
     this.element.querySelector('.world-map-close')!.addEventListener('click', () => { this.close(); this.onClose(); }, { signal });
     for (const button of this.element.querySelectorAll<HTMLButtonElement>('[data-map]')) {
@@ -477,19 +499,27 @@ export class WorldMap {
       if (event.button !== 0) return;
       this.cancelRecenter();
       event.preventDefault(); const p = local(event); this.canvas.focus(); this.canvas.setPointerCapture(event.pointerId);
-      this.drag = { id: event.pointerId, ...p, centerX: this.view.centerX, centerY: this.view.centerY };
+      this.drag = { id: event.pointerId, ...p, centerX: this.view.centerX, centerY: this.view.centerY, moved: false };
       this.canvas.classList.add('world-map-dragging'); this.hideTooltip();
     }, { signal });
     this.canvas.addEventListener('pointermove', event => {
       const p = local(event); this.pointer = p;
       if (this.drag && event.pointerId === this.drag.id) {
-        this.view.centerX = clampMapCoordinate(this.drag.centerX - (p.x - this.drag.x) / this.view.zoom);
-        this.view.centerY = clampMapCoordinate(this.drag.centerY - (p.y - this.drag.y) / this.view.zoom);
+        this.drag.moved ||= Math.hypot(p.x - this.drag.x, p.y - this.drag.y) > 6;
+        if (this.drag.moved) {
+          this.view.centerX = clampMapCoordinate(this.drag.centerX - (p.x - this.drag.x) / this.view.zoom);
+          this.view.centerY = clampMapCoordinate(this.drag.centerY - (p.y - this.drag.y) / this.view.zoom);
+        }
       }
       this.invalidate(!!this.drag);
     }, { signal });
     const release = () => { this.drag = null; this.canvas.classList.remove('world-map-dragging'); this.invalidate(false); };
-    this.canvas.addEventListener('pointerup', release, { signal });
+    this.canvas.addEventListener('pointerup', event => {
+      const p = local(event), drag = this.drag;
+      const clicked = drag?.id === event.pointerId && !drag.moved && Math.hypot(p.x-drag.x,p.y-drag.y)<=6;
+      release();
+      if (clicked) this.selectTravel(p);
+    }, { signal });
     this.canvas.addEventListener('pointercancel', release, { signal });
     this.canvas.addEventListener('lostpointercapture', release, { signal });
     this.canvas.addEventListener('pointerleave', () => { if (!this.drag) { this.pointer = null; this.hideTooltip(); this.invalidate(false); } }, { signal });
@@ -511,6 +541,9 @@ export class WorldMap {
         return;
       }
       if (event.target !== this.canvas) return;
+      if (event.key === 'Enter' && this.pointer) {
+        event.preventDefault(); event.stopPropagation(); this.selectTravel(this.pointer); return;
+      }
       if (event.key === 'Home') {
         event.preventDefault(); event.stopPropagation(); this.centerOnPlayer(); return;
       }
@@ -527,6 +560,38 @@ export class WorldMap {
       this.view.centerY = clampMapCoordinate(this.view.centerY);
       event.preventDefault(); event.stopPropagation(); this.invalidate();
     }, { signal });
+  }
+
+  private selectTravel(point: { x: number; y: number }) {
+    if (!this.travelActions || this.explorationMode || this.travelBusy) return;
+    const poi = pickMapPOI(this.visiblePOIs, this.view, point, 14);
+    this.selectedTravel = poi;
+    this.travelCard.hidden = !poi;
+    if (!poi) return;
+    this.hideTooltip();
+    setText(this.travelName, poi.name);
+    const problem = this.travelActions.problem(poi.id);
+    this.travelDescription.textContent = problem ?? 'Teleport nearby · No cost';
+    this.travelButton.disabled = !!problem;
+    this.travelButton.textContent = 'Teleport';
+    if (!problem) this.travelButton.focus({ preventScroll: true });
+  }
+
+  private async travelToSelected() {
+    const actions = this.travelActions, poi = this.selectedTravel;
+    if (!actions || !poi || this.travelBusy || this.explorationMode) return;
+    const problem = actions.problem(poi.id);
+    if (problem) { this.travelDescription.textContent = problem; this.travelButton.disabled = true; return; }
+    this.travelBusy = true; this.travelButton.disabled = true; this.travelButton.textContent = 'Travelling…';
+    try {
+      const result = await actions.travel(poi.id);
+      if (!result.ok && this.opened) this.travelDescription.textContent = result.message;
+    } catch {
+      if (this.opened) this.travelDescription.textContent = 'Could not save travel. Please try again.';
+    } finally {
+      this.travelBusy = false; this.travelButton.textContent = 'Teleport';
+      this.travelButton.disabled = !!actions.problem(poi.id);
+    }
   }
 
   private tile(tx: number, ty: number, size: number, detailed = false): TerrainTile | null {
@@ -899,6 +964,8 @@ export class WorldMap {
     this.tooltip.hidden = false; setText(this.tooltipName, poi.name);
     setText(this.tooltipKind, `${this.poiLabel(poi)} · ${this.encounterLevelReader(poi) !== null ? `Lv ${this.encounterLevelReader(poi)}` : mapAreaLabel(this.world, poi.x, poi.y)}`); setText(this.tooltipDescription, this.activityStateReader(poi)?.label ?? poi.description);
     this.tooltip.style.setProperty('--poi-color', POI_DEFINITIONS[poi.kind].color);
+    if (this.travelActions && !this.explorationMode && !this.travelActions.problem(poi.id))
+      setText(this.tooltipDescription, `${this.activityStateReader(poi)?.label ?? poi.description} · Click to travel`);
     this.positionTooltip(point);
   }
   private positionTooltip(point: { x: number; y: number }) {

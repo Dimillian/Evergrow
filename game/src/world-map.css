@@ -71,6 +71,21 @@
   position: absolute; z-index: 2; width: 270px; max-width: calc(100% - 22px);
   max-height: calc(100% - 22px); overflow: hidden; padding: 17px 19px 18px;
 }
+.world-map-travel.ui-tooltip {
+  position: absolute; z-index: 3; left: 16px; right: 16px; bottom: 76px;
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  width: fit-content; max-width: calc(100% - 32px); pointer-events: auto;
+}
+.world-map-travel[hidden] { display: none; }
+.world-map-travel > div { min-width: 0; }
+.world-map-travel .ui-kicker { margin: 0 0 4px; font-size: 10px; }
+.world-map-travel .ui-title { margin: 0; font-size: 20px; overflow-wrap: anywhere; }
+.world-map-travel .ui-body { margin: 5px 0 0; font-size: 13px; color: var(--ui-muted); }
+.world-map-travel .ui-button { flex: none; }
+@media (max-width: 560px) {
+  .world-map-travel.ui-tooltip { flex-wrap: wrap; gap: 8px; padding: 12px; }
+  .world-map-travel > div { flex-basis: 100%; }
+}
 .world-map-area.ui-tooltip {
   position: absolute; z-index: 1; top: 18px; left: 18px;
   width: 300px; max-width: calc(100% - 128px); max-height: calc(100% - 36px);

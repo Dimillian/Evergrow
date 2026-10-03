@@ -2,9 +2,38 @@ import { interruptTrial } from './poi-content.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
 import type { Simulation } from './simulation.ts';
 import { portalDepartureProblem, portalLanding, withinPortalReach, type PortalAnchor } from './travel.ts';
+import type { WorldPOI } from './world-pois.ts';
 
 type Result = { ok: boolean; message: string };
 type Persist = (checkpoint: CharacterCheckpoint) => Result | Promise<Result>;
+export type TravelDiscoveries = { getDiscoveredPOI(id: string): WorldPOI | undefined };
+
+export function mapTravelProblem(sim: Simulation, discoveries: TravelDiscoveries, id: string): string | null {
+  if (sim.player.dead) return 'You cannot travel while defeated.';
+  if (sim.dungeonFloor || sim.expeditions.location) return 'Leave the dungeon or rift before using map travel.';
+  const poi = discoveries.getDiscoveredPOI(id);
+  if (!poi || poi.sighted) return 'Visit this location first to unlock teleporting.';
+  if (![poi.x, poi.y].every(n => Number.isFinite(n) && Math.abs(n) <= 4e7)) return 'This destination is unavailable.';
+  return null;
+}
+
+/** Resolve an ID against the character's chart, never coordinates supplied by UI.
+ * Preserve home/return ownership, resources and encounter contents on every trip. */
+export async function executeMapTravel(sim: Simulation, discoveries: TravelDiscoveries, id: string, persist: Persist): Promise<Result> {
+  const problem = mapTravelProblem(sim, discoveries, id);
+  if (problem) return { ok: false, message: problem };
+  const poi = discoveries.getDiscoveredPOI(id)!;
+  const point = portalLanding(sim.world, { x: poi.x, y: poi.y + 42 }, sim.player.radius);
+  if (!point) return { ok: false, message: 'No clear landing near this location.' };
+  const checkpoint = sim.captureCheckpoint();
+  interruptTrial(checkpoint.events!, checkpoint.actors ?? []);
+  checkpoint.x = point.x; checkpoint.y = point.y;
+  const result = await persist(checkpoint);
+  if (!result.ok) return result;
+  interruptTrial(sim.eventState, sim.enemies);
+  sim.eventChannel.cancel(); sim.relocate(point.x, point.y);
+  return { ok: true, message: poi.name };
+}
 /** Stage position and portal ownership in one checkpoint, then publish only after durable storage. */
 export async function executePortalTravel(sim: Simulation, anchor: PortalAnchor, returning: boolean, persist: Persist): Promise<Result> {
   const p = sim.player, link = sim.travel.returnTo;

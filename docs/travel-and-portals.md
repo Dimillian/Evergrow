@@ -1,6 +1,6 @@
-# Town portals and waypoints
+# Town portals and map travel
 
-Updated 2026-09-14. **Town portal implemented; permanent waypoint travel remains specified.** Initial timings remain playtest defaults. [Static captures](captures/2026-09-05/town-portal/README.md) use the real renderer without gameplay.
+Updated 2026-10-03. **Town portals and visited-location map travel are implemented.** Initial timings remain playtest defaults. [Static captures](captures/2026-09-05/town-portal/README.md) use the real renderer without gameplay.
 
 ## Current delivery
 
@@ -8,7 +8,7 @@ P or the minimap-adjacent portal button channels for three seconds outside sanct
 
 Home/return markers are explicit known positions and reveal no terrain. State and position persist together before relocation; failures preserve the previous link and position. Simulation relocation preserves live actors, ground loot, resources and camp memory, clears action buffers, resets encounter travel credit and waits for destination camera coverage. No portal trip refreshes the initial roaming population. Death removes the return link. Camp casualties remain persistent; surviving wounds retain the existing run-local behavior rather than gaining a new save format here.
 
-Deferred portions below: permanent waypoint network/map travel, biome-specific portal tint and future POI encounter integration. Town anchors currently set the home destination only. Verified with 519 code tests, strict application/core compilation and production build; gameplay remains for the player.
+The original portal checkpoint was verified with 519 code tests; this is a historical count. Gameplay acceptance remains with the player.
 
 ## Player loop
 
@@ -27,15 +27,15 @@ Explore, fill the bag, return to town, sell or improve gear, then return to the 
 
 The return destination remains the actual wilderness position, even after equipment changes. Enchanting still uses the town NPC's geographic level: returning from a level-20 area to a level-1 town does not turn that town into a level-20 service.
 
-### Permanent waypoints — specified, not implemented
+### Visited-location map travel
 
-Each town plaza and a sparse subset of existing roadside shrines contain an anchor. The origin shrine is unlocked initially too. Other anchors require approaching and activating with E/click. Seeing one on the map is discovery, not activation. Initial wilderness density: roughly one anchor per 3,200–4,800 units of road travel; do not duplicate nearby town anchors within 1,200 units.
+Open the full map with M, click or tap a visited marker, then choose **Teleport** in its compact destination card. All discovered location types qualify: settlements, services, camps, shrines, landmarks and outdoor dungeon entrances. Ordinary local discovery within the existing 600-unit reveal radius counts as visiting; locations only sighted through a beacon do not unlock travel until locally discovered. Unknown Journey search areas and synthetic home/return hints cannot grant travel permission. No additional waypoint activation or save schema is required.
 
-At an activated anchor, open the existing world map in Travel mode. Click an unlocked destination, see its name and area level, and choose **Travel**. Unknown destinations are absent; discovered but inactive anchors show **Activate in person**. The ordinary map remains useful anywhere but cannot teleport from arbitrary wilderness ground.
+Travel is free and immediate after the destination is saved, from either town or wilderness. Full-map combat remains paused. Dragging/pinching never selects a destination; held-Tab overlay remains passive. Leave a dungeon or rift through its existing travel flow before using surface map travel, so it cannot bypass run ownership or abandonment rules. Teleporting to a dungeon marker lands outside its entrance, without entering or completing it.
 
-Travel is free. Departing from a wilderness anchor requires the same interruptible three-second channel; town-to-anchor travel is immediate after confirmation. Arrival rules match the portal. Visiting/activating a town changes the home town; merely hovering or selecting a destination does not.
+The command resolves the selected ID against the active character's stored chart, rejects merely sighted/missing/invalid destinations and searches for clear nearby ground with the existing bounded landing rules. Persistence finishes before relocation; failed writes or blocked landings leave the live run untouched. A trip interrupts active timed trials as town travel does, but preserves enemies, loot, progression, resources, home town and existing return portal. Arrival shares the fade, camera snap, input cleanup, brief protection and spawn-coverage barrier. No connecting route is revealed.
 
-Waypoint travel closes an outstanding return portal, preventing multiple expedition anchors. The existing destination confirmation displays **Closes your return portal** when relevant; no additional confirmation dialog. Walking out of town does not close it. Death closes it. Character switching preserves each character's own link, and normal save/continue restores it.
+`travel-command.ts` owns permission, landing and persistence; `LocationController` establishes arrival only after success. `WorldMap` owns the selectable destination card, and `Game` supplies the durable-action barrier. The preceding proposed activated-waypoint network is superseded by this visited-location rule.
 
 ## Visuals and UX
 
@@ -43,7 +43,7 @@ Portal: an upright oval of thin silver-violet strands above a ground rune, with 
 
 Channeling names the actual Home town. The compact world label uses only the destination name; the HUD tooltip and accessible label provide the preserved surface region and its ordinary level range, or the retained dungeon and its level. This presentation is derived from already-saved destination facts and never reveals terrain, routes, actors or rewards.
 
-Waypoints use a low stone plinth and engraved rings: dark when discovered, illuminated after activation. Their silhouette differs from temporary buff shrines. Native-resolution labels only appear on focus. The atlas distinguishes inactive, activated, home-town and return-portal markers, with concise hover information and area level.
+Map travel reuses existing POI symbols and the shared frosted-glass card/buttons. Eligible hover cards include **Click to travel**; unvisited selections explain why teleporting is unavailable.
 
 Use existing tooltip, notification and reduced-motion behavior. Notify activation once; routine travel needs only the transition and destination readout. A brief 180–250ms fade masks relocation. Camera current/previous positions snap together; it must not fly across the world. World rendering must have valid destination coverage before spawning resumes.
 
@@ -51,19 +51,19 @@ Use existing tooltip, notification and reduced-motion behavior. Notify activatio
 
 Travel is a complete command: resolve authorized destination, find clear ground, stage player position/link/home state, save, then publish the transition. Revalidate the departure at channel completion. Failed storage, stale session, invalid anchor or no safe landing leaves the character and previous portal unchanged. There is no charge to refund.
 
-- Persist home town ID, unlocked anchor IDs and the optional return link, scoped to character and world generation. Store anchor identities and reconstruct positions from generated geometry; only the temporary departure requires explicit coordinates.
+- Persist home town ID and the optional return link, scoped to character and world generation. Map travel reuses visited POIs in the character's existing exploration chart.
 - Never land inside walls, props or water collision. Search deterministically within 80 units of an obstructed return position; if no valid point exists, retain the link and show **Return point blocked**. Never silently send the player to another zone.
 - Preserve source-level/rank/reward identities and existing camp casualties. Ambient retirement grants no rewards. New actors obey the existing offscreen visual margin at the destination, including on zoomed-out arrival.
 - Active POI encounters pause while unloaded and persist their exact progress; travel cannot reset their defenders or generate a second reward. Ordinary live ambient enemies continue following existing save/streaming rules.
 - Save remaining durations for any POI blessing in simulation seconds; time in town, menus or unloaded event space follows the POI rules. Wall-clock time on a closed browser is never a reward or refill mechanic.
-- Begin with a bound of 1,024 unlocked anchors plus one return link. Never evict an unlocked anchor silently. At the limit, discovery still works and existing travel remains available; further activation is unavailable. Validate the combined save size with POI/commerce state before settling the schema.
+- Reuse exploration's existing 4,096-POI bound without a second unlocked-anchor collection. Never evict visited destinations to make room for new ones.
 
-Keep immutable anchor definitions separate from character travel state. Proposed owners: `travel.ts` for plans/channel rules, a narrow runtime command for persistence and relocation, and `travel-art.ts` for portal/anchor drawing. Extend the existing map and E-interaction dispatch; do not build a second travel map or a general entity framework.
+Keep immutable anchor definitions separate from character travel state. `travel.ts` owns portal/channel and landing rules, `travel-command.ts` owns persistence and relocation, and `travel-art.ts` owns portal drawing. Map travel extends the existing chart; there is no second travel map.
 
 ## Delivery and acceptance
 
 1. Town anchor, P channel, return endpoint and clear landing; cancel/no-heal behavior, focus clearing, exactly-once save-backed travel.
-2. Activated waypoint network and shared-map destination selection; per-character persistence and portal invalidation on travel/death.
+2. Shared-map visited-destination selection; existing per-character discovery and preserved return ownership.
 3. Procedural visuals and frozen in-app captures of channel, arrival, map and return states. Player tests actual pacing and readability.
 
 Code checks cover damage/movement interruption, duplicate input, zero/full resources, boundary/collision destinations, death during channel, stale save writes, save/continue, character isolation, source-level preservation and no on-screen enemy births. These are required correctness checks; affordability and gameplay feel remain with the player.

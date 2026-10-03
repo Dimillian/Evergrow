@@ -52,7 +52,7 @@ import { DungeonMap, drawCryptMinimap } from './dungeon-map.ts';
 import { EventPanel } from './poi-panel.ts';
 import { EVENT_RULES, focusEvent, eventClaimed, isEventKind, type EventSite, type EventChoice } from './poi-content.ts';
 import { executeEvent, eventProblem, claimCompletedEvent, pendingEventReward } from './poi-command.ts';
-import { activatePortalAnchor } from './travel-command.ts';
+import { activatePortalAnchor, mapTravelProblem } from './travel-command.ts';
 import { townPortalAnchor, withinPortalReach, portalMapMarkers, type PortalAnchor } from './travel.ts';
 import { portalActionMode, portalDestinations } from './portal-destination.ts';
 import type { CharacterCheckpoint } from './character-save.ts';
@@ -231,6 +231,7 @@ export class Game {
       this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
     this.worldMap.setActivityStateReader(poi => activityStatus(poi, this.journeys.facts()));
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
+    this.configureMapTravel();
       this.inventoryPanel = this.lifetime.own(new InventoryPanel(this.shell.panelMount, {
         close: () => this.closeCharacterPanel(),
         assignSkill: (slot, skill) => this.characterAction({ type: 'assignSkill', slot, skill }),
@@ -737,6 +738,7 @@ export class Game {
     this.worldMap.setEncounterLevelReader(poi => isEventKind(poi.kind)||poi.kind==='dungeon' ? activityLevel(poi,this.journeys.facts(),this.overworld.seed) : null);
     this.worldMap.setActivityStateReader(poi => activityStatus(poi, this.journeys.facts()));
     this.worldMap.setPortalMarkers(() => portalMapMarkers(this.sim.travel, band => this.overworld.getPortalAnchor(band)));
+    this.configureMapTravel();
     this.worldMap.resize(); this.titleScreen.close(); this.saveError = '';
     this.projectBeacons(); this.enterWorld();
     if(this.sim.player.character.treeRefunded){
@@ -1097,6 +1099,18 @@ export class Game {
   }
   private travelThrough(anchor: PortalAnchor, returning: boolean): Promise<boolean> {
     return this.durable(() => this.locations.portal(anchor, returning), false);
+  }
+  private configureMapTravel(): void {
+    this.worldMap.setTravel({
+      problem: id => mapTravelProblem(this.sim, this.exploration, id),
+      travel: id => this.durable(async () => {
+        if (this.phase !== 'map' || this.panels.mapHeld || !this.session.active)
+          return { ok: false, message: 'Open the full world map to travel.' };
+        const result = await this.locations.map(id, this.exploration);
+        if (result.ok) this.panels.transition('playing');
+        return result;
+      }, { ok: false, message: 'Another action is being saved. Try again.' }),
+    });
   }
   private finishTravel(): void {
     this.panels.releaseMap();
