@@ -1,5 +1,13 @@
 # Evergrow changelog
 
+## v0.7.6 — 2026-10-03T19:01:00Z
+
+### New
+
+- Click a visited location on the world map and choose Teleport to return there for free.
+- Travel to discovered towns, services, camps, shrines, landmarks and outdoor dungeon entrances while keeping your resources and return portal.
+- Locations only sighted through a beacon unlock teleporting after a local visit. Leave dungeons and rifts through their usual exits before using map travel.
+
 ## v0.7.5 — 2026-10-02T20:00:00Z
 
 ### Fixes
