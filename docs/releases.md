@@ -37,6 +37,17 @@ The user approved the next major prototype milestone, **0.7.0**, on 2026-09-20 f
 
 ## Last verified publication
 
+- Game v0.7.6 / Sites version 68, publicly deployed on 2026-10-03 at 19:04:00 UTC.
+- Published source: `fbaa88c9eacaaaecdf052b2150ee6958b7468e9f`.
+- Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_bdb04596396c8191a652ed442e9ac83a`.
+- Deployment: `appgdep_6ac151894b448191a666085987d7918a`; Sites returned `succeeded`.
+- Adds free, saved teleporting to locally visited world-map markers, with a compact destination card and preserved resources, encounters and return portal. Beacon-only sightings remain locked until visited; dungeon/rift departure retains its existing flow.
+- The implementation passed both targeted test runs (27 travel/location/hover/architecture checks and 52 map/exploration checks, with five overlapping tests), application/core type checking and the local build. Publication passed the cloud-enabled client/Worker build, archive validation and clean-source release validation. No automated browser gameplay was run.
+- No character reset or required player action. Development tools remain excluded; the local server remains available.
+- This publication record is a documentation-only checkpoint after the deployed source above.
+
+## Previous verified publication
+
 - Game v0.7.5 / Sites version 67, publicly deployed on 2026-10-02 at 20:02:38 UTC.
 - Published source: `fa7e628a7377332d199499cf744466d49763637a`.
 - Saved version: `appgprj_6a9c702e88608191a86a8a753f552b44~appgver_893852da3ea88191b8d968fc4bbf3e4f`.
