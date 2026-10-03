@@ -1,10 +1,17 @@
 # Controls
 
-Open **Escape → Options → Controls & key bindings** to customize keyboard and mouse controls. Movement, basic attack, all five skill slots, dodge, potion, interaction, portal and menu shortcuts each have primary and alternate bindings. Select either binding, then press a key or a mouse button (left, right, middle, or side buttons M4/M5). Choose **Unbind** to clear it, or Escape/Cancel to leave it unchanged. Conflicts name the existing action and require **Replace binding** before moving the binding. **Restore defaults** restores the entire default layout below.
+Open **Escape → System → Controls** to customize keyboard and mouse controls. Movement, basic attack, all five skill slots, dodge, potion, interaction, portal and menu shortcuts each have primary and alternate bindings. Select either binding, then press a key or a mouse button (left, right, middle, or side buttons M4/M5). Choose **Unbind** to clear it, or Escape/Cancel to leave it unchanged. Conflicts name the existing action and require **Replace binding** before moving the binding. **Restore defaults** restores the entire default layout below.
 
 Changes apply immediately and save automatically on this device, across characters and reloads. They do not change skill assignments or character saves, and require no progress reset. If browser storage is unavailable, the screen reports that changes apply only to this session. HUD badges, interaction prompts, inventory assignment menus and the skill atlas use the current bindings. The first available binding is shown when a primary is empty.
 
 Bindings use physical keyboard positions. Escape remains pause/back and cancels binding capture. Holding Shift reveals loot names by default, and that action can be rebound like other keyboard and mouse controls. OS/browser modifier shortcuts, reload, fullscreen and developer-tools keys are reserved. Tab and ordinary menu navigation keys retain their native behavior in paused panels. On the Tab exploration overlay, gameplay controls remain active; release Tab to close. M opens the full paused map with normal keyboard map navigation. Mouse wheel zoom and left-click interaction with nearby objects remain available. The Controller tab documents the fixed gamepad layout; touch and controller input are independent of keyboard/mouse remapping.
+
+## Export and import
+
+File transfers are available in the browser. The packaged Android/AYN Thor app omits the transfer buttons, file input and transfer help because its native WebView has no file-picker or download bridge. On-device remapping and Restore defaults remain available.
+
+In the Keyboard & mouse tab, **Export bindings** downloads `evergrow-keybindings.json`, including primary, alternate and unbound slots. **Import bindings** replaces the entire keyboard/mouse layout with a valid export and saves it on this device. Files must use the supported Evergrow format and version, include every action (including Reveal loot names), contain no duplicate or reserved keys, and be at most 16 KB. Invalid files leave current bindings untouched. Imports refresh shortcut labels immediately; blocked storage is reported as session-only. Cursor style and size, controller controls, character progress and skill-slot assignments are unaffected.
+
 
 ## Default keyboard and mouse layout
 
